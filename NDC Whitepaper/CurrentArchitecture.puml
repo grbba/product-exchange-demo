@@ -1,0 +1,68 @@
+@startuml
+title NDC Today: Multi-Airline Shopping & Inefficiency (C-Level View)
+
+actor Customer
+participant "Retailer / OTA" as Retailer
+participant "Airline A NDC API" as NDC_A
+participant "Airline B NDC API" as NDC_B
+participant "Airline C NDC API" as NDC_C
+database "Legacy PSS\n(Airline A)" as PSS_A
+database "Legacy PSS\n(Airline B)" as PSS_B
+database "Legacy PSS\n(Airline C)" as PSS_C
+
+note over Retailer
+- No advanced product intelligence
+- Must send broad, repetitive requests
+- Must query many airline NDCs
+end note
+
+note over NDC_A, NDC_C
+- Each airline handles high volume of requests
+- Offers are generic/opaque
+- No true personalization or differentiation
+end note
+
+note over PSS_A, PSS_C
+- Legacy, fare-centric systems
+- Cannot deliver rich retail content
+end note
+
+Customer -> Retailer : Search (origin, date, prefs)
+
+Retailer -> NDC_A : Broad shopping request
+NDC_A -> PSS_A : Query fares/offers
+PSS_A --> NDC_A : Return generic offers
+NDC_A --> Retailer : Opaque offer
+
+Retailer -> NDC_B : Broad shopping request
+NDC_B -> PSS_B : Query fares/offers
+PSS_B --> NDC_B : Return generic offers
+NDC_B --> Retailer : Opaque offer
+
+Retailer -> NDC_C : Broad shopping request
+NDC_C -> PSS_C : Query fares/offers
+PSS_C --> NDC_C : Return generic offers
+NDC_C --> Retailer : Opaque offer
+
+note over Retailer
+- Must aggregate many opaque offers
+- Cannot easily compare or differentiate
+- Often must repeat requests for more info
+end note
+
+Retailer --> Customer : Show slow, undifferentiated offers
+
+note over Customer
+- Slow, unhelpful results
+- Poor comparison/shopping experience
+end note
+
+== Key Inefficiencies ==
+
+note over Retailer, NDC_C
+- High system load & IT cost (many broad requests)
+- High look-to-book ratio (~1000:1)
+- Data noise, poor demand forecasting
+- Poor user experience, little product differentiation
+end note
+@enduml

@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKOS Taxonomy Tree Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-area {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            background: linear-gradient(45deg, rgba(52, 152, 219, 0.1), rgba(155, 89, 182, 0.1));
+        }
+
+        .upload-area:hover {
+            border-color: #2980b9;
+            background: linear-gradient(45deg, rgba(52, 152, 219, 0.2), rgba(155, 89, 182, 0.2));
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #27ae60;
+            background: linear-gradient(45deg, rgba(39, 174, 96, 0.2), rgba(46, 204, 113, 0.2));
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .upload-btn:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        #tree-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            overflow: hidden;
+            min-height: 600px;
+        }
+
+        .node circle {
+            cursor: pointer;
+            stroke: #3498db;
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover circle {
+            stroke: #e74c3c;
+            stroke-width: 3px;
+            r: 8;
+        }
+
+        .node text {
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .node:hover text {
+            font-size: 13px;
+            font-weight: 600;
+            fill: #e74c3c;
+        }
+
+        .link {
+            fill: none;
+            stroke: #95a5a6;
+            stroke-width: 2px;
+            stroke-opacity: 0.8;
+        }
+
+        .link:hover {
+            stroke: #3498db;
+            stroke-width: 3px;
+            stroke-opacity: 1;
+        }
+
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98);
+            transform: translateY(-1px);
+        }
+
+        .info-panel {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(155, 89, 182, 0.1));
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+
+        .export-btn:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 SKOS Taxonomy Tree Visualizer</h1>
+            <p>Upload your SKOS TTL file to generate an interactive tree diagram</p>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop your SKOS TTL file here or click to browse</p>
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose File
+            </button>
+            <input type="file" id="fileInput" accept=".ttl,.turtle,.rdf" />
+        </div>
+
+        <div class="controls">
+            <button class="control-btn" onclick="expandAll()">🔍 Expand All</button>
+            <button class="control-btn" onclick="collapseAll()">📁 Collapse All</button>
+            <button class="control-btn" onclick="centerTree()">🎯 Center View</button>
+            <button class="export-btn" onclick="exportSVG()">📥 Export SVG</button>
+            <button class="export-btn" onclick="exportPNG()">🖼️ Export PNG</button>
+        </div>
+
+        <div id="tree-container"></div>
+
+        <div class="info-panel">
+            <strong>📋 Instructions:</strong><br>
+            • Upload a SKOS TTL file using the area above<br>
+            • Click on nodes to expand/collapse branches<br>
+            • Hover over elements for interactive effects<br>
+            • Use controls to manage the tree view<br>
+            • Export as SVG or PNG for use in Confluence
+        </div>
+    </div>
+
+    <script>
+        let treeData = null;
+        let svg, g, root, treeLayout, diagonal;
+        let width = 1200, height = 600;
+        let i = 0, duration = 750;
+
+        // Initialize the tree
+        function initializeTree() {
+            svg = d3.select("#tree-container")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .call(d3.zoom().on("zoom", function(event) {
+                    g.attr("transform", event.transform);
+                }));
+
+            g = svg.append("g")
+                .attr("transform", "translate(80,50)");
+
+            treeLayout = d3.tree().size([height - 100, width - 160]);
+            diagonal = d3.linkHorizontal()
+                .x(d => d.y)
+                .y(d => d.x);
+        }
+
+        // Parse TTL content
+        function parseTTL(content) {
+            const lines = content.split('\n');
+            const concepts = new Map();
+            const relationships = [];
+
+            let currentSubject = null;
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line.startsWith('#') || line.startsWith('@')) return;
+
+                // Handle subject
+                if (line.includes('a skos:Concept') || line.includes('a <http://www.w3.org/2004/02/skos/core#Concept>')) {
+                    const match = line.match(/^<?([^>\s]+)>?\s+/);
+                    if (match) {
+                        currentSubject = match[1];
+                        if (!concepts.has(currentSubject)) {
+                            concepts.set(currentSubject, {
+                                id: currentSubject,
+                                label: extractLocalName(currentSubject),
+                                children: []
+                            });
+                        }
+                    }
+                }
+
+                // Handle prefLabel
+                if (currentSubject && (line.includes('skos:prefLabel') || line.includes('<http://www.w3.org/2004/02/skos/core#prefLabel>'))) {
+                    const labelMatch = line.match(/"([^"]+)"/);
+                    if (labelMatch && concepts.has(currentSubject)) {
+                        concepts.get(currentSubject).label = labelMatch[1];
+                    }
+                }
+
+                // Handle broader/narrower relationships
+                if (currentSubject && (line.includes('skos:broader') || line.includes('<http://www.w3.org/2004/02/skos/core#broader>'))) {
+                    const objectMatch = line.match(/<?([^>\s;.]+)>?\s*[;.]?\s*$/);
+                    if (objectMatch) {
+                        relationships.push({ child: currentSubject, parent: objectMatch[1] });
+                    }
+                }
+
+                if (currentSubject && (line.includes('skos:narrower') || line.includes('<http://www.w3.org/2004/02/skos/core#narrower>'))) {
+                    const objectMatch = line.match(/<?([^>\s;.]+)>?\s*[;.]?\s*$/);
+                    if (objectMatch) {
+                        relationships.push({ child: objectMatch[1], parent: currentSubject });
+                    }
+                }
+
+                // Reset current subject at the end of a statement
+                if (line.endsWith('.')) {
+                    currentSubject = null;
+                }
+            });
+
+            // Build tree structure
+            const rootConcepts = [];
+            const childrenMap = new Map();
+
+            // Initialize children map
+            concepts.forEach((concept, id) => {
+                childrenMap.set(id, []);
+            });
+
+            // Process relationships
+            relationships.forEach(rel => {
+                if (concepts.has(rel.parent) && concepts.has(rel.child)) {
+                    childrenMap.get(rel.parent).push(concepts.get(rel.child));
+                }
+            });
+
+            // Find root concepts (those without parents)
+            const hasParent = new Set(relationships.map(r => r.child));
+            concepts.forEach((concept, id) => {
+                if (!hasParent.has(id)) {
+                    rootConcepts.push(concept);
+                }
+                concept.children = childrenMap.get(id) || [];
+            });
+
+            // If we have multiple roots, create a virtual root
+            if (rootConcepts.length > 1) {
+                return {
+                    id: 'root',
+                    label: 'SKOS Taxonomy',
+                    children: rootConcepts
+                };
+            } else if (rootConcepts.length === 1) {
+                return rootConcepts[0];
+            } else {
+                // Fallback: pick the first concept
+                return Array.from(concepts.values())[0] || { id: 'empty', label: 'No concepts found', children: [] };
+            }
+        }
+
+        function extractLocalName(uri) {
+            if (uri.includes('#')) {
+                return uri.split('#').pop();
+            } else if (uri.includes('/')) {
+                return uri.split('/').pop();
+            }
+            return uri;
+        }
+
+        // Render the tree
+        function renderTree(source) {
+            const treeData = treeLayout(root);
+            const nodes = treeData.descendants();
+            const links = treeData.descendants().slice(1);
+
+            // Update nodes
+            const node = g.selectAll('g.node')
+                .data(nodes, d => d.id || (d.id = ++i));
+
+            const nodeEnter = node.enter().append('g')
+                .attr('class', 'node')
+                .attr('transform', d => `translate(${source.y0 || 0},${source.x0 || 0})`)
+                .on('click', click);
+
+            nodeEnter.append('circle')
+                .attr('r', 1e-6)
+                .style('fill', d => d._children ? '#3498db' : '#ecf0f1')
+                .style('stroke', '#3498db');
+
+            nodeEnter.append('text')
+                .attr('dy', '.35em')
+                .attr('x', d => d.children || d._children ? -13 : 13)
+                .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+                .text(d => d.data.label)
+                .style('fill-opacity', 1e-6);
+
+            const nodeUpdate = nodeEnter.merge(node);
+
+            nodeUpdate.transition()
+                .duration(duration)
+                .attr('transform', d => `translate(${d.y},${d.x})`);
+
+            nodeUpdate.select('circle')
+                .attr('r', 6)
+                .style('fill', d => d._children ? '#3498db' : '#ecf0f1')
+                .attr('cursor', 'pointer');
+
+            nodeUpdate.select('text')
+                .style('fill-opacity', 1);
+
+            const nodeExit = node.exit().transition()
+                .duration(duration)
+                .attr('transform', d => `translate(${source.y},${source.x})`)
+                .remove();
+
+            nodeExit.select('circle')
+                .attr('r', 1e-6);
+
+            nodeExit.select('text')
+                .style('fill-opacity', 1e-6);
+
+            // Update links
+            const link = g.selectAll('path.link')
+                .data(links, d => d.id);
+
+            const linkEnter = link.enter().insert('path', 'g')
+                .attr('class', 'link')
+                .style('stroke', '#95a5a6')
+                .style('stroke-width', '2px')
+                .style('fill', 'none')
+                .attr('d', d => {
+                    const o = { x: source.x0 || 0, y: source.y0 || 0 };
+                    return diagonal({ source: o, target: o });
+                });
+
+            const linkUpdate = linkEnter.merge(link);
+
+            linkUpdate.transition()
+                .duration(duration)
+                .attr('d', d => diagonal({ source: d, target: d.parent }));
+
+            link.exit().transition()
+                .duration(duration)
+                .attr('d', d => {
+                    const o = { x: source.x, y: source.y };
+                    return diagonal({ source: o, target: o });
+                })
+                .remove();
+
+            nodes.forEach(d => {
+                d.x0 = d.x;
+                d.y0 = d.y;
+            });
+        }
+
+        function click(event, d) {
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else {
+                d.children = d._children;
+                d._children = null;
+            }
+            renderTree(d);
+        }
+
+        function expandAll() {
+            function expand(d) {
+                if (d._children) {
+                    d.children = d._children;
+                    d._children = null;
+                }
+                if (d.children) {
+                    d.children.forEach(expand);
+                }
+            }
+            expand(root);
+            renderTree(root);
+        }
+
+        function collapseAll() {
+            function collapse(d) {
+                if (d.children) {
+                    d._children = d.children;
+                    d.children = null;
+                    d._children.forEach(collapse);
+                }
+            }
+            root.children.forEach(collapse);
+            renderTree(root);
+        }
+
+        function centerTree() {
+            svg.transition().duration(750).call(
+                d3.zoom().transform,
+                d3.zoomIdentity.translate(width / 2, height / 2).scale(1)
+            );
+        }
+
+        function exportSVG() {
+            const svgData = new XMLSerializer().serializeToString(svg.node());
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'skos-tree.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportPNG() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+
+            const svgData = new XMLSerializer().serializeToString(svg.node());
+            const img = new Image();
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+
+            img.onload = function() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'skos-tree.png';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+            img.src = url;
+        }
+
+        // File handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+
+        fileInput.addEventListener('change', handleFile);
+
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    treeData = parseTTL(content);
+                    
+                    // Clear existing tree
+                    d3.select("#tree-container").select("svg").remove();
+                    
+                    // Initialize and render new tree
+                    initializeTree();
+                    root = d3.hierarchy(treeData, d => d.children);
+                    root.x0 = height / 2;
+                    root.y0 = 0;
+
+                    // Collapse all children initially except the first level
+                    root.children.forEach(collapse);
+                    function collapse(d) {
+                        if (d.children) {
+                            d._children = d.children;
+                            d._children.forEach(collapse);
+                            d.children = null;
+                        }
+                    }
+                    
+                    renderTree(root);
+                } catch (error) {
+                    alert('Error parsing TTL file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Initialize empty tree on load
+        initializeTree();
+
+        // Create sample data for demonstration
+        const sampleData = {
+            id: 'sample-root',
+            label: 'Sample SKOS Taxonomy',
+            children: [
+                {
+                    id: 'concept-1',
+                    label: 'Natural Sciences',
+                    children: [
+                        { id: 'concept-1-1', label: 'Biology', children: [] },
+                        { id: 'concept-1-2', label: 'Chemistry', children: [] },
+                        { id: 'concept-1-3', label: 'Physics', children: [] }
+                    ]
+                },
+                {
+                    id: 'concept-2',
+                    label: 'Social Sciences',
+                    children: [
+                        { id: 'concept-2-1', label: 'Psychology', children: [] },
+                        { id: 'concept-2-2', label: 'Sociology', children: [] }
+                    ]
+                }
+            ]
+        };
+
+        // Display sample tree initially
+        root = d3.hierarchy(sampleData, d => d.children);
+        root.x0 = height / 2;
+        root.y0 = 0;
+        renderTree(root);
+    </script>
+</body>
+</html>

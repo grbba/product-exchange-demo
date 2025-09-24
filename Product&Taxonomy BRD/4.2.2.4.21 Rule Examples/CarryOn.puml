@@ -1,0 +1,133 @@
+@startuml CarryOnBags_Max2
+title Rule Instance: Not more than two carry-on bags allowed
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam classAttributeIconSize 0
+hide empty members
+
+' === Rule ===
+object ProductRule_RCB {
+  ruleID = "R-CARRYON-001"
+  name = "Limit carry-on bags"
+  type = ValueConstraint
+  priority = 5
+}
+
+' === Condition ===
+object QuantityCondition_CarryOn {
+  itemID     = "CarryOnBag"
+  quantity   = 2
+  operator   = LESS_THAN_OR_EQUAL
+  description= "At most 2 carry-on bags selected"
+}
+
+' === Targets ===
+object ProductTarget_AllowCB {
+  productID   = "CarryOnBag"
+  action      = ALLOW
+  description = "Allow up to 2 carry-on bags"
+}
+
+object ProductTarget_ForbidCB {
+  productID   = "CarryOnBag"
+  action      = FORBID
+  description = "Forbid more than 2 carry-on bags"
+}
+
+' === Wiring ===
+ProductRule_RCB --> QuantityCondition_CarryOn : triggers on
+ProductRule_RCB --> ProductTarget_AllowCB : enforces
+ProductRule_RCB --> ProductTarget_ForbidCB : enforces
+
+@enduml
+
+
+@startuml CarryOn_Taxonomy_Max2_WithTransport
+title Rule: Max 2 Carry-on (taxonomy) only when a transport is selected
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam classAttributeIconSize 0
+hide empty members
+
+
+' === Rule ===
+object ProductRule_RCO_CTX {
+  ruleID = "R-CARRYON-CTX-001"
+  name = "Max 2 Carry-on when transport present"
+  type = ValueConstraint
+  priority = 5
+}
+
+' === Logical grouping ===
+object CompoundCondition_AND {
+  operator = AND
+  description = "Carry-on count ≤ 2 AND at least one transport selected"
+}
+
+' === Condition 1: taxonomy-scoped count for carry-on ===
+object TaxonomyCondition_CarryOn {
+  taxonomyConceptID = "apmwg:CARRY_ON"
+  taxonomyScheme    = "apmwg:product_taxonomy_scheme"
+  selectionScope    = "ANY_SELECTED"
+  threshold         = "<= 2"
+  description       = "Total selected items tagged Carry-on ≤ 2"
+}
+
+' === Condition 2: transport existence in context ===
+object TaxonomyCondition_Transport {
+  taxonomyConceptID = "apmwg:AIR_TRANSPORT"
+  taxonomyScheme    = "apmwg:product_taxonomy_scheme"
+  selectionScope    = "ANY_SELECTED"
+  subjectRef        = "transport"
+  threshold         = ">= 1"
+  description       = "At least one selected transport (Air Transport) exists"
+}
+
+' (Optional) Concept references for clarity
+object TaxonomyConcept_CarryOn {
+  conceptID = "apmwg:CARRY_ON"
+  label     = "Carry-on"
+}
+object TaxonomyConcept_AirTransport {
+  conceptID = "apmwg:AIR_TRANSPORT"
+  label     = "Air Transport"
+}
+
+' === Targets ===
+object TaxonomyTarget_AllowCO {
+  conceptID   = "apmwg:CARRY_ON"
+  action      = ALLOW
+  description = "Allow up to 2 Carry-on items when a transport exists"
+}
+
+object TaxonomyTarget_ForbidCO {
+  conceptID   = "apmwg:CARRY_ON"
+  action      = FORBID
+  description = "Forbid Carry-on when > 2 or no transport"
+}
+
+' === Context binding (illustrative) ===
+object RuleContext_CTX {
+  contextID = "CTX-BOOKING"
+  bindings  = "{ transport }"
+}
+object Transport_CDGGFK {
+  id     = "CDG-JFK"
+  tagged = ["apmwg:AIR_TRANSPORT"]
+}
+
+' === Wiring ===
+ProductRule_RCO_CTX --> RuleContext_CTX : evaluated with
+RuleContext_CTX --> Transport_CDGGFK   : transport
+
+ProductRule_RCO_CTX --> CompoundCondition_AND : triggers on
+CompoundCondition_AND --> TaxonomyCondition_CarryOn
+CompoundCondition_AND --> TaxonomyCondition_Transport
+
+TaxonomyCondition_CarryOn --> TaxonomyConcept_CarryOn
+TaxonomyCondition_Transport --> TaxonomyConcept_AirTransport
+
+ProductRule_RCO_CTX --> TaxonomyTarget_AllowCO : enforces
+ProductRule_RCO_CTX --> TaxonomyTarget_ForbidCO : enforces
+
+@enduml

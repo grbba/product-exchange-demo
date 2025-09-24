@@ -1,0 +1,78 @@
+@startuml Figure 5: Feature
+' title Feature Requirements
+' skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 100
+skinparam ranksep 60
+hide empty members
+
+package "Layer 1: Product Definition - Feature" as L1F {
+' === Feature Core ===
+
+enum MultiplicitySemantics {
+  +UNIQUE 
+  +COMPOSITIONAL
+  +ALTERNATIVES 
+} 
+
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+  +featureValueSemantics: MultiplicitySemantics
+}
+
+'note left of Feature
+'<b>"Any"</b> means that the 
+'way to identify a 
+'feature needs 
+'to be determined.
+'end note
+
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +name
+  +unit
+}
+
+class SingleValue {
+  +value
+}
+
+class DiscreteSet {
+  +values: List
+}
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+
+
+class ReferenceSystem {
+  <b>note</b>: see reference system 
+  section for more details.
+}
+
+
+
+FeatureValue <|--- SingleValue
+FeatureValue <|--- ValueRange
+FeatureValue <|--- DiscreteSet
+
+Feature "1" *-d-> "1..n" FeatureValue : values {ordered}
+FeatureValue <--r-- ReferenceSystem : overides default <
+Feature <--r-- ReferenceSystem : default applies to <
+
+note top of Feature
+All values for a given 
+Feature MUST share the same subtype: 
+(SingleValue | ValueRange | DiscreteSet).
+end note
+
+
+}
+
+@enduml

@@ -1,0 +1,404 @@
+@startuml
+' ------------------------------------------------------------
+' Meta-model: TransportProduct + Feature / FeatureValue pattern
+' ------------------------------------------------------------
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 100
+
+package "Layer 1: Product Definition" as L1 {
+
+  class TransportProduct {
+    +productID : String
+    +supplierOperator : String
+    +modeOfTransport : ModeOfTransport
+    +retailStatus : RetailStatus
+  }
+
+  class Validity {
+    +validFrom : Date
+    +validTo : Date
+  }
+
+  ' Optional taxonomy facets bundled for retail/UX
+  class Taxonomy {
+    +geographicScope : GeographicScope
+    +segmentType : TransportSegmentType
+    +modeTag : ModeOfTransport
+    +productExperience : ProductExperience  ' altLabel: Comfort Profile
+  }
+
+  ' --- Feature pattern (from your model) ---
+  class Feature {
+    +identifier : Any
+    +name : Text
+    +description : Text
+    +referenceSystem : Text   ' points to RS code/URI (IATA, UIC, apmwg, etc.)
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+  class SingleValue {
+    +value
+  }
+  class ValueRange {
+    +minValue
+    +maxValue
+  }
+  class DiscreteSet {
+    +allowedValues : List
+  }
+
+  FeatureValue <|-- SingleValue
+  FeatureValue <|-- ValueRange
+  FeatureValue <|-- DiscreteSet
+
+  Feature "1" --> "1" FeatureValue : has exactly
+  TransportProduct "1" *-- "1" Validity
+  TransportProduct "1" *-- "0..1" Taxonomy
+  TransportProduct "1" *-- "1..*" Feature : has >
+
+  ' --- Enums used across products ---
+  enum ModeOfTransport {
+    Air
+    Rail
+    BusCoach
+    Ferry
+  }
+
+  enum RetailStatus {
+    Active
+    Suspended
+    Withdrawn
+  }
+
+  enum GeographicScope {
+    Domestic
+    Regional
+    International
+    Intercontinental
+  }
+
+  enum TransportSegmentType {
+    Feeder
+    Intercity
+    LongHaul
+    Overnight
+    Shuttle
+    AirportFeeder
+  }
+
+  enum ProductExperience {
+    Basic
+    Standard
+    Premium
+    High
+    Mixed
+  }
+
+  enum ServiceTopology {
+    Direct
+    WithStops
+    Shuttle
+    PointToPoint
+    TechnicalStopNoPax
+  }
+
+  enum SeatGuaranteeType {
+    GuaranteedSeat
+    StandingPossible
+    BerthOrSeatRequired
+  }
+
+}
+
+' ------------------------------------------------------------
+' Instances: Test Case 1 – Air (CDG -> JFK, Air France)
+' ------------------------------------------------------------
+package "Instances" as INST {
+
+  object "TransportProduct\nTP-FR-AF-CDG-JFK" as TP1 {
+    productID = TP-FR-AF-CDG-JFK
+    supplierOperator = Air France
+    modeOfTransport = Air
+    retailStatus = Active
+  }
+
+  object "Validity\nvalidFrom=2025-10-29\nvalidTo=2026-03-29" as VLD1
+  object "Taxonomy\ngeographicScope=Intercontinental\nsegmentType=LongHaul\nmodeTag=Air\nproductExperience=High" as TAX1
+
+  TP1 *-- VLD1
+  TP1 *-- TAX1
+
+  object "Feature\norigin\nrefSys=IATA-Airport" as A_F1
+  object "Feature\ndestination\nrefSys=IATA-Airport" as A_F2
+  object "Feature\nserviceTopology\nrefSys=apmwg:Topology" as A_F3
+  object "Feature\nnominalDuration\nrefSys=ISO-8601-Duration" as A_F4
+  object "Feature\nserviceClassesAvailable\nrefSys=Airline-Cabin-Classes" as A_F5
+  object "Feature\nseatGuaranteeType\nrefSys=apmwg:SeatGuarantee" as A_F6
+  object "Feature\naccessibilityPromise\nrefSys=Accessibility-Catalog" as A_F7
+  object "Feature\noperationalVehicleType\nrefSys=IATA-AircraftTypes" as A_F8
+  object "Feature\noperationalDaysOfWeek\nrefSys=ISO-Weekday" as A_F9
+
+  TP1 *-- A_F1
+  TP1 *-- A_F2
+  TP1 *-- A_F3
+  TP1 *-- A_F4
+  TP1 *-- A_F5
+  TP1 *-- A_F6
+  TP1 *-- A_F7
+  TP1 *-- A_F8
+  TP1 *-- A_F9
+
+  object "SingleValue\nCDG" as A_V1
+  object "SingleValue\nJFK" as A_V2
+  object "SingleValue\nDirect" as A_V3
+  object "ValueRange\nmin=PT7H50M\nmax=PT8H45M" as A_V4
+  object "DiscreteSet\n{Economy, PremiumEconomy, Business, First}" as A_V5
+  object "SingleValue\nGuaranteedSeat" as A_V6
+  object "DiscreteSet\n{WheelchairAssistance, JetBridgeBoarding}" as A_V7
+  object "DiscreteSet\n{Widebody, A350-900, B777-300ER}" as A_V8
+  object "DiscreteSet\n{Mon, Wed, Fri, Sun}" as A_V9
+
+  A_F1 --> A_V1
+  A_F2 --> A_V2
+  A_F3 --> A_V3
+  A_F4 --> A_V4
+  A_F5 --> A_V5
+  A_F6 --> A_V6
+  A_F7 --> A_V7
+  A_F8 --> A_V8
+  A_F9 --> A_V9
+
+  note right of A_F3
+  Air = “right to fly” direct; tech stop allowed with no pax
+  end note
+
+' ------------------------------------------------------------
+' Instances: Test Case 2 – Rail (Amsterdam Centraal -> Schiphol, NS)
+' ------------------------------------------------------------
+
+  object "TransportProduct\nTP-NL-NS-AMSCS-AMSAP" as TP2 {
+    productID = TP-NL-NS-AMSCS-AMSAP
+    supplierOperator = Nederlandse Spoorwegen
+    modeOfTransport = Rail
+    retailStatus = Active
+  }
+
+  object "Validity\nvalidFrom=2025-01-01\nvalidTo=open" as VLD2
+  object "Taxonomy\ngeographicScope=Domestic\nsegmentType=AirportFeeder\nmodeTag=Rail\nproductExperience=Standard" as TAX2
+
+  TP2 *-- VLD2
+  TP2 *-- TAX2
+
+  object "Feature\norigin\nrefSys=UIC-Station" as R_F1
+  object "Feature\ndestination\nrefSys=UIC-Station" as R_F2
+  object "Feature\nserviceTopology\nrefSys=apmwg:Topology" as R_F3
+  object "Feature\nnominalDuration\nrefSys=ISO-8601-Duration" as R_F4
+  object "Feature\nserviceClassesAvailable\nrefSys=Rail-Classes" as R_F5
+  object "Feature\nseatGuaranteeType\nrefSys=apmwg:SeatGuarantee" as R_F6
+  object "Feature\naccessibilityPromise\nrefSys=Accessibility-Catalog" as R_F7
+  object "Feature\noperationalVehicleType\nrefSys=Rail-RollingStock" as R_F8
+  object "Feature\noperationalDaysOfWeek\nrefSys=ISO-Weekday" as R_F9
+
+  TP2 *-- R_F1
+  TP2 *-- R_F2
+  TP2 *-- R_F3
+  TP2 *-- R_F4
+  TP2 *-- R_F5
+  TP2 *-- R_F6
+  TP2 *-- R_F7
+  TP2 *-- R_F8
+  TP2 *-- R_F9
+
+  object "SingleValue\n8400058" as R_V1   
+  ' Amsterdam Centraal (example)
+  object "SingleValue\n8400621" as R_V2   
+  ' Schiphol Airport (example)
+  object "SingleValue\nShuttle" as R_V3
+  object "ValueRange\nmin=PT0H12M\nmax=PT0H20M" as R_V4
+  object "DiscreteSet\n{SecondClass, FirstClass}" as R_V5
+  object "SingleValue\nStandingPossible" as R_V6
+  object "DiscreteSet\n{StepFreeBoarding, WheelchairSpaces}" as R_V7
+  object "DiscreteSet\n{HighSpeed-EMU, ICNG}" as R_V8
+  object "DiscreteSet\n{Mon, Tue, Wed, Thu, Fri, Sat, Sun}" as R_V9
+
+  R_F1 --> R_V1
+  R_F2 --> R_V2
+  R_F3 --> R_V3
+  R_F4 --> R_V4
+  R_F5 --> R_V5
+  R_F6 --> R_V6
+  R_F7 --> R_V7
+  R_F8 --> R_V8
+  R_F9 --> R_V9
+
+' ------------------------------------------------------------
+' Instances: Test Case 3 – Bus/Coach (London Victoria -> Heathrow)
+' ------------------------------------------------------------
+
+  object "TransportProduct\nTP-UK-NATEXP-LONVIC-LHR" as TP3 {
+    productID = TP-UK-NATEXP-LONVIC-LHR
+    supplierOperator = National Express
+    modeOfTransport = BusCoach
+    retailStatus = Active
+  }
+
+  object "Validity\nvalidFrom=2025-01-01\nvalidTo=open" as VLD3
+  object "Taxonomy\ngeographicScope=Domestic\nsegmentType=AirportFeeder\nmodeTag=BusCoach\nproductExperience=Standard" as TAX3
+
+  TP3 *-- VLD3
+  TP3 *-- TAX3
+
+  object "Feature\norigin\nrefSys=GB-NaPTAN|LocalStopCode" as B_F1
+  object "Feature\ndestination\nrefSys=GB-NaPTAN|LocalStopCode" as B_F2
+  object "Feature\nserviceTopology\nrefSys=apmwg:Topology" as B_F3
+  object "Feature\nnominalDuration\nrefSys=ISO-8601-Duration" as B_F4
+  object "Feature\nserviceClassesAvailable\nrefSys=Coach-Classes" as B_F5
+  object "Feature\nseatGuaranteeType\nrefSys=apmwg:SeatGuarantee" as B_F6
+  object "Feature\naccessibilityPromise\nrefSys=Accessibility-Catalog" as B_F7
+  object "Feature\noperationalVehicleType\nrefSys=Coach-VehicleTypes" as B_F8
+  object "Feature\noperationalDaysOfWeek\nrefSys=ISO-Weekday" as B_F9
+
+  TP3 *-- B_F1
+  TP3 *-- B_F2
+  TP3 *-- B_F3
+  TP3 *-- B_F4
+  TP3 *-- B_F5
+  TP3 *-- B_F6
+  TP3 *-- B_F7
+  TP3 *-- B_F8
+  TP3 *-- B_F9
+
+  object "SingleValue\nLondon Victoria Coach Station" as B_V1
+  object "SingleValue\nHeathrow Central Bus Station" as B_V2
+  object "SingleValue\nDirect" as B_V3
+  object "ValueRange\nmin=PT0H45M\nmax=PT1H20M" as B_V4
+  object "DiscreteSet\n{Standard}" as B_V5
+  object "SingleValue\nGuaranteedSeat" as B_V6
+  object "DiscreteSet\n{WheelchairLift, PrioritySeating, ServiceAnimalsPermitted}" as B_V7
+  object "DiscreteSet\n{LongDistanceCoach}" as B_V8
+  object "DiscreteSet\n{Mon, Tue, Wed, Thu, Fri, Sat, Sun}" as B_V9
+
+  B_F1 --> B_V1
+  B_F2 --> B_V2
+  B_F3 --> B_V3
+  B_F4 --> B_V4
+  B_F5 --> B_V5
+  B_F6 --> B_V6
+  B_F7 --> B_V7
+  B_F8 --> B_V8
+  B_F9 --> B_V9
+
+' ------------------------------------------------------------
+' Instances: Test Case 4 – Ferry (Stockholm -> Helsinki, Viking Line)
+' ------------------------------------------------------------
+
+  object "TransportProduct\nTP-SE-VIKING-STO-HEL" as TP4 {
+    productID = TP-SE-VIKING-STO-HEL
+    supplierOperator = Viking Line
+    modeOfTransport = Ferry
+    retailStatus = Active
+  }
+
+  object "Validity\nvalidFrom=2025-04-01\nvalidTo=2025-10-31" as VLD4
+  object "Taxonomy\ngeographicScope=International\nsegmentType=Overnight\nmodeTag=Ferry\nproductExperience=Mixed" as TAX4
+
+  TP4 *-- VLD4
+  TP4 *-- TAX4
+
+  object "Feature\norigin\nrefSys=UN/LOCODE" as F_F1
+  object "Feature\ndestination\nrefSys=UN/LOCODE" as F_F2
+  object "Feature\nintermediateStops\nrefSys=UN/LOCODE" as F_F3
+  object "Feature\nserviceTopology\nrefSys=apmwg:Topology" as F_F4
+  object "Feature\nnominalDuration\nrefSys=ISO-8601-Duration" as F_F5
+  object "Feature\nserviceClassesAvailable\nrefSys=Ferry-Classes" as F_F6
+  object "Feature\nseatGuaranteeType\nrefSys=apmwg:SeatGuarantee" as F_F7
+  object "Feature\naccessibilityPromise\nrefSys=Accessibility-Catalog" as F_F8
+  object "Feature\noperationalVehicleType\nrefSys=Ship-Types" as F_F9
+  object "Feature\noperationalDaysOfWeek\nrefSys=ISO-Weekday" as F_F10
+
+  TP4 *-- F_F1
+  TP4 *-- F_F2
+  TP4 *-- F_F3
+  TP4 *-- F_F4
+  TP4 *-- F_F5
+  TP4 *-- F_F6
+  TP4 *-- F_F7
+  TP4 *-- F_F8
+  TP4 *-- F_F9
+  TP4 *-- F_F10
+
+  object "SingleValue\nSE STO" as F_V1
+  object "SingleValue\nFI HEL" as F_V2
+  object "DiscreteSet\n{AX MHQ}" as F_V3    
+  ' Mariehamn
+  object "SingleValue\nWithStops" as F_V4
+  object "ValueRange\nmin=PT15H\nmax=PT17H" as F_V5
+  object "DiscreteSet\n{DeckTicket, Cabin, Suite}" as F_V6
+  object "SingleValue\nBerthOrSeatRequired" as F_V7
+  object "DiscreteSet\n{StepFreeAccess, AdaptedCabins, AssistanceOnRequest}" as F_V8
+  object "DiscreteSet\n{RoPaxFerry}" as F_V9
+  object "DiscreteSet\n{Fri, Sun}" as F_V10
+
+  F_F1 --> F_V1
+  F_F2 --> F_V2
+  F_F3 --> F_V3
+  F_F4 --> F_V4
+  F_F5 --> F_V5
+  F_F6 --> F_V6
+  F_F7 --> F_V7
+  F_F8 --> F_V8
+  F_F9 --> F_V9
+  F_F10 --> F_V10
+
+}
+
+' ------------------------------------------------------------
+' Business rule annotation for Air topology
+' ------------------------------------------------------------
+note bottom of L1 
+' ::ServiceTopology
+Mode-specific rule:
+- Air TransportProduct = "Right to Fly" Direct O→D
+  (exception: TechnicalStopNoPax allowed)
+- Rail/Bus/Ferry may be Direct, WithStops, Shuttle, etc.
+end note
+
+@enduml
+
+
+object "Feature_Origin : Feature" as Feature_Origin {
+    name = "Origin"
+    description = "Point of departure"
+  }
+  object "Feature_Destination : Feature" as Feature_Destination {
+    name = "Destination"
+    description = "Point of arrival"
+  }
+
+  object "Feature_TransportMode : Feature" as Feature_TransportMode{
+    name = "Transport Mode"
+    description = "Mode of transport (Air, Rail...)"
+  }
+
+  object "Feature_Validity : Feature" as Feature_Validity{
+    name = "Validity Period"
+    description = "Date range of product validity"
+  }
+
+  Feature_Origin --> SingleValue
+  Feature_Destination --> SingleValue
+  Feature_TransportMode --> DiscreteSet
+  Feature_Validity --> ValueRange
+
+  object "LH1234_Economy : TransportProduct" as LH1234_Economy {
+    identifier = "LH1234_ECO"
+    name = "Flight LH1234 Economy Class"
+  }
+
+  LH1234_Economy *-- Feature_Origin
+  LH1234_Economy *-- Feature_Destination
+  LH1234_Economy *-- Feature_TransportMode
+  LH1234_Economy *-- Feature_Validity

@@ -1,0 +1,90 @@
+@startuml
+!include <archimate/archimate>
+
+title IATA APMWG Taxonomy Conceptual Model
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam class {
+    BackgroundColor White
+    ArrowColor Black
+    BorderColor Black
+}
+
+' === Core Concept ===
+class Concept <<$archimate/business-object>> {
+  id: Identifier
+  status: ConceptStatus
+  scopeNote: Text
+  createdDate: Date
+  modifiedDate: Date
+}
+
+' === Term Representation (preferred and non-preferred) ===
+class Term {
+  label: Text
+  language: Language
+  type: TermType
+  source: Text
+}
+
+enum TermType {
+  Preferred
+  NonPreferred
+  Compound
+}
+
+enum ConceptStatus {
+  Active
+  Deprecated
+  Candidate
+}
+
+' === Self-referencing semantic relationships ===
+Concept "0..*" --> "0..*" Concept : broader / narrower
+Concept "0..*" --> "0..*" Concept : related
+
+' === Labeling and synonymy ===
+Concept "1" o-- "1..*" Term : hasTerm
+
+Term --> TermType
+Concept --> ConceptStatus
+
+' === Facet (semantic grouping) ===
+class Facet {
+  name: Text
+  description: Text
+}
+
+Facet "1" o-- "0..*" Concept : groups
+
+' === Cross-Thesaurus Mapping ===
+class ConceptMapping {
+  sourceConceptId: Identifier
+  targetConceptId: Identifier
+  relation: MappingRelation
+  sourceThesaurus: Text
+  targetThesaurus: Text
+}
+
+enum MappingRelation {
+  ExactMatch
+  CloseMatch
+  BroadMatch
+  NarrowMatch
+  RelatedMatch
+}
+
+ConceptMapping --> MappingRelation
+ConceptMapping --> Concept : source
+ConceptMapping --> Concept : target
+
+' === Concept Coordination (e.g., "female pilot") ===
+class CoordinatedConcept {
+  id: Identifier
+  label: Text
+}
+
+CoordinatedConcept "1" *-- "2..*" Concept : composedOf
+
+@enduml

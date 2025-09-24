@@ -1,0 +1,27 @@
+
+@startuml current_ndc_problems
+!theme plain
+title Current NDC: "Dumb Shopping" Problem
+
+actor Retailer
+participant "Airline A" as A1
+participant "Airline B" as A2 
+participant "Airline C" as A3
+
+Retailer -> A1 : Search request
+A1 -> Retailer : Opaque offer "Flex Economy $580"
+
+Retailer -> A2 : Search request
+A2 -> Retailer : Opaque offer "Business Saver $620"
+
+Retailer -> A3 : Search request  
+A3 -> Retailer : Opaque offer "Premium $590"
+
+note over Retailer : Cannot compare intelligently:\n• What's included?\n• Change policies?\n• Must make MORE requests!
+
+Retailer -> A1 : More requests...
+Retailer -> A2 : More requests...
+Retailer -> A3 : More requests...
+
+note right : Result:\nLook-to-book 1000:1\nMassive "fishing" costs
+@enduml

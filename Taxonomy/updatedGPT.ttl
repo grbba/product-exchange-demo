@@ -1,0 +1,179 @@
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix apmwg: <https://taxonomy.apmwg.ovh#> .
+
+### Parent grouping for all taxonomy facets relevant to transport
+apmwg:TransportAttributes a skos:Collection ;
+    skos:prefLabel "Transport Attributes"@en ;
+    skos:member apmwg:ModeOfTransport , 
+                apmwg:Topology , 
+                apmwg:GeographicScope , 
+                apmwg:SegmentType , 
+                apmwg:ProductExperience ;
+    skos:broader apmwg:TransportProduct .
+
+### Mode of Transport
+apmwg:ModeOfTransport a skos:Collection ;
+    skos:prefLabel "Mode of Transport"@en ;
+    skos:member apmwg:Air , apmwg:Rail , apmwg:BusCoach , apmwg:Ferry ;
+    skos:broader apmwg:TransportAttributes .
+
+apmwg:Air a skos:Concept ;
+    skos:prefLabel "Air"@en ;
+    skos:definition "Transport by airplane, jet, or other aircraft."@en ;
+    skos:broader apmwg:ModeOfTransport .
+
+apmwg:Rail a skos:Concept ;
+    skos:prefLabel "Rail"@en ;
+    skos:definition "Transport by train or other rail-based systems."@en ;
+    skos:broader apmwg:ModeOfTransport .
+
+apmwg:BusCoach a skos:Concept ;
+    skos:prefLabel "Bus/Coach"@en ;
+    skos:definition "Transport by bus or long-distance coach services."@en ;
+    skos:broader apmwg:ModeOfTransport .
+
+apmwg:Ferry a skos:Concept ;
+    skos:prefLabel "Ferry"@en ;
+    skos:definition "Transport by ferry or other ship-based scheduled service."@en ;
+    skos:broader apmwg:ModeOfTransport .
+
+### Topology / Routing
+apmwg:Topology a skos:Collection ;
+    skos:prefLabel "Topology / Routing"@en ;
+    skos:member apmwg:Direct , apmwg:WithStops , apmwg:Shuttle , apmwg:TechnicalStopNoPax ;
+    skos:broader apmwg:TransportAttributes .
+
+apmwg:Direct a skos:Concept ;
+    skos:prefLabel "Direct"@en ;
+    skos:definition "Transport service without passenger stops between origin and destination."@en ;
+    skos:broader apmwg:Topology .
+
+apmwg:WithStops a skos:Concept ;
+    skos:prefLabel "With Stops"@en ;
+    skos:definition "Transport service with scheduled passenger stops between origin and destination."@en ;
+    skos:broader apmwg:Topology .
+
+apmwg:Shuttle a skos:Concept ;
+    skos:prefLabel "Shuttle"@en ;
+    skos:definition "Point-to-point service, typically frequent and short-distance."@en ;
+    skos:broader apmwg:Topology .
+
+apmwg:TechnicalStopNoPax a skos:Concept ;
+    skos:prefLabel "Technical Stop (No Pax)"@en ;
+    skos:definition "Intermediate stop for operational reasons (refuelling, crew) without passenger embarkation or disembarkation."@en ;
+    skos:broader apmwg:Topology .
+
+### Geographic Scope
+apmwg:GeographicScope a skos:Collection ;
+    skos:prefLabel "Geographic Scope"@en ;
+    skos:member apmwg:Domestic , apmwg:Regional , apmwg:International , apmwg:Intercontinental ;
+    skos:broader apmwg:TransportAttributes .
+
+apmwg:Domestic a skos:Concept ;
+    skos:prefLabel "Domestic"@en ;
+    skos:definition "Transport within a single country."@en ;
+    skos:broader apmwg:GeographicScope .
+
+apmwg:Regional a skos:Concept ;
+    skos:prefLabel "Regional"@en ;
+    skos:definition "Transport across a limited region, typically within a continent or subregion."@en ;
+    skos:broader apmwg:GeographicScope .
+
+apmwg:International a skos:Concept ;
+    skos:prefLabel "International"@en ;
+    skos:definition "Transport crossing national borders."@en ;
+    skos:broader apmwg:GeographicScope .
+
+apmwg:Intercontinental a skos:Concept ;
+    skos:prefLabel "Intercontinental"@en ;
+    skos:definition "Transport connecting two or more continents."@en ;
+    skos:broader apmwg:GeographicScope .
+
+### Segment / Service Type
+apmwg:SegmentType a skos:Collection ;
+    skos:prefLabel "Segment / Service Type"@en ;
+    skos:member apmwg:Feeder , apmwg:Intercity , apmwg:LongHaul , apmwg:Overnight , apmwg:ShuttleService ;
+    skos:broader apmwg:TransportAttributes .
+
+apmwg:Feeder a skos:Concept ;
+    skos:prefLabel "Feeder"@en ;
+    skos:definition "Short-haul service feeding passengers into longer-haul or mainline networks."@en ;
+    skos:broader apmwg:SegmentType .
+
+apmwg:Intercity a skos:Concept ;
+    skos:prefLabel "Intercity"@en ;
+    skos:definition "Service connecting major cities, usually medium distance."@en ;
+    skos:broader apmwg:SegmentType .
+
+apmwg:LongHaul a skos:Concept ;
+    skos:prefLabel "Long Haul"@en ;
+    skos:definition "Service covering long distances, typically overnight or intercontinental."@en ;
+    skos:broader apmwg:SegmentType .
+
+apmwg:Overnight a skos:Concept ;
+    skos:prefLabel "Overnight"@en ;
+    skos:definition "Service that operates overnight with arrival the following day."@en ;
+    skos:broader apmwg:SegmentType .
+
+apmwg:ShuttleService a skos:Concept ;
+    skos:prefLabel "Shuttle Service"@en ;
+    skos:definition "Frequent, short-haul service often operating at high frequency between fixed points."@en ;
+    skos:broader apmwg:SegmentType .
+
+### Product Experience (altLabel Comfort Profile)
+apmwg:ProductExperience skos:altLabel "Comfort Profile"@en ;
+    skos:narrower apmwg:Basic , apmwg:Standard , apmwg:Premium , apmwg:High ;
+    skos:broader apmwg:TransportAttributes .
+
+apmwg:Basic a skos:Concept ;
+    skos:prefLabel "Basic"@en ;
+    skos:definition "Lowest comfort profile, limited amenities."@en ;
+    skos:broader apmwg:ProductExperience .
+
+apmwg:Standard a skos:Concept ;
+    skos:prefLabel "Standard"@en ;
+    skos:definition "Regular comfort profile, average amenities."@en ;
+    skos:broader apmwg:ProductExperience .
+
+apmwg:Premium a skos:Concept ;
+    skos:prefLabel "Premium"@en ;
+    skos:definition "Higher comfort profile with enhanced services or seating."@en ;
+    skos:broader apmwg:ProductExperience .
+
+apmwg:High a skos:Concept ;
+    skos:prefLabel "High"@en ;
+    skos:definition "Top comfort profile, luxury-level service and amenities."@en ;
+    skos:broader apmwg:ProductExperience .
+
+### Broader and Narrower links to existing facets
+
+
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix apmwg: <https://taxonomy.apmwg.ovh#> .
+
+### Mode of Transport ↔ Transport Mode
+apmwg:ModeOfTransport skos:broader apmwg:12AZYHGL ;
+    skos:inScheme apmwg:APMWGTransportProductScheme .
+apmwg:12AZYHGL skos:narrower apmwg:ModeOfTransport .
+
+### Topology / Routing ↔ Transport Duration
+apmwg:Topology skos:broader apmwg:4QN4PC8S ;
+    skos:inScheme apmwg:APMWGTransportProductScheme .
+apmwg:4QN4PC8S skos:narrower apmwg:Topology .
+
+### Segment / Service Type ↔ Transport Duration
+apmwg:SegmentType skos:broader apmwg:4QN4PC8S ;
+    skos:inScheme apmwg:APMWGTransportProductScheme .
+apmwg:4QN4PC8S skos:narrower apmwg:SegmentType .
+
+### Geographic Scope ↔ Geography
+apmwg:GeographicScope skos:broader apmwg:NYBKU16D ;
+    skos:inScheme apmwg:APMWGTransportProductScheme .
+apmwg:NYBKU16D skos:narrower apmwg:GeographicScope .
+
+### Product Experience (Comfort Profile) ↔ Onboard Experience
+apmwg:ProductExperience skos:broader apmwg:VEW3D584 ;
+    skos:inScheme apmwg:APMWGTransportProductScheme .
+apmwg:VEW3D584 skos:narrower apmwg:ProductExperience .
+
+

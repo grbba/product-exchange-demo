@@ -1,0 +1,1349 @@
+
+@startuml
+title Reference Systems – IATA Airport Codes and UNECE Rec 20
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Core Reference System Model ===
+class ReferenceSystem {
+  +systemID: String
+  +systemType: ReferenceSystemType
+  +description: String
+}
+
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+class ExternalReference {
+  +authority: String
+  +resourceName: String
+  +resourceType: String
+  +url: String
+}
+
+ReferenceSystem --> ExternalReference : references
+ReferenceSystemType -[hidden]-> ReferenceSystem
+
+' === Concrete: IATA Airport Codes ===
+class RS_IATA_AIRPORT {
+  systemID = "RS-IATA-AIRPORT-001"
+  systemType = Enumeration
+  description = "IATA 3-letter airport codes for identifying airports"
+}
+
+class IATA_External {
+  authority = "IATA"
+  resourceName = "IATA Airline and Airport Code Directory"
+  resourceType = "Enumeration"
+  url = "https://www.iata.org/en/publications/directories/code-search/"
+}
+
+RS_IATA_AIRPORT --> IATA_External
+
+' === Concrete: UNECE Rec 20 Units ===
+class RS_UNECE_REC20 {
+  systemID = "RS-UNECE-REC20"
+  systemType = Measurement
+  description = "UNECE Rec 20: Codes for Units of Measure used in international trade"
+}
+
+
+class UNECE_ExternalRef {
+  authority = "UNECE"
+  resourceName = "Recommendation No. 20"
+  resourceType = "CodeList"
+  url = "https://unece.org/trade/cefact/recommendations/rec20"
+}
+
+note bottom
+this is part of the product schema layer as it is used togetehr with the
+features of a product defined at this level the concrete product will just 
+inherit the refebce system as fixed value
+end note
+RS_UNECE_REC20 --> UNECE_ExternalRef
+' === Private Airline Code System ===
+class RS_CUSTOM_AIRLINES {
+  systemID = "RS-CUSTOM-AIRLINES-001"
+  systemType = CodeSystem
+  description = "Internally agreed airline codes for partner-specific use cases"
+}
+
+class InternalAirlineRef {
+  authority = "Retailer-Supplier Agreement"
+  resourceName = "Custom Airline Code List"
+  resourceType = "CodeList"
+  url = "n/a"
+}
+
+RS_CUSTOM_AIRLINES --> InternalAirlineRef
+@enduml
+
+@startuml
+title ReferenceSystem – with System Type and Dual Source (External/Internal)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Reference System Core Class ===
+class ReferenceSystem {
+  +systemID: String
+  +description: String
+  +systemType: ReferenceSystemType
+}
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: String
+  +resourceName: String
+  +resourceType: String
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +url: String
+}
+
+class InternalReference {
+  +repositoryName: String
+  +version: String
+}
+
+' === Relationships ===
+ReferenceSystem --> ReferenceSystemType : type
+ReferenceSystem --> ReferenceSource : definedBy
+
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+class RS_IATA << ReferenceSystem>> {
+  systemID = "RS-IATA-AIRPORT-001"
+  description = "IATA 3-letter airport codes"
+  systemType = Enumeration
+}
+
+class IATARef <<ExternalRefrence>> {
+  authority = "IATA"
+  resourceName = "IATA Airline and Airport Code Directory"
+  resourceType = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/"
+}
+
+RS_IATA --> IATARef
+
+class RS_CUSTOM_AIRLINE << ReferenceSystem>> {
+  systemID = "RS-CUSTOM-AIRLINE-001"
+  description = "Internally agreed airline codes for special partners"
+  systemType = CodeSystem
+}
+
+class InternalRef <<InternalReference>> {
+  authority = "Retailer-Supplier Group"
+  resourceName = "Private Airline Code Registry"
+  resourceType = "CodeList"
+  repositoryName = "Retailer Master Data Hub"
+  version = "2025.2"
+}
+
+RS_CUSTOM_AIRLINE --> InternalRef
+
+RS_IATA .....r..> ReferenceSystem : > instance of
+
+@enduml
+@startuml
+title Feature Model with Single, Range and Discrete Set Values
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Feature ===
+class Feature {
+  +featureID: String
+  +name: String
+  +description: String
+}
+
+Feature --> FeatureValue : has
+Feature --> ReferenceSystem : constrainedBy
+
+' === Reference System ===
+class ReferenceSystem {
+  +systemID: String
+  +systemType: ReferenceSystemType
+  +description: String
+}
+
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Feature Values (abstract + subtypes) ===
+abstract class FeatureValue {
+  +unit: String
+}
+
+class SingleValue {
+  +value: String
+}
+
+class ValueRange {
+  +minValue: String
+  +maxValue: String
+}
+
+class DiscreteSet {
+  +allowedValues: List<String>
+}
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+@enduml
+@startuml
+' title Feature Requirements
+
+' skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Feature Core ===
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+  +reference: ReferenceSystem
+}
+
+note right of Feature
+<b>"Any"</b> means that the way to identify a 
+feature needs to be deteremined.
+end note
+
+' === Reference System ===
+/'class ReferenceSystem {
+  +systemID: String
+  +systemType: ReferenceSystemType
+  +description: String
+}
+
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+Feature "1" ---> "1" ReferenceSystem : constrained by >
+'/
+
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +unit
+}
+
+class SingleValue {
+  +value
+}
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+class DiscreteSet {
+  +allowedValues: List
+}
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+Feature "1" --> "1" FeatureValue : has exactly one >
+
+@enduml
+
+@startuml
+title Product Class: Transport & Instance: CDG to JFK Flight
+
+skinparam classAttributeIconSize 0
+
+' === Transport Product Class ===
+object "Product: TransportSchema" as TransportSchema {
+  identifier = "Transport"
+  name = "Generic Transport"
+  description = "Transport product with a departure and arrival location and mode"
+}
+
+object "Feature: departureStation" as DepartureF {
+  featureID = "departureStation"
+  name = "Departure Station"
+}
+
+object "Feature: arrivalStation" as ArrivalF {
+  featureID = "arrivalStation"
+  name = "Arrival Station"
+}
+
+object "Feature: transportMode" as ModeF {
+  featureID = "transportMode"
+  name = "Transport Mode"
+}
+
+TransportSchema --> DepartureF : defines
+TransportSchema --> ArrivalF : defines
+TransportSchema --> ModeF : defines
+
+' === Reference System for Locations ===
+object "ReferenceSystem: IATA Airport Codes" as IATA {
+  systemID = "RS-IATA-AIRPORT-CODES"
+  systemType = CodeSystem
+  description = "IATA 3-letter airport codes"
+}
+
+object "ExternalReference: IATA" as IATAExt {
+  authority = "IATA"
+  resourceName = "IATA Airport Codes"
+  resourceType = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/"
+}
+
+DepartureF --> IATA : constrainedBy
+ArrivalF --> IATA : constrainedBy
+IATA --> IATAExt : definedBy
+ModeF --> RS_TransportModes: constrained by
+
+' === Core Reference System ===
+object "ReferenceSystem: Transport Modes" as RS_TransportModes {
+  systemID = "RS-INTERNAL-TRANSPORT-MODES"
+  description = "Internally maintained list of allowed transport modes"
+  systemType = Enumeration
+}
+
+' === Internal Reference Source ===
+object "InternalReference: Transport Modes Enum" as InternalSource {
+  authority = "Retailer Supplier Domain"
+  resourceName = "TransportModes"
+  resourceType = "Enumeration"
+  repositoryName = "ProductDataRepo"
+  version = "1.0.0"
+}
+
+' === Allowed Transport Modes ===
+object "Mode: air" as AirMode {
+  value = "air"
+}
+object "Mode: rail" as RailMode {
+  value = "rail"
+}
+object "Mode: road" as RoadMode {
+  value = "road"
+}
+object "Mode: sea" as SeaMode {
+  value = "sea"
+}
+
+' === Relationships ===
+RS_TransportModes --> InternalSource : definedBy
+RS_TransportModes --> AirMode : includes
+RS_TransportModes --> RailMode : includes
+RS_TransportModes --> RoadMode : includes
+RS_TransportModes --> SeaMode : includes
+
+
+' === Instance: Flight from CDG to JFK ===
+/'
+object "Product: CDG to JFK Flight" as CDGJFK {
+  productID = "FLIGHT-CDG-JFK-001"
+  name = "Flight from CDG to JFK"
+  productClass = "Transport"
+}
+
+object "Value: CDG" as CDGVal {
+  value = "CDG"
+  unit = ""
+}
+
+object "Value: JFK" as JFKVal {
+  value = "JFK"
+  unit = ""
+}
+
+object "Value: air" as AirVal {
+  value = "air"
+  unit = ""
+}
+
+CDGJFK --> DepartureF : hasFeature
+CDGJFK --> ArrivalF : hasFeature
+CDGJFK --> ModeF : hasFeature
+
+DepartureF --> CDGVal : hasValue
+ArrivalF --> JFKVal : hasValue
+ModeF --> AirVal : hasValue
+'/
+@enduml
+@startuml
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Core Model" {
+
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+
+' Features that describe a product
+class Feature {
+  note: see feature section 
+  for more details
+}
+
+LifecycleStatus  .d.> StatusCode
+
+  class Product {
+    +identifier
+    +type
+    +name : Text
+    +description : Text
+  }
+
+  class Feature {
+    +identifier: Any
+    +name: Text
+    +description: Text
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+
+  class SingleValue {
+    +value
+  }
+
+  class ValueRange {
+    +minValue
+    +maxValue
+  }
+
+  class DiscreteSet {
+    +allowedValues: List
+  }
+
+  FeatureValue <|-- SingleValue
+  FeatureValue <|-- ValueRange
+  FeatureValue <|-- DiscreteSet
+
+  Feature --> FeatureValue : has exactly one >
+
+  Product "1" *-- "1..*" Feature : has >
+}
+
+' === Layer 2: Product Class Specialization ===
+package "Layer 2: Product Class: TransportProduct" {
+
+  enum TransportMode {
+    Air
+    Rail
+    Bus
+    Ferry
+    Car
+    Other
+  }
+
+  TransportProduct --> TransportMode: uses >
+
+  class TransportProduct {
+    +transportMode: TransportMode
+    +origin: Location
+    +destination: Location
+    +validityPeriod: DateRange
+  }
+
+  Product <|-- TransportProduct
+
+  note right of TransportProduct
+    Domain-specific attributes like:
+    - transportMode
+    - origin/destination
+    - validityPeriod
+    are represented as Feature instances
+    attached to the base Product
+  end note
+}
+
+' === Layer 3: Feature Mapping Example ===
+package "Layer 3: Feature Instances for LH1234" {
+
+object "Feature_Origin : Feature" as Feature_Origin {
+    name = "Origin"
+    description = "Point of departure"
+  }
+  object "Feature_Destination : Feature" as Feature_Destination {
+    name = "Destination"
+    description = "Point of arrival"
+  }
+
+  object "Feature_TransportMode : Feature" as Feature_TransportMode{
+    name = "Transport Mode"
+    description = "Mode of transport (Air, Rail...)"
+  }
+
+  object "Feature_Validity : Feature" as Feature_Validity{
+    name = "Validity Period"
+    description = "Date range of product validity"
+  }
+
+  Feature_Origin --> SingleValue
+  Feature_Destination --> SingleValue
+  Feature_TransportMode --> DiscreteSet
+  Feature_Validity --> ValueRange
+
+  object "LH1234_Economy : TransportProduct" as LH1234_Economy {
+    identifier = "LH1234_ECO"
+    name = "Flight LH1234 Economy Class"
+  }
+
+  LH1234_Economy *-- Feature_Origin
+  LH1234_Economy *-- Feature_Destination
+  LH1234_Economy *-- Feature_TransportMode
+  LH1234_Economy *-- Feature_Validity
+}
+
+@enduml
+
+
+
+@startuml global#1
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Feature Model" as AFM {
+
+ abstract class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  .d.> StatusCode
+
+  abstract class Feature {
+    +identifier
+    +name: Text
+    +description: Text
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+
+  class SingleValue {
+    +value
+  }
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+class DiscreteSet {
+  +allowedValues: List
+}
+
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+  Feature --> FeatureValue : has >
+
+  class ReferenceSystem {
+    +identifier
+    +description
+    +system_type
+  }
+
+  Feature --> ReferenceSystem : uses >
+}
+
+' === Layer 2: TransportProduct with Specialized Features ===
+package "Layer 2: TransportProduct" as TP {
+
+  enum TransportMode {
+    Air
+    Rail
+    Bus
+    Ferry
+    Other
+  }
+
+  class TransportProduct {
+    +identifier
+    +name: Text
+    +description: Text
+
+    +origin: OriginFeature
+    +destination: DestinationFeature
+    +validityPeriod: ValidityPeriodFeature
+    +transportMode: TransportModeFeature
+  }
+  
+  Product <|- TransportProduct: derived from <
+  TransportMode --> TransportModeFeature : uses >
+
+  class OriginFeature
+  class DestinationFeature
+  class ValidityPeriodFeature
+  class TransportModeFeature {
+    +mode: TransportMode
+  }
+
+  SingleValue <|- OriginFeature: derived from <
+  SingleValue <|- DestinationFeature: derived from <
+  Feature <|- ValidityPeriodFeature: derived from <
+  Feature <|-- TransportModeFeature: derived from <
+
+  DestinationFeature -[hidden]-> OriginFeature
+  ValidityPeriodFeature -[hidden]-> DestinationFeature
+  TransportModeFeature -[hidden]-> ValidityPeriodFeature
+}
+
+AFM -d[hidden]-> TP
+TP --d[hidden]> CPI
+
+' === Layer 3: Concrete product instance ===
+
+package "Layer 3: Concrete Product Instance" as CPI {
+
+  object "LH1234_Economy : TransportProduct" as LH1234_Economy {
+    identifier = "LH1234_ECO"
+    name = "Flight LH1234 Economy Class"
+    description = "Economy seat on LH1234 flight"
+  }
+
+  object  "Origin_LHR : OriginFeature" as Origin_LHR  {
+    name = "Origin"
+    description = "London Heathrow Airport"
+  }
+
+  object  "Destination_JFK : DestinationFeature" as Destination_JFK  {
+    name = "Destination"
+    description = "John F. Kennedy Airport"
+  }
+
+  object "Validity_Summer2025 : ValidityPeriodFeature" as Validity_Summer2025 {
+    name = "Validity Period"
+    description = "Valid from June to August 2025"
+  }
+
+  object  "TransportMode_Air : TransportModeFeature" as TransportMode_Air {
+    name = "Transport Mode"
+    description = "Air transport mode"
+  }
+
+  ' Feature Values
+  object "Value_LHR : SingleValue" as Value_LHR {
+    value = "LHR"
+  }
+
+  object "Value_JFK : SingleValue" as Value_JFK {
+    value = "JFK"
+  }
+
+  object "Value_ValidSummer : SingleValue" as Value_ValidSummer {
+    value = "2025-06 to 2025-08"
+  }
+
+  object "Value_ModeAir : SingleValue" as Value_ModeAir {
+    value = "Air"
+  }
+
+  ' Reference Systems
+  object "IATA_Codes : ReferenceSystem" as IATA_Codes {
+    identifier = "IATA-Airport-Codes"
+    description = "IATA 3-letter airport code system"
+    system_type = "CodeSystem"
+  }
+
+  object "TransportModesRef : ReferenceSystem" as TransportModesRef {
+    identifier = "Transport-Modes"
+    description = "Standardized transport modes"
+    system_type = "Enumeration"
+  }
+
+  ' Connect features to values and reference systems
+  Origin_LHR --> Value_LHR
+  Origin_LHR --> IATA_Codes
+
+  Destination_JFK --> Value_JFK
+  Destination_JFK --> IATA_Codes
+
+  Validity_Summer2025 --> Value_ValidSummer
+
+  TransportMode_Air --> Value_ModeAir
+  TransportMode_Air --> TransportModesRef
+
+  ' Connect concrete product to feature instances
+  LH1234_Economy *-- Origin_LHR
+  LH1234_Economy *-- Destination_JFK
+  LH1234_Economy *-- Validity_Summer2025
+  LH1234_Economy *-- TransportMode_Air
+  
+}
+
+@enduml
+
+
+@startuml Supplier-Retailer Product Rules Model
+
+!theme plain
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+package "Supplier Domain" {
+  class Supplier {
+    +id: SupplierID
+    +name: String
+    +apiEndpoint: URL
+    +catalog: ProductCatalog
+    +ruleDefinitions: Set<SupplierRuleDefinition>
+    +publishProduct(product: SupplierProduct): void
+    +updateRules(productId: ProductID, rules: Set<SerializableRule>): void
+  }
+
+  class SupplierProduct {
+    +id: SupplierProductID
+    +name: String
+    +category: String
+    +features: Set<ProductFeature>
+    +pricing: PricingInfo
+    +availability: AvailabilityInfo
+    +associatedRules: Set<SerializableRule>
+    +ruleVersion: String
+    +lastUpdated: DateTime
+    +serialize(): ProductDataPackage
+  }
+
+  class ProductDataPackage {
+    +product: SupplierProduct
+    +rules: Set<SerializableRule>
+    +ruleMetadata: RuleMetadata
+    +schemaVersion: String
+    +digitalSignature: String
+    +validate(): ValidationResult
+  }
+
+  class SupplierRuleDefinition {
+    +ruleId: SupplierRuleID
+    +applicableProducts: Set<SupplierProductID>
+    +ruleTemplate: RuleTemplate
+    +businessJustification: String
+    +effectiveDate: DateTime
+    +expirationDate: DateTime?
+  }
+}
+
+package "Communication Layer" {
+  class ProductCatalogAPI {
+    +getProduct(supplierId: SupplierID, productId: ProductID): ProductDataPackage
+    +getProductRules(supplierId: SupplierID, productId: ProductID): Set<SerializableRule>
+    +validateRuleCompliance(offer: RetailerOffer): ComplianceResult
+    +subscribeToRuleUpdates(supplierId: SupplierID): EventStream
+  }
+
+  class RuleUpdateEvent {
+    +supplierId: SupplierID
+    +productId: ProductID
+    +ruleChanges: Set<RuleChange>
+    +effectiveDate: DateTime
+    +changeReason: String
+  }
+
+  enum RuleChangeType {
+    RULE_ADDED
+    RULE_MODIFIED
+    RULE_REMOVED
+    RULE_SUSPENDED
+  }
+
+  class RuleChange {
+    +changeType: RuleChangeType
+    +ruleId: RuleID
+    +oldRule: SerializableRule?
+    +newRule: SerializableRule?
+    +impactAssessment: ImpactAssessment
+  }
+}
+
+package "Serializable Rule Framework" {
+  class SerializableRule {
+    +ruleId: RuleID
+    +supplierId: SupplierID
+    +ruleType: SerializableRuleType
+    +name: String
+    +description: String
+    +version: String
+    +priority: Integer
+    +conditions: SerializableConditionSet
+    +actions: SerializableActionSet
+    +metadata: RuleSerializationMetadata
+    +contextRequirements: Set<ContextRequirement>
+    +serialize(): JSON
+    +deserialize(json: JSON): SerializableRule
+    +validate(): ValidationResult
+  }
+
+  class SerializableConditionSet {
+    +logicalOperator: LogicalOperator
+    +conditions: Set<SerializableCondition>
+    +evaluate(context: EvaluationContext): Boolean
+    +serialize(): JSON
+  }
+
+  class SerializableCondition {
+    +conditionId: ConditionID
+    +type: SerializableConditionType
+    +target: ConditionTarget
+    +operator: ComparisonOperator
+    +value: SerializableValue
+    +parameters: Map<String, SerializableValue>
+    +evaluate(context: EvaluationContext): Boolean
+  }
+
+  class SerializableActionSet {
+    +actions: Set<SerializableAction>
+    +executionOrder: ExecutionOrder
+    +serialize(): JSON
+  }
+
+  class SerializableAction {
+    +actionId: ActionID
+    +type: SerializableActionType
+    +target: ActionTarget
+    +parameters: Map<String, SerializableValue>
+    +message: LocalizedMessage?
+    +severity: ActionSeverity
+    +execute(context: EvaluationContext): ActionResult
+  }
+
+  enum SerializableRuleType {
+    BUNDLE_REQUIREMENT
+    EXCLUSION_CONSTRAINT
+    DEPENDENCY_RULE
+    FEATURE_COMPATIBILITY
+    QUANTITY_CONSTRAINT
+    CUSTOMER_ELIGIBILITY
+    GEOGRAPHIC_RESTRICTION
+    TEMPORAL_CONSTRAINT
+  }
+
+  enum SerializableConditionType {
+    PRODUCT_IN_OFFER
+    PRODUCT_QUANTITY
+    PRODUCT_FEATURE_MATCH
+    OFFER_TOTAL_VALUE
+    CUSTOMER_ATTRIBUTE
+    GEOGRAPHIC_LOCATION
+    TIME_WINDOW
+    RETAILER_CHANNEL
+    INVENTORY_AVAILABILITY
+  }
+
+  enum SerializableActionType {
+    BLOCK_OFFER
+    REQUIRE_PRODUCT_ADDITION
+    SUGGEST_PRODUCT_REMOVAL
+    APPLY_DISCOUNT_CONSTRAINT
+    DISPLAY_WARNING
+    REQUIRE_APPROVAL
+    LOG_COMPLIANCE_EVENT
+    REDIRECT_TO_ALTERNATIVE
+  }
+
+  class SerializableValue {
+    +type: ValueType
+    +value: Any
+    +constraints: Set<ValueConstraint>
+    +serialize(): JSON
+    +deserialize(json: JSON): SerializableValue
+  }
+
+  enum ValueType {
+    STRING
+    INTEGER
+    DECIMAL
+    BOOLEAN
+    DATE_TIME
+    PRODUCT_REFERENCE
+    FEATURE_REFERENCE
+    CUSTOMER_SEGMENT
+    GEOGRAPHIC_REGION
+    MONEY_AMOUNT
+  }
+}
+
+package "Retailer Domain" {
+  class Retailer {
+    +id: RetailerID
+    +name: String
+    +channels: Set<SalesChannel>
+    +supplierIntegrations: Set<SupplierIntegration>
+    +ruleEngine: RetailerRuleEngine
+    +createOffer(products: Set<Product>, customer: Customer): RetailerOffer
+    +validateOffer(offer: RetailerOffer): OfferValidationResult
+  }
+
+  class RetailerRuleEngine {
+    +supplierRules: Map<SupplierID, Set<SerializableRule>>
+    +internalRules: Set<RetailerRule>
+    +ruleCache: RuleCache
+    +validateOffer(offer: RetailerOffer, context: RetailerContext): ValidationResult
+    +loadSupplierRules(supplierId: SupplierID): void
+    +updateSupplierRules(supplierId: SupplierID, rules: Set<SerializableRule>): void
+    +resolveRuleConflicts(conflicts: Set<RuleConflict>): Resolution
+  }
+
+  class RetailerOffer {
+    +offerId: OfferID
+    +products: Set<OfferedProduct>
+    +customer: Customer
+    +channel: SalesChannel
+    +totalValue: Money
+    +discounts: Set<Discount>
+    +context: OfferContext
+    +creationTime: DateTime
+    +validateAgainstSupplierRules(): OfferValidationResult
+  }
+
+  class OfferedProduct {
+    +supplierProduct: SupplierProduct
+    +retailerProductId: RetailerProductID
+    +quantity: Integer
+    +unitPrice: Money
+    +appliedDiscounts: Set<Discount>
+    +customizations: Set<ProductCustomization>
+  }
+
+  class OfferValidationResult {
+    +valid: Boolean
+    +violations: Set<RuleViolation>
+    +warnings: Set<RuleWarning>
+    +requiredActions: Set<RequiredAction>
+    +supplierNotifications: Set<SupplierNotification>
+    +complianceReport: ComplianceReport
+  }
+
+  class SupplierIntegration {
+    +supplierId: SupplierID
+    +apiConfiguration: APIConfiguration
+    +ruleUpdateSchedule: Schedule
+    +lastSyncTime: DateTime
+    +syncSupplierRules(): SyncResult
+    +handleRuleUpdate(event: RuleUpdateEvent): void
+  }
+}
+
+package "Evaluation Context" {
+  class EvaluationContext {
+    +offer: RetailerOffer
+    +customer: Customer
+    +retailer: Retailer
+    +channel: SalesChannel
+    +geography: GeographicContext
+    +timestamp: DateTime
+    +supplierContext: Map<SupplierID, SupplierContext>
+    +getValue(key: String): Any
+    +hasProduct(productId: ProductID): Boolean
+    +getProductQuantity(productId: ProductID): Integer
+  }
+
+  class RetailerContext {
+    +retailerId: RetailerID
+    +channel: SalesChannel
+    +location: GeographicLocation
+    +businessRules: Set<RetailerRule>
+    +customerSegmentation: CustomerSegmentationRules
+  }
+
+  class SupplierContext {
+    +supplierId: SupplierID
+    +contractTerms: ContractTerms
+    +pricingAgreement: PricingAgreement
+    +ruleEnforcementLevel: EnforcementLevel
+  }
+
+  enum EnforcementLevel {
+    STRICT
+    WARNING_ONLY
+    ADVISORY
+    DISABLED
+  }
+}
+
+package "Compliance & Monitoring" {
+  class ComplianceReport {
+    +reportId: ReportID
+    +offerId: OfferID
+    +supplierId: SupplierID
+    +evaluatedRules: Set<RuleEvaluationRecord>
+    +overallCompliance: Boolean
+    +riskScore: Float
+    +recommendations: Set<ComplianceRecommendation>
+    +generateAuditTrail(): AuditTrail
+  }
+
+  class RuleEvaluationRecord {
+    +ruleId: RuleID
+    +supplierId: SupplierID
+    +evaluationResult: Boolean
+    +executionTime: Duration
+    +contextSnapshot: EvaluationContext
+    +violationDetails: ViolationDetails?
+  }
+
+  class SupplierNotification {
+    +notificationId: NotificationID
+    +supplierId: SupplierID
+    +notificationType: NotificationType
+    +message: String
+    +relatedOffer: OfferID
+    +violatedRules: Set<RuleID>
+    +sendTime: DateTime
+  }
+
+  enum NotificationType {
+    RULE_VIOLATION
+    RULE_WARNING
+    COMPLIANCE_REPORT
+    RULE_UPDATE_REQUIRED
+  }
+}
+
+package "Rule Templates & Standards" {
+  class RuleTemplate {
+    +templateId: TemplateID
+    +name: String
+    +description: String
+    +industryStandard: IndustryStandard?
+    +parameterDefinitions: Set<ParameterDefinition>
+    +conditionTemplate: ConditionTemplate
+    +actionTemplate: ActionTemplate
+    +instantiate(parameters: Map<String, Any>): SerializableRule
+  }
+
+  class ParameterDefinition {
+    +name: String
+    +type: ValueType
+    +required: Boolean
+    +defaultValue: SerializableValue?
+    +constraints: Set<ParameterConstraint>
+    +description: String
+  }
+
+  enum IndustryStandard {
+    GS1_GLOBAL_STANDARDS
+    EDI_X12
+    ETIM_CLASSIFICATION
+    UNSPSC_CODES
+    CUSTOM_STANDARD
+  }
+}
+
+' Relationships
+Supplier ||--o{ SupplierProduct : provides
+Supplier ||--o{ SupplierRuleDefinition : defines
+SupplierProduct ||--o{ SerializableRule : hasRules
+SupplierProduct --> ProductDataPackage : packages
+ProductDataPackage ||--o{ SerializableRule : contains
+SerializableRule ||--|| SerializableConditionSet : hasConditions
+SerializableRule ||--|| SerializableActionSet : hasActions
+SerializableConditionSet ||--o{ SerializableCondition : contains
+SerializableActionSet ||--o{ SerializableAction : contains
+SerializableCondition --> SerializableValue : uses
+SerializableAction --> SerializableValue : uses
+
+Retailer ||--o{ SupplierIntegration : manages
+Retailer ||--|| RetailerRuleEngine : uses
+RetailerRuleEngine --> SerializableRule : evaluates
+Retailer --> RetailerOffer : creates
+RetailerOffer ||--o{ OfferedProduct : contains
+OfferedProduct --> SupplierProduct : references
+
+RetailerRuleEngine --> EvaluationContext : uses
+EvaluationContext --> RetailerContext : includes
+EvaluationContext --> SupplierContext : includes
+
+ProductCatalogAPI --> ProductDataPackage : delivers
+ProductCatalogAPI --> RuleUpdateEvent : publishes
+RuleUpdateEvent ||--o{ RuleChange : contains
+
+ComplianceReport ||--o{ RuleEvaluationRecord : contains
+ComplianceReport ||--o{ SupplierNotification : generates
+
+RuleTemplate --> SerializableRule : generates
+RuleTemplate ||--o{ ParameterDefinition : defines
+
+note top of SerializableRule : Core serializable rule that travels\nwith product data from supplier to retailer
+note right of ProductDataPackage : Complete product information package\nincluding rules, digitally signed by supplier
+note left of RetailerRuleEngine : Evaluates both supplier rules\nand internal retailer rules
+note bottom of EvaluationContext : Provides all necessary context\nfor rule evaluation at retailer side
+
+@enduml
+@startuml TransportProduct-Specialization
+' ==============================
+' Layer 2: Product Specialization – TransportProduct
+' Built to align with the provided core models (Product / Feature / FeatureValue / ReferenceSystem)
+' Business view: metadata/audit/lifecycle intentionally hidden.
+' ==============================
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 120
+
+package "Layer 2: Product – Transport" as L2T {
+  ' === Specialization of Product ===
+  class TransportProduct {
+    +identifier : Any          ' Product ID (e.g., TP-FR-AF-CDG-JFK)
+    +type : "Transport"       ' Fixed for this specialization
+    +name : Text               ' Brand/Marketing name (e.g., "La Première")
+    +description : Text
+  }
+
+  ' We reuse the Feature / FeatureValue model from Layer 1 (Feature) as-is.
+  ' Below are feature types (specializations) used by TransportProduct.
+
+  ' === Feature Types for Transport ===
+  class ModeOfTransportFeature <<Feature>>
+  class SupplierOperatorFeature <<Feature>>
+  class BrandMarketingNameFeature <<Feature>>
+  class OriginFeature <<Feature>>
+  class DestinationFeature <<Feature>>
+  class IntermediateStopsFeature <<Feature>>
+  class ServiceTopologyFeature <<Feature>>
+  class NominalDurationFeature <<Feature>>
+  class ServiceClassesAvailableFeature <<Feature>>
+  class AccessibilityFeature <<Feature>>
+  class OperationalVehicleTypeFeature <<Feature>>
+  class OperationalDaysOfWeekFeature <<Feature>>
+
+  ' TransportProduct features
+  TransportProduct "1" *-- "1" ModeOfTransportFeature : has >
+  TransportProduct "1" *-- "0..1" SupplierOperatorFeature : has >
+  TransportProduct "1" *-- "0..1" BrandMarketingNameFeature : has >
+  TransportProduct "1" *-- "1" OriginFeature : has >
+  TransportProduct "1" *-- "1" DestinationFeature : has >
+  TransportProduct "1" *-- "0..1" IntermediateStopsFeature : has >
+  TransportProduct "1" *-- "1" ServiceTopologyFeature : has >
+  TransportProduct "1" *-- "0..1" NominalDurationFeature : has >
+  TransportProduct "1" *-- "0..1" ServiceClassesAvailableFeature : has >
+  TransportProduct "1" *-- "0..1" AccessibilityFeature : has >
+  TransportProduct "1" *-- "0..1" OperationalVehicleTypeFeature : has >
+  TransportProduct "1" *-- "0..1" OperationalDaysOfWeekFeature : has >
+
+  ' === Feature Value shape bindings (using the shared FeatureValue subtypes) ===
+
+
+  ' Each concrete Feature has exactly one FeatureValue (per the base model)
+  ModeOfTransportFeature --> SingleValue : value
+  SupplierOperatorFeature --> SingleValue : value
+  BrandMarketingNameFeature --> SingleValue : value
+  OriginFeature --> SingleValue : value
+  DestinationFeature --> SingleValue : value
+  IntermediateStopsFeature --> DiscreteSet : values
+  ServiceTopologyFeature --> SingleValue : value
+  NominalDurationFeature --> SingleValue : value
+  ServiceClassesAvailableFeature --> DiscreteSet : values
+  AccessibilityFeature --> DiscreteSet : values
+  OperationalVehicleTypeFeature --> DiscreteSet : values
+  OperationalDaysOfWeekFeature --> DiscreteSet : values
+
+  ' === Reference Systems (declared and bound at Feature level) ===
+  package "Reference Systems (declared)" as RS {
+    class RS_ModeOfTransport <<ReferenceSystem>> {
+      note: Controlled transport mode list (e.g., Flight, Train, Bus, Ferry)
+    }
+    class RS_TerminalCode <<ReferenceSystem>> {
+      note: Union of terminal/station/port code systems.
+      note: Examples: IATA Airport, UIC Station, UN/LOCODE Port, GTFS Stop ID
+    }
+    class RS_ServiceTopology <<ReferenceSystem>> {
+      note: Direct, With Stops, Shuttle, Point-to-Point
+      note: (May be modelled via taxonomy concepts)
+    }
+    class RS_Duration <<ReferenceSystem>> {
+      note: ISO 8601 duration designator (e.g., PT8H15M)
+    }
+    class RS_ServiceClass <<ReferenceSystem>> {
+      note: Taxonomy-backed classes (e.g., Economy/Business/First; 1st/2nd)
+      note: Alignment via taxonomy collections across modes
+    }
+    class RS_Accessibility <<ReferenceSystem>> {
+      note: Accessibility capabilities (e.g., Wheelchair access, assistance)
+      note: Source expected to be taxonomy-backed
+    }
+    class RS_VehicleType <<ReferenceSystem>> {
+      note: Abstract vehicle/rolling stock/aircraft/ship types
+      note: Examples: ICAO aircraft type, UIC rolling stock, generic coach classes
+    }
+    class RS_DayOfWeek <<ReferenceSystem>> {
+      note: ISO weekday names (Mon..Sun)
+    }
+    class RS_LegalEntity <<ReferenceSystem>> {
+      note: Legal/marketing entity registry or partner master
+    }
+  }
+
+  ' Bind feature -> reference system expectations
+  ModeOfTransportFeature .. RS_ModeOfTransport : uses
+  SupplierOperatorFeature .. RS_LegalEntity : uses (optional)
+  BrandMarketingNameFeature ..> "Text" : free text
+  OriginFeature .. RS_TerminalCode : uses
+  DestinationFeature .. RS_TerminalCode : uses
+  IntermediateStopsFeature .. RS_TerminalCode : uses
+  ServiceTopologyFeature .. RS_ServiceTopology : uses
+  NominalDurationFeature .. RS_Duration : uses
+  ServiceClassesAvailableFeature .. RS_ServiceClass : uses
+  AccessibilityFeature .. RS_Accessibility : uses
+  OperationalVehicleTypeFeature .. RS_VehicleType : uses
+  OperationalDaysOfWeekFeature .. RS_DayOfWeek : uses
+}
+
+' ==============================
+' Semantics & Notes
+' ==============================
+
+note as N1
+TransportProduct specialization rules (business-facing):
+• Product ID: carried in TransportProduct.identifier (e.g., TP-FR-AF-CDG-JFK).
+• Supplier / Operator: optional SupplierOperatorFeature. If omitted, the supplier is
+  implicitly the party that provided the product information (per business rule).
+• Mode of Transport: SingleValue using RS_ModeOfTransport.
+• Origin / Destination: SingleValue using RS_TerminalCode. For flights, IATA airport codes; 
+  for rail, UIC station codes; for ferry/ports, UN/LOCODE; for coach/bus, GTFS stops (or partner registry).
+• Intermediate Stops: DiscreteSet of RS_TerminalCode. Use for structural/technical stops.
+• Service Topology: SingleValue using RS_ServiceTopology. For Flight, value is always "Direct".
+• Nominal Duration: SingleValue using RS_Duration (ISO 8601).
+• Service Classes Available: DiscreteSet via RS_ServiceClass. Recommended to align via Taxonomy collections
+  (e.g., map Air "Business" ↔ Rail "1st class").
+• Accessibility: DiscreteSet via RS_Accessibility. Suggested to manage via Taxonomy concepts.
+• Operational Vehicle Type: DiscreteSet via RS_VehicleType (can include multiple permissible types).
+• Operational Days of Week: DiscreteSet via RS_DayOfWeek; represents recurring operation days.
+end note
+
+@enduml
+
+@startuml foobar
+' =================================
+' Example Instance of Slim TransportProduct
+' Using reduced schema: Mode of Transport, Origin, Destination, Brand/Marketing Name, Operational Vehicle Type
+' =================================
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 120
+
+package "Example Instance – TransportProduct" as Example {
+  ' === TransportProduct Instance ===
+
+object "TP_FR_AF_CDG_JFK" as TransportProduct {
+    identifier = "TP-FR-AF-CDG-JFK"
+    type = "Transport"
+    name = "La Première – Paris to New York"
+    description = "Non-stop premium flight service from Paris CDG to New York JFK"
+  }
+
+  ' === Features with values ===
+  object ModeOfTransportFeature_Instance {
+    value = "Flight" (RS_ModeOfTransport)
+  }
+  object OriginFeature_Instance {
+    value = "CDG" (IATA – Paris Charles de Gaulle)
+  }
+  object DestinationFeature_Instance {
+    value = "JFK" (IATA – New York John F. Kennedy)
+  }
+  object BrandMarketingNameFeature_Instance {
+    value = "La Première"
+  }
+  object OperationalVehicleTypeFeature_Instance {
+    values = { "Boeing 777-300ER" }
+  }
+
+  ' Bind features to TransportProduct instance
+  TransportProduct *-- ModeOfTransportFeature_Instance
+  TransportProduct *-- OriginFeature_Instance
+  TransportProduct *-- DestinationFeature_Instance
+  TransportProduct *-- BrandMarketingNameFeature_Instance
+  TransportProduct *-- OperationalVehicleTypeFeature_Instance
+}
+
+note as N1
+Example transport product instance:
+• Product ID: TP-FR-AF-CDG-JFK
+• Mode of Transport: Flight
+• Origin: CDG (Paris Charles de Gaulle, IATA)
+• Destination: JFK (New York John F. Kennedy, IATA)
+• Brand/Marketing Name: "La Première"
+• Operational Vehicle Type: Boeing 777-300ER
+end note
+@enduml

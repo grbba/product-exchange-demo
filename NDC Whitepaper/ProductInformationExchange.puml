@@ -1,0 +1,29 @@
+
+@startuml continuous_maintenance
+!theme plain
+title Continuous Product Information Exchange
+
+participant Supplier
+participant "IATA Standards" as IATA
+participant Retailer
+database "Product Knowledge" as PK
+
+== Setup ==
+Supplier -> IATA : Publish products
+IATA -> Retailer : Standard format
+Retailer -> PK : Map to retailer taxonomy
+
+== Ongoing Updates ==
+loop Regular Updates
+  Supplier -> IATA : Product changes
+  IATA -> Retailer : Update notification  
+  Retailer -> PK : Update taxonomy mapping
+end
+
+== Smart Shopping ==
+Retailer -> PK : Customer requirements
+PK -> Retailer : Matching products only
+Retailer -> Supplier : Targeted request
+
+note right : 80% fewer\nAPI calls
+@enduml

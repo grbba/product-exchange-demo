@@ -1,0 +1,914 @@
+@prefix apmwg: <https://taxonomy.apmwg.ovh#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://taxonomy.apmwg.ovh> a owl:Ontology ;
+    rdfs:label "IATA APMWG Product Taxonomy"@en ;
+    dc:contributor "IATA Airline Product Management Working Group"@en ;
+    dc:creator "Gregor Baues"@en ;
+    dc:title "IATA Product Taxonomy"@en ;
+    rdfs:comment "This taxonomy is built to describe products further and what is not part of the promise to the customer to the contrary of the features as advertised of a product. If the product is e.g. an entrance to an amusement park you can add taxonomy nodes like 'fun' 'adventure' etc to that product but those are not part of the promise. The promise is the access to the amusement park."@en ;
+    owl:imports dc:,
+        <http://purl.org/iso25964/skos-thes> ;
+    owl:versionInfo "1.0"@en ;
+    skos:prefLabel "IATA APMWG Product Taxonomy"@en .
+
+apmwg:AVML a apmwg:SSR ;
+    skos:prefLabel "AVML"@en .
+
+apmwg:E7Y63352 a skos:Concept ;
+    skos:broader apmwg:nutrition ;
+    skos:definition " A vegetarian meal often inspired by South Asian flavors, with spices and no meat, fish, or eggs."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Asian Vegetarian"@en .
+
+apmwg:G5K95028 a skos:Concept ;
+    skos:broader apmwg:Z9H87109 ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Sweet"@en .
+
+apmwg:HNML a apmwg:SSR ;
+    skos:prefLabel "HNML"@en .
+
+apmwg:KSML a apmwg:SSR ;
+    skos:prefLabel "KSML"@en .
+
+apmwg:L9B71271 a skos:Concept ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Prepared in accordance with Jewish dietary laws."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Kosher"@en .
+
+apmwg:MOML a apmwg:SSR ;
+    skos:prefLabel "MOML"@en .
+
+apmwg:N4N102947 a skos:Concept ;
+    skos:broader apmwg:Z9H87109 ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Savory"@en .
+
+apmwg:Q6S47514 a skos:Concept ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Prepared according to Jain customs, without root vegetables (like garlic, onions, potatoes) and without animal products."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Vegetarian Jain"@en .
+
+apmwg:S4E79190 a skos:Concept ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Prepared according to Islamic dietary laws, excluding pork and alcohol."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Halal"@en .
+
+apmwg:U0Q110866 a skos:Concept ;
+    skos:broader apmwg:Z9H87109 ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Spicy"@en .
+
+apmwg:VJML a apmwg:SSR ;
+    skos:prefLabel "VJML"@en .
+
+apmwg:X4V55433 a skos:Concept ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Includes dairy and eggs but excludes meat, fish, and poultry."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Vegetarian Lacto-Ovo"@en ;
+    apmwg:linkedSSR apmwg:vlml .
+
+apmwg:_id_hindu a skos:Concept ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Hindu"@en .
+
+apmwg:airportdelivery a skos:Concept ;
+    rdfs:label "Airport"@en ;
+    skos:broader apmwg:deliverylocation ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Airport"@en .
+
+apmwg:airtravel a skos:Concept ;
+    rdfs:label "Air"@en ;
+    skos:broader apmwg:transport_mode ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Air"@en .
+
+apmwg:american a skos:Concept ;
+    rdfs:label "American"@en ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "American"@en .
+
+apmwg:apmwgCultureRegion a skos:Concept ;
+    skos:broader apmwg:regions ;
+    skos:example "US Hispanic Community"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cultur"@en .
+
+apmwg:apmwgDesert a skos:Concept ;
+    skos:broader apmwg:apmwgBiogeographic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Desert"@en .
+
+apmwg:apmwgEconomic a skos:Concept ;
+    skos:broader apmwg:regions ;
+    skos:example "European Economic Community"@en,
+        "SiliconValley"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Economic"@en .
+
+apmwg:apmwgFood a skos:Collection ;
+    skos:member apmwg:alcoholic,
+        apmwg:course,
+        apmwg:cuisine,
+        apmwg:drinks,
+        apmwg:meal,
+        apmwg:nonalcoholic,
+        apmwg:nutrition,
+        apmwg:timeofmeal ;
+    skos:prefLabel "Food"@en .
+
+apmwg:apmwgPolitical a skos:Concept ;
+    skos:broader apmwg:regions ;
+    skos:example "European Union"@en,
+        "Provinces of Canada"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Political"@en .
+
+apmwg:apmwgRainforest a skos:Concept ;
+    skos:broader apmwg:apmwgBiogeographic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Rainforest"@en .
+
+apmwg:appetizer a skos:Concept ;
+    rdfs:label "Appetizer"@en ;
+    skos:broader apmwg:course ;
+    skos:definition "An appetizer is a small meal served at the beginning of the main course"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Appetizer"@en,
+        "Entradas"@es,
+        "Hors d'oeuvre"@fr,
+        "Başlangıçlar"@tr .
+
+apmwg:areas a skos:Concept ;
+    rdfs:label "Areas"@en ;
+    skos:broader apmwg:geography ;
+    skos:definition "An area is a geographical entity not necessarily limit by administrative boundaries such as e.g. Sahara or Alps"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Areas"@en .
+
+apmwg:basic a skos:Concept ;
+    rdfs:label "Basic"@en ;
+    skos:broadMatch apmwg:economy ;
+    skos:broader apmwg:experience ;
+    skos:definition """Service : Minimal service, focused on functionality. Customer interactions are generic and limited.
+Item:  Basic, functional, and often mass-produced with minimal attention to aesthetics or durability.
+Item: Design & Materials: Simple design, low-cost materials, and utilitarian in nature."""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Basic"@en .
+
+apmwg:beach a skos:Concept ;
+    rdfs:label "Beach"@en ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Beach"@en .
+
+apmwg:beer a skos:Concept ;
+    rdfs:label "Beer"@en ;
+    skos:broader apmwg:alcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Beer"@en .
+
+apmwg:boxRetailItem a skos:Concept ;
+    dc:description "Used for products which can be shipped to customers independently e.g. Model Plane, Baggage, Cat boxes etc. "@en ;
+    skos:broader apmwg:stowage ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Box Retail Item"@en .
+
+apmwg:bread a skos:Concept ;
+    rdfs:label "Bread"@en ;
+    skos:broader apmwg:accompainment ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Bread"@en .
+
+apmwg:breakfast a skos:Concept ;
+    rdfs:label "Breakfast"@en ;
+    skos:broader apmwg:timeofmeal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Breakfast"@en,
+        "Zmorge"@gsw .
+
+apmwg:bungee a skos:Concept ;
+    skos:broader apmwg:adventure ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Bungee jumping"@en .
+
+apmwg:c_d2bb068a a skos:Concept ;
+    rdfs:label "Juices & Mixers"@en ;
+    skos:broader apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Juices & Mixers"@en .
+
+apmwg:cabin_baggage a skos:Concept ;
+    rdfs:label "Cabin Baggage"@en ;
+    dc:description "use that term to label a product called \"cabin baggage\" as the tag will improve searchability "@en ;
+    skos:broader apmwg:stowage ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cabin Baggage"@en .
+
+apmwg:casino a skos:Concept ;
+    skos:broader apmwg:entertainement ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Casino"@en .
+
+apmwg:checked_baggage a skos:Concept ;
+    rdfs:label "Checked Baggage"@en ;
+    skos:broader apmwg:stowage ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Checked Baggage"@en .
+
+apmwg:cinema a skos:Concept ;
+    skos:broader apmwg:entertainement ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cinema"@en .
+
+apmwg:cities a skos:Concept ;
+    rdfs:label "Cities"@en ;
+    skos:broader apmwg:geography ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cities"@en .
+
+apmwg:cocktail a skos:Concept ;
+    rdfs:label "Cocktail"@en ;
+    skos:broader apmwg:alcoholic,
+        apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cocktail"@en .
+
+apmwg:coffee a skos:Concept ;
+    rdfs:label "Coffee"@en ;
+    skos:broader apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Coffee"@en .
+
+apmwg:contients a skos:Concept ;
+    rdfs:label "Continent"@en ;
+    skos:broader apmwg:geography ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Continent"@en .
+
+apmwg:continental a skos:Concept ;
+    rdfs:label "Continental"@en ;
+    skos:broader apmwg:climate ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Continental"@en .
+
+apmwg:countries a skos:Concept ;
+    rdfs:label "Country"@en ;
+    skos:broader apmwg:geography ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Country"@en .
+
+apmwg:cultural a skos:Concept ;
+    skos:broader apmwg:tours ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:note "Cultural-related tours incl. religious activities ( e.g. Hadj ) "@en ;
+    skos:prefLabel "Cultural"@en .
+
+apmwg:dessert a skos:Concept ;
+    rdfs:label "Dessert"@en ;
+    skos:broader apmwg:course ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Dessert"@en .
+
+apmwg:diaryfree a skos:Concept ;
+    rdfs:label "Diary-Free"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Excludes all dairy products and thus eliminates in particular lactose"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Diary-Free"@en .
+
+apmwg:diner a skos:Concept ;
+    rdfs:label "Diner"@en ;
+    skos:broader apmwg:timeofmeal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Diner"@en .
+
+apmwg:dry a skos:Concept ;
+    rdfs:label "Dry"@en ;
+    skos:broader apmwg:climate ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Trocken"@de,
+        "Dry"@en .
+
+apmwg:exhibition a skos:Concept ;
+    skos:broader apmwg:tours ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Exhibition"@en .
+
+apmwg:fall a skos:Concept ;
+    skos:broader apmwg:season ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Fall"@en .
+
+apmwg:family a skos:Concept ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Family"@en .
+
+apmwg:flexitarian a skos:Concept ;
+    rdfs:label "Flexitarian"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Flexitarian"@en .
+
+apmwg:french a skos:Concept ;
+    rdfs:label "French"@en ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "French"@en .
+
+apmwg:german a skos:Concept ;
+    rdfs:label "German"@en ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "German"@en .
+
+apmwg:glutenfree a skos:Concept ;
+    rdfs:label "Gluten-Free"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition " Excludes gluten, a protein found in wheat, barley, and rye."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Gluten-Free"@en .
+
+apmwg:golf a skos:Concept ;
+    skos:broader apmwg:sport ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Golf"@en .
+
+apmwg:history a skos:Concept ;
+    rdfs:label "Historic"@en ;
+    skos:broader apmwg:tours ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Historic"@en .
+
+apmwg:homedelivery a skos:Concept ;
+    rdfs:label "Home"@en ;
+    skos:broader apmwg:deliverylocation ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Home"@en .
+
+apmwg:indian a skos:Concept ;
+    rdfs:label "Indian"@en ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Indian"@en .
+
+apmwg:japanese a skos:Concept ;
+    rdfs:label "Japanese"@en ;
+    skos:broader apmwg:cuisine ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Japanese"@en .
+
+apmwg:keto a skos:Concept ;
+    rdfs:label "Keto"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "High in fats, low in carbohydrates."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Keto"@en .
+
+apmwg:linkedSSR a rdf:Property ;
+    rdfs:domain skos:Concept .
+
+apmwg:long_travel a skos:Concept ;
+    rdfs:label "Long"@en ;
+    skos:broader apmwg:transport_duration ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Long"@en .
+
+apmwg:loungedelivery a skos:Concept ;
+    rdfs:label "Lounge"@en ;
+    skos:broader apmwg:deliverylocation ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Lounge"@en .
+
+apmwg:lowcarb a skos:Concept ;
+    rdfs:label "Low-Carb"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Reduces carbohydrate intake, often increasing protein and fat consumption."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Low-Carb"@en .
+
+apmwg:lowsugar a skos:Concept ;
+    rdfs:label "Low-Sugar"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Low-Sugar"@en .
+
+apmwg:lunch a skos:Concept ;
+    rdfs:label "Lunch"@en ;
+    skos:broader apmwg:timeofmeal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Lunch"@en .
+
+apmwg:luxury_product a skos:Concept ;
+    rdfs:label "Luxury"@en ;
+    skos:altLabel "4-Star"@en ;
+    skos:broadMatch apmwg:premiumonboard ;
+    skos:broader apmwg:experience ;
+    skos:definition """Service: Highly personalized and attentive service. Every detail is managed to create an exclusive and memorable experience.
+Item quality: Exceptional quality with meticulous craftsmanship. Products are built to last and often feature unique, high-end features.
+Item design & materials: Exquisite design, often handmade or with artisanal elements. Premium materials like leather, fine metals, and rare woods."""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Luxury"@en .
+
+apmwg:maincourse a skos:Concept ;
+    rdfs:label "Main Course"@en ;
+    skos:broader apmwg:course ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Main Course"@en .
+
+apmwg:medium_travel a skos:Concept ;
+    rdfs:label "Medium"@en ;
+    dc:description "This is some description of the concept of medium haul flights "@en ;
+    skos:broader apmwg:transport_duration ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Medium"@en .
+
+apmwg:mild a skos:Concept ;
+    rdfs:label "Mild"@en ;
+    skos:broader apmwg:climate ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Mild"@en .
+
+apmwg:museum a skos:Concept ;
+    skos:broader apmwg:tours ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Museum"@en .
+
+apmwg:nightlive a skos:Concept ;
+    skos:broader apmwg:citylife ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Nightlife"@en,
+        "escapade de nuit"@fr .
+
+apmwg:onboarddelivery a skos:Concept ;
+    rdfs:label "Onboard"@en ;
+    skos:broader apmwg:deliverylocation ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Onboard"@en .
+
+apmwg:paleo a skos:Concept ;
+    rdfs:label "Paleo"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Focuses on foods presumed to have been eaten by early humans, including lean meats, fish, fruits, vegetables, nuts, and seeds."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Paleo"@en .
+
+apmwg:parcel a skos:Concept ;
+    rdfs:label "Cargo & Parcel Delivery"@en ;
+    dc:description "Excluded for the time being to be reviewed later"@en ;
+    skos:broader apmwg:stowage ;
+    skos:definition ""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cargo & Parcel"@en .
+
+apmwg:personalservices rdfs:label "Personal Service Requests"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Personal Service Requests"@en .
+
+apmwg:polar a skos:Concept ;
+    rdfs:label "Polar"@en ;
+    skos:broader apmwg:climate ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Polar"@en .
+
+apmwg:premium_product a skos:Concept ;
+    rdfs:label "Premium"@en ;
+    skos:broadMatch apmwg:business ;
+    skos:broader apmwg:experience ;
+    skos:definition """Service: Enhanced service with attention to detail. Some level of personalization, and proactive customer service.
+Item quality: High-quality products with superior performance and longer lifespan. Designed for comfort and satisfaction.
+Item design & materials: Sophisticated design with high-quality materials. Focus on aesthetics and functionality."""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Premium"@en .
+
+apmwg:rail_travel a skos:Concept ;
+    rdfs:label "Rail"@en ;
+    skos:broader apmwg:transport_mode ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Rail"@en .
+
+apmwg:restaurant a skos:Concept ;
+    skos:broader apmwg:entertainement ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Restaurant"@en .
+
+apmwg:retreat a skos:Concept ;
+    rdfs:label "Retreat"@en ;
+    skos:altLabel "Seclusion"@en ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Retreat"@en .
+
+apmwg:roadtravel a skos:Concept ;
+    rdfs:label "Road"@en ;
+    skos:broader apmwg:transport_mode ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Road"@en .
+
+apmwg:salad a skos:Concept ;
+    rdfs:label "Salad"@en ;
+    skos:broader apmwg:accompainment ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Salad"@en .
+
+apmwg:scuba a skos:Concept ;
+    skos:broader apmwg:adventure ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Scubadiving"@en .
+
+apmwg:sea_travel a skos:Concept ;
+    rdfs:label "Sea"@en ;
+    skos:broader apmwg:transport_mode ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Sea"@en .
+
+apmwg:seasonal a skos:Concept ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Seasonal"@en .
+
+apmwg:short_travel a skos:Concept ;
+    rdfs:label "Short"@en ;
+    rdfs:comment "C'est moins de 2h"@fr ;
+    skos:broader apmwg:transport_duration ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Short"@en .
+
+apmwg:sightseeing a skos:Concept ;
+    skos:broader apmwg:citylife,
+        apmwg:tours ;
+    skos:definition "Organized sightseeing tour of a location with a guide, selfguides with tarnsport like a bus or by bike by foot etc ... "@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Sightseeing"@en .
+
+apmwg:snack a skos:Concept ;
+    rdfs:label "Snack"@en ;
+    skos:broader apmwg:timeofmeal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Snack"@en .
+
+apmwg:sodas a skos:Concept ;
+    rdfs:label "Sodas"@en ;
+    skos:broader apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Sodas"@en .
+
+apmwg:soup a skos:Concept ;
+    rdfs:label "Soup"@en ;
+    skos:broader apmwg:accompainment ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Soup"@en .
+
+apmwg:spirits a skos:Concept ;
+    rdfs:label "Spirits"@en ;
+    skos:broader apmwg:alcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Spirits"@en .
+
+apmwg:spring a skos:Concept ;
+    skos:broader apmwg:season ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Spring"@en .
+
+apmwg:standard a skos:Concept ;
+    rdfs:label "Standard"@en ;
+    skos:broadMatch apmwg:premium_economy ;
+    skos:broader apmwg:experience ;
+    skos:definition """Service: Reliable and consistent service that meets basic expectations. Some customer support is available, usually polite but not personalized.
+Item: Quality: Decent quality, offers good value for money, reliable for everyday use.
+Item :Design & Materials: Functional design with moderate attention to aesthetics. Materials are durable but not premium."""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Standard"@en .
+
+apmwg:summer a skos:Concept ;
+    skos:broader apmwg:season ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Summer"@en .
+
+apmwg:surf a skos:Concept ;
+    skos:broader apmwg:sport ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Surf"@en .
+
+apmwg:tea a skos:Concept ;
+    rdfs:label "Tea"@en ;
+    skos:broader apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Tea"@en .
+
+apmwg:theater a skos:Concept ;
+    skos:broader apmwg:entertainement ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Theater"@en .
+
+apmwg:tropical a skos:Concept ;
+    rdfs:label "Tropical"@en ;
+    skos:broader apmwg:climate ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Tropical"@en .
+
+apmwg:ultra_product a skos:Concept ;
+    rdfs:label "Ultra Luxury"@en ;
+    skos:altLabel "5-Star"@en ;
+    skos:broadMatch apmwg:premiumonboard ;
+    skos:broader apmwg:experience ;
+    skos:definition """Service: Exceptionally personalized service, tailored to the customer’s specific preferences and needs. Services often include private, bespoke experiences that go beyond expectations.
+Item quality: The pinnacle of quality and craftsmanship. Products are often custom-made or limited edition, with attention to the finest details.
+Item design & materials: Unique, often one-of-a-kind designs, using the most exclusive and luxurious materials available. These products are as much about artistry as they are about functionality."""@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Ultra Luxury"@en .
+
+apmwg:vegan a skos:Concept ;
+    rdfs:label "Vegan"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Vegan"@en ;
+    apmwg:linkedSSR apmwg:vgml .
+
+apmwg:vegetarian a skos:Concept ;
+    rdfs:label "Vegetarian"@en ;
+    skos:broader apmwg:nutrition ;
+    skos:definition "Excludes meat, but may include dairy and eggs."@en,
+        "Exclut la viande, mais peut inclure des produits laitiers et des œufs."@fr,
+        "肉を除外するが、乳製品や卵を含むことがある。"@ja ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Vegetarian"@en,
+        "Végétarien"@fr,
+        "ベジタリアン (Bejitarian)"@ja .
+
+apmwg:water a skos:Concept ;
+    rdfs:label "Water"@en ;
+    skos:broader apmwg:nonalcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Water"@en .
+
+apmwg:wine a skos:Concept ;
+    rdfs:label "Wine"@en ;
+    skos:broader apmwg:alcoholic ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Wine"@en .
+
+apmwg:winter a skos:Concept ;
+    skos:broader apmwg:season ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Winter"@en ;
+    skos:related apmwg:ski .
+
+apmwg:zipline a skos:Concept ;
+    skos:broader apmwg:adventure ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Ziplining"@en .
+
+apmwg:business a skos:Concept ;
+    rdfs:label "Business"@en ;
+    skos:broader apmwg:onb_expirience ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Business"@en .
+
+apmwg:economy a skos:Concept ;
+    rdfs:label "Economy"@en ;
+    skos:broader apmwg:onb_expirience ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Economy"@en .
+
+apmwg:premium_economy a skos:Concept ;
+    rdfs:label "Premium Economy"@en ;
+    skos:broader apmwg:onb_expirience ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Premium Economy"@en .
+
+apmwg:ski a skos:Concept ;
+    skos:broader apmwg:sport ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Ski"@en .
+
+apmwg:vgml a apmwg:SSR ;
+    rdfs:label "VGML"@en ;
+    rdfs:comment "Class for represneting SRR codes usable to further qualifiy the Taxonomy. They are provided here but could well be in their own Vocabulary in which case we would use the exact / broader match semantic to align the vocabularies"@en ;
+    skos:prefLabel "VGML"@en .
+
+apmwg:vlml a apmwg:SSR ;
+    rdfs:label "VLML"@en ;
+    rdfs:comment "Vegetarian Lacto-Ovo Meal – Vegetarian with dairy and eggs, no meat or fish."@en ;
+    skos:prefLabel "VLML"@en .
+
+apmwg:apmwgBiogeographic a skos:Concept ;
+    skos:broader apmwg:regions ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Biogeographic"@en .
+
+apmwg:citylife a skos:Concept ;
+    rdfs:label "City life"@en ;
+    skos:altLabel "Metropolitan"@en ;
+    skos:broader apmwg:activities ;
+    skos:definition "City groups all activities which are predominantly available in larger cities (but not limited to)"@en ;
+    skos:example "Hop on/off Sightseeing bus tour "@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "City"@en .
+
+apmwg:premiumonboard a skos:Concept ;
+    rdfs:label "First"@en ;
+    skos:broader apmwg:onb_expirience ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "First"@en .
+
+apmwg:Z9H87109 a skos:Concept ;
+    skos:broader apmwg:meal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Taste"@en .
+
+apmwg:accompainment a skos:Concept ;
+    rdfs:label "Side Course"@en ;
+    skos:altLabel "Side Course"@en ;
+    skos:broader apmwg:course ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Accompaniment"@en .
+
+apmwg:adventure a skos:Concept ;
+    rdfs:label "Adventure"@en ;
+    skos:broader apmwg:activities ;
+    skos:definition "An unusual, exciting, or daring experience involving exploration, risk, or unexpected events."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Adventure"@en .
+
+apmwg:drinks a skos:Concept ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Beverage"@en ;
+    skos:related apmwg:course ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:sport a skos:Concept ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Sport"@en .
+
+apmwg:transport_duration a skos:Concept ;
+    rdfs:label "Transport Duration"@en ;
+    rdfs:comment "Classification used to describe transport products in terms of the duration of the travel on a coarse grained level. the exact interpretation of what short medium and long mean is up to the appreciation of each individual organization when labeleing their products. Bilateral agreements may also clarify this in further detail and add ev additional classification like XS or XXL etc ... if required together with the min max duration attached as addded information to the taxonomy nodes "@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Transport Duration"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:deliverylocation a skos:Concept ;
+    rdfs:label "Delivery Location"@en ;
+    skos:definition "Delivery Location refers to the specific place where goods, services, or materials are to be delivered. This could be a physical address, such as a customers's home, business, or warehouse, or a designated spot within a broader area, such as a gate area, onboard of a plane or pickup point.  The delivery location is typically specified by the recipient or purchaser based and is crucial for ensuring that the delivery is made accurately and efficiently."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Lieferort"@de,
+        "Delivery Location"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:entertainement a skos:Concept ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Entertainement"@en .
+
+apmwg:onb_expirience a skos:Concept ;
+    rdfs:label "Onboard Experience"@en ;
+    skos:definition "All classifications for products delivered on board of a transport product. "@en ;
+    skos:editorialNote "This facet will expand as other transport options become available / integrated into the airline retail offerings. This facet is today build around the 4 different cabin types which are present in the airline industry. "@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Onboard Experience"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:regions a skos:Concept ;
+    rdfs:label "Region"@en ;
+    skos:broader apmwg:geography ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Region"@en .
+
+apmwg:season a skos:Concept ;
+    rdfs:label "Season"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Season"@en ;
+    skos:related apmwg:activities ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:stowage a skos:Concept ;
+    rdfs:label "Physical Item"@en ;
+    dc:description "Physical Items: travelling together with a pax ( excl. travelling by themselves ) Classifies products aiming ay transporting items not requiring the owner of the items to be present at the same time at the means of transport used. To the contrary of the other concepts on Cabin and Checked Baggage"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:note """Cool
+Vulnerable/fragile
+Express/time definite
+Life
+Pharmaceutical : Proposals to think about to be added to the Phys Item facet"""@en ;
+    skos:prefLabel "Physical Item"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:transport_mode a skos:Concept ;
+    rdfs:label "Transport Mode"@en ;
+    rdfs:comment "For a transport product characterizes the broader means of transportation. Air is plane, helicopter, hot air ballon ( e.g. for expirence related products ) Rail in general is a train. Road cand be Bus, Limo, VTC, Uber, etc... Sea would typically be a boat but could be anything else which floats and would enable transportation and could be more specialized if not part of the product definition"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Transport Mode"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:alcoholic a skos:Concept ;
+    skos:broader apmwg:drinks ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Alcoholic"@en .
+
+apmwg:climate a skos:Concept ;
+    rdfs:label "Climate"@en ;
+    skos:definition "Climate encompasses the long-term patterns of temperature, humidity, wind, precipitation, and other atmospheric conditions in a particular region. Unlike weather, which describes short-term conditions, climate represents the average and variability of these conditions over extended periods, typically 30 years or more."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Klima"@de,
+        "Climate"@en,
+        "Climat"@fr ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:experience a skos:Concept ;
+    rdfs:label "Product Experience"@en ;
+    skos:definition "Focuses on the customer’s perception of the products and service provided, including customer support, ease of access, and personalization."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Product Experience"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:geography a skos:Concept ;
+    rdfs:label "Geographie"@de,
+        "Geography"@en ;
+    dct:source "'https://en.wikipedia.org/wiki/Geography?wprov=sfti1#"@en ;
+    skos:definition "Geographical classifications of products e.g. an adventure experience offered may be offer as a product only in a given geography so the product shall be labeled as such. The precise location , as the promise to the customer, shall be part of the product definition and be reflected as such as either individual products and/or product variants"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Geographie"@de,
+        "Geography"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:timeofmeal a skos:Concept ;
+    rdfs:label "Time"@en ;
+    rdfs:comment "Time of day when a meal is served. Snack can possibly be served anytime"@en ;
+    skos:broader apmwg:meal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Time"@en .
+
+apmwg:tours a skos:Concept ;
+    skos:broader apmwg:activities ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Tours"@en .
+
+apmwg:course a skos:Concept ;
+    rdfs:label "Course"@en ;
+    skos:broader apmwg:meal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Course"@en .
+
+apmwg:meal a skos:Concept ;
+    rdfs:label "Meal"@en ;
+    skos:definition "The Meal facet allows to a) describe that other products ( such as lounge, or flight, etc.  ... ) provide meals and b) the actual meals served by them selves either as generic products like breakfast of relay specific meals that that can be ordered"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Meal"@en ;
+    skos:related <http://data.iata.org/vocabularies/products/01.03.00.00/> ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:SSR a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    skos:definition """IATA SSR stands for Special Service Request in the context of air travel. It's a standard code set defined by IATA (International Air Transport Association) used by airlines, travel agents, and reservation systems to communicate special passenger needs or services.
+Class for represneting SRR codes usable to further qualifiy the Taxonomy. They are provided here but could well be in their own Vocabulary in which case we would use the exact / broader match semantic to align the vocabularies"""@en ;
+    skos:prefLabel "SSR"@en .
+
+apmwg:cuisine a skos:Concept ;
+    rdfs:label "Cuisine"@en ;
+    skos:broader apmwg:meal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Cuisine"@en .
+
+apmwg:nonalcoholic a skos:Concept ;
+    skos:broader apmwg:drinks ;
+    skos:definition "All beverages not containing any alcohol such as coffee, tea, soft drinks, smoothies, alcohol free cocktails, etc ..."@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Non-Alcoholic"@en .
+
+apmwg:activities a skos:Concept ;
+    rdfs:label "Activities"@en ;
+    skos:definition "Activities"@en ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Activities"@en ;
+    skos:topConceptOf apmwg:product_taxonomy_scheme .
+
+apmwg:nutrition a skos:Concept ;
+    rdfs:label "Nutrition"@en ;
+    skos:broader apmwg:meal ;
+    skos:inScheme apmwg:product_taxonomy_scheme ;
+    skos:prefLabel "Nutrition"@en .
+
+apmwg:product_taxonomy_scheme a skos:ConceptScheme ;
+    rdfs:label """
+IATA-APMWG"""@en ;
+    rdfs:comment "https://standards.atlassian.net/wiki/spaces/APMWG/pages/922025985/Taxonomy+Sub-group"^^xsd:anyURI ;
+    skos:definition "This Schema is defining the APMWG product taxonomy. It does not describe the features  of the products i.e. the parts which form the promise towards the customer but elements which describe products in a more intangible fashion allowing to search faster and better for products"@en ;
+    skos:prefLabel "IATA-APMWG "@en .
+

@@ -1,0 +1,269 @@
+@startuml
+' TransportProduct – integrated with Product/Feature core and Taxonomy tagging
+' Business-Simple View (metadata hidden)
+' ---------------------------------------------------------------
+' Stereotypes
+skinparam classAttributeIconSize 0
+hide methods
+
+package "Product Core" {
+  class Product {
+    +identifier : IRI
+    +type : ProductType
+    +name : Text
+    +description : Text
+  }
+
+  enum ProductType {
+    Transport
+    Lounge
+    Meal
+    Baggage
+    Seat
+    PriorityBoarding
+    Other
+  }
+
+  class Feature {
+    note "Atomic, reusable characteristics" as N1
+  }
+
+  Product "1" *-- "1..*" Feature : has >
+}
+
+package "Transport Product" {
+  class TransportProduct <<Product>> {
+    +productClass = Transport
+  }
+  TransportProduct --|> Product
+
+  ' Core transport features (all mandatory unless noted)
+  class Origin <<Feature>> {
+    +station_airport_stop : LocationCode
+    +geo : GeoPoint [0..1]
+  }
+  class Destination <<Feature>> {
+    +station_airport_stop : LocationCode
+    +geo : GeoPoint [0..1]
+  }
+  class TransportMode <<Feature>> {
+    +mode : ModeCode
+    note right: Values: rail, bus, air, ferry, metro, tram, rideShare, other
+  }
+  class ServicePattern <<Feature>> {
+    +pattern : ServiceType
+    +stops_count : NonNegativeInt [0..1]
+    note right: ServiceType = direct | oneStop | multiStop
+  }
+  class Duration <<Feature>> {
+    +planned : DurationISO
+    +buffered : DurationISO [0..1]
+  }
+  class Carrier <<Feature>> {
+    +code : CarrierCode
+    +name : Text [0..1]
+  }
+  class Route <<Feature>> {
+    +identifier : RouteCode [0..1]
+    +segments : SegmentRef[] [0..1]
+  }
+  class TravelClass <<Feature>> {
+    +classCode : Text ' e.g., 1st, 2nd, Economy, Business
+  }
+  class SeatAttributes <<Feature>> {
+    +reserved_seating : Boolean [0..1]
+    +seat_pitch_cm : Number [0..1]
+    +seat_width_cm : Number [0..1]
+  }
+  class OnboardExperience <<Feature>> {
+    +wifi : Availability [0..1]
+    +power_outlet : Availability [0..1]
+    +quiet_zone : Boolean [0..1]
+  }
+  class FlexConditions <<Feature>> {
+    +changeable : Boolean [0..1]
+    +refundable : Boolean [0..1]
+    +penalty_summary : Text [0..1]
+  }
+
+  ' Feature composition on TransportProduct
+  TransportProduct *-- Origin
+  TransportProduct *-- Destination
+  TransportProduct *-- TransportMode
+  TransportProduct *-- ServicePattern
+  TransportProduct *-- Duration
+  TransportProduct *-- Carrier
+  TransportProduct *-- Route
+  TransportProduct o-- TravelClass
+  TransportProduct o-- SeatAttributes
+  TransportProduct o-- OnboardExperience
+  TransportProduct o-- FlexConditions
+}
+
+package "Taxonomy (Business)" {
+  class Concept <<apmwg:Concept>> {
+    +id : IRI
+    +prefLabel : langString
+    +altLabel : langString[] [0..*]
+    +definition : langString [0..1]
+  }
+  class Collection <<SKOS:Collection>> {
+    +id : IRI
+    +label : langString
+  }
+  class ClassificationProfile {
+    +productClass : ProductType
+    +required_min_tags : Integer [0..1]
+    +recommended_tags : Integer [0..1]
+  }
+  class Tagging {
+    +about : IRI  ' Product or Feature id
+    +concept : IRI ' Concept id
+    +confidence : Number [0..1]
+  }
+
+  ' Facets as top terms (is_top=true)
+  class Facet <<apmwg:Concept>> {
+    +id : IRI
+    +prefLabel : langString
+    +is_top = true
+  }
+
+  ProfTransport --> CollTransport : binds
+  Tagging --> Concept
+  Tagging --> Product
+  Tagging --> Feature
+}
+
+' Business facet examples (opaque ids, labels carry meaning)
+class Facet_Geography <<apmwg:Concept>>
+class Facet_TransportMode <<apmwg:Concept>>
+class Facet_Duration <<apmwg:Concept>>
+class Facet_OnboardExperience <<apmwg:Concept>>
+
+' Example mappings
+TransportMode .. Tagging : tag with Facet_TransportMode
+Duration .. Tagging : tag with Facet_Duration
+OnboardExperience .. Tagging : altLabel "Product Experience"
+
+@enduml
+
+
+' ================= Full View (with Metadata separated) =================
+@startuml
+skinparam classAttributeIconSize 0
+hide methods
+
+package "Metadata" {
+  enum StatusCode <<Metadata>> {
+    active
+    deprecated
+    onhold
+    new
+    deleted
+    archived
+  }
+
+  class LifecycleStatus <<Metadata>> {
+    +status : StatusCode
+    +since : Date
+    +reason : Text [0..1]
+  }
+
+  class Versioning <<Metadata>> {
+    +version : SemVer
+    +changed_by : Agent
+    +changed_at : DateTime
+    +comment : Text [0..1]
+  }
+
+  class AvailabilityWindow <<Metadata>> {
+    +sell_from : DateTime
+    +deliver_from : DateTime
+    +sell_until : DateTime [0..1]
+    +deliver_until : DateTime [0..1]
+    note right: Supports the staging rule with two key dates.
+  }
+}
+
+package "Core" {
+  class Product {
+    +identifier : IRI
+    +type : ProductType
+    +name : Text
+    +description : Text
+  }
+  enum ProductType {
+    Transport
+    Lounge
+    Meal
+    Baggage
+    Seat
+    PriorityBoarding
+    Other
+  }
+  class Feature { }
+  Product "1" *-- "1..*" Feature : has >
+}
+
+package "Transport" {
+  class TransportProduct <<Product>> { +productClass = Transport }
+  TransportProduct --|> Product
+
+  class Origin <<Feature>> { +station_airport_stop : LocationCode +geo : GeoPoint [0..1] }
+  class Destination <<Feature>> { +station_airport_stop : LocationCode +geo : GeoPoint [0..1] }
+  enum ModeCode { rail bus air ferry metro tram rideShare other }
+  class TransportMode <<Feature>> { +mode : ModeCode }
+  enum ServiceType { direct oneStop multiStop }
+  class ServicePattern <<Feature>> { +pattern : ServiceType +stops_count : NonNegativeInt [0..1] }
+  class Duration <<Feature>> { +planned : DurationISO +buffered : DurationISO [0..1] }
+  class Carrier <<Feature>> { +code : CarrierCode +name : Text [0..1] }
+  class Route <<Feature>> { +identifier : RouteCode [0..1] +segments : SegmentRef[] [0..1] }
+  class TravelClass <<Feature>> { +classCode : Text }
+  class SeatAttributes <<Feature>> { +reserved_seating : Boolean [0..1] +seat_pitch_cm : Number [0..1] +seat_width_cm : Number [0..1] }
+  enum Availability { yes no limited unknown }
+  class OnboardExperience <<Feature>> { +wifi : Availability [0..1] +power_outlet : Availability [0..1] +quiet_zone : Boolean [0..1] }
+  class FlexConditions <<Feature>> { +changeable : Boolean [0..1] +refundable : Boolean [0..1] +penalty_summary : Text [0..1] }
+
+  TransportProduct *-- Origin
+  TransportProduct *-- Destination
+  TransportProduct *-- TransportMode
+  TransportProduct *-- ServicePattern
+  TransportProduct *-- Duration
+  TransportProduct *-- Carrier
+  TransportProduct *-- Route
+  TransportProduct o-- TravelClass
+  TransportProduct o-- SeatAttributes
+  TransportProduct o-- OnboardExperience
+  TransportProduct o-- FlexConditions
+}
+
+package "Taxonomy" {
+  class Concept <<apmwg:Concept>> { +id : IRI +prefLabel : langString +altLabel : langString[] [0..*] +definition : langString [0..1] }
+  class Facet <<apmwg:Concept>> { +id : IRI +prefLabel : langString +is_top = true }
+  class Collection <<SKOS:Collection>> { +id : IRI +label : langString }
+  class ClassificationProfile { +productClass : ProductType +required_min_tags : Integer [0..1] +recommended_tags : Integer [0..1] }
+  class Tagging { +about : IRI +concept : IRI +confidence : Number [0..1] }
+
+  Facet "Geography" as Facet_Geo
+  Facet "Transport Mode" as Facet_Mode
+  Facet "Transport Duration" as Facet_Dur
+  Facet "Onboard Experience" as Facet_OBE
+
+  Collection "Transport Essentials" as CollTransport
+  ClassificationProfile "Transport → Essentials" as ProfTransport
+
+  ProfTransport --> CollTransport : binds
+  Tagging --> Concept
+  Tagging --> Product
+  Tagging --> Feature
+
+  OnboardExperience .. Tagging : altLabel "Product Experience"
+}
+
+' Metadata associations (kept separate from business view)
+TransportProduct "1" -- "1" LifecycleStatus : has >
+TransportProduct "1" -- "0..*" Versioning : history >
+TransportProduct "1" -- "1" AvailabilityWindow : availability >
+
+@enduml

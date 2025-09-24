@@ -1,0 +1,243 @@
+
+@startuml E2E example L1 plus L2
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 120
+hide empty members
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Core Model (no ReferenceSystem/Rules shown ) " as P1 {
+
+class TaxonomyConcept {
+  +conceptID: String
+  +prefLabel: String
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+
+LifecycleStatus  .d.> StatusCode
+
+enum ProductType {
+  +Transport
+  +Baggage
+  +Lounge
+  +Meal
+  +Other
+}
+
+'note top of ProductType
+'shall be extensible
+'end note
+
+  class Product {
+    +identifier
+    +type: ProductType
+    +name : Text
+    +description : Text
+  }
+
+  Product  .l.> ProductType
+  Product "1" -r- "0..n" TaxonomyConcept: classified by >
+
+  class Feature {
+    +identifier: Any
+    +name: Text
+    +description: Text
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+
+  class SingleValue {
+    +value
+  }
+
+  class ValueRange {
+    +minValue
+    +maxValue
+  }
+
+  class DiscreteSet {
+    +allowedValues: List
+  }
+
+  FeatureValue <|-- SingleValue
+  FeatureValue <|-- ValueRange
+  FeatureValue <|-- DiscreteSet
+
+  Feature --> FeatureValue : has exactly one >
+
+  Product "1" *-- "1..*" Feature : has >
+
+
+
+}
+
+' === Layer 2: Product Class Specialization ===
+package "Layer 2: Product Class: TransportProduct" as P2 {
+
+    class RS_IATA <<ReferenceSystem>> {
+      identifier = "RS-IATA-AIRPORT-001"
+      description = "IATA 3-letter airport codes"
+      system_type = Enumeration
+    }
+
+    class "RS_Weekdays" <<ReferenceSystem>> {}
+    class "RS_TransportModes" <<ReferenceSystem>> {}
+    class "RS_IATA VehicleTypes" <<ReferenceSystem>> {} 
+
+  class TransportProduct << Product >> {
+    +identifier : UID
+    +type : ProductType = "Transport"
+    +name : Text
+    +description : Text
+  }
+
+
+class Origin <<Feature>> {
+  +unit: Location
+}
+class OriginValue <<SingleValue>> {
+  +value: String 
+}
+
+RS_IATA --> OriginValue: applies to >
+RS_IATA --> DestinationValue: applies to >
+
+Origin -d-> OriginValue
+class Destination <<Feature>> {
+  +unit: Location
+}
+class DestinationValue <<SingleValue>> {
+  +value: String 
+}
+Destination -d-> DestinationValue
+
+class MarketingName <<Feature>> {}
+class VehicleType <<Feature>> {}
+class OpWeekDays <<Feature>> {}
+class ModeOfTransport <<Feature>> {}
+
+TransportProduct -d-> ModeOfTransport: has
+TransportProduct -d-> Origin: has
+TransportProduct -d-> Destination: has
+TransportProduct -d-> MarketingName: has
+TransportProduct -d-> VehicleType: has
+TransportProduct -d-> OpWeekDays: has
+
+  ' Product <|-- TransportProduct
+
+}
+
+P2 -----up[hidden]-> P1
+
+' === Layer 3: Feature Mapping Example ===
+@enduml
+
+@startuml E2E example L2 plus L3
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+hide empty members
+
+' === Layer 1: Abstract Core Model ===
+' === Layer 2: Product Class Specialization ===
+' package "Layer 2: Product Class: TransportProduct" as P2 {
+
+' }
+
+
+' === Layer 3: Feature Mapping Example ===
+package "Layer 3: Concrete Product AF[CDG-JFK] " as P3 {
+
+' ------------------------------------------------------------
+' Instances: Test Case 1 – Air (CDG -> JFK, Air France)
+' ------------------------------------------------------------
+  object "**TransportProduct**\nTP-FR-AF-CDG-JFK" as TP1 {
+    productID = TP-FR-AF-CDG-JFK
+    supplierOperator = Air France
+    modeOfTransport = Air
+    retailStatus = Active
+    \n
+    \n
+  }
+
+  object "Validity\nvalidFrom=2025-10-29\nvalidTo=2026-03-29" as VLD1
+  object "**Taxonomy**\ngeographicScope=Intercontinental\nsegmentType=LongHaul\nmodeTag=Air\nproductExperience=High" as TAX1
+  object "**LifecycleStatus**\nstatus=active" as LCS1
+  TP1 --> VLD1
+  TP1 --l-> TAX1
+  TP1 --r-> LCS1
+
+  object "**Feature**\norigin\nrefSys=IATA-Airport" as A_F1
+  object "**Feature**\ndestination\nrefSys=IATA-Airport" as A_F2
+  object "**Feature**\nserviceTopology\nrefSys=apmwg:Topology" as A_F3
+  object "**Feature**\nnominalDuration\nrefSys=ISO-8601-Duration" as A_F4
+  object "**Feature**\nserviceClassesAvailable\nrefSys=Airline-Cabin-Classes" as A_F5
+  object "**Feature**\nseatGuaranteeType\nrefSys=apmwg:SeatGuarantee" as A_F6
+  object "**Feature**\naccessibilityPromise\nrefSys=Accessibility-Catalog" as A_F7
+  object "**Feature**\noperationalVehicleType\nrefSys=IATA-AircraftTypes" as A_F8
+  object "**Feature**\noperationalDaysOfWeek\nrefSys=ISO-Weekday" as A_F9
+
+  TP1 --> A_F1: has
+  TP1 --> A_F2: has
+  TP1 --> A_F3: has
+  TP1 --> A_F4: has
+  TP1 --> A_F5: has
+  TP1 --> A_F6: has
+  TP1 --> A_F7: has
+  TP1 --> A_F8: has
+  TP1 --> A_F9: has
+
+  object "SingleValue\nCDG" as A_V1
+  object "SingleValue\nJFK" as A_V2
+  object "SingleValue\nDirect" as A_V3
+  object "ValueRange\nmin=PT7H50M\nmax=PT8H45M" as A_V4
+  object "DiscreteSet\n{Economy, PremiumEconomy, Business, First}" as A_V5
+  object "SingleValue\nGuaranteedSeat" as A_V6
+  object "DiscreteSet\n{WheelchairAssistance, JetBridgeBoarding}" as A_V7
+  object "DiscreteSet\n{Widebody, A350-900, B777-300ER}" as A_V8
+  object "DiscreteSet\n{Mon, Wed, Fri, Sun}" as A_V9
+
+  A_F1 --> A_V1
+  A_F2 --> A_V2
+  A_F3 --> A_V3
+  A_F4 --> A_V4
+  A_F5 --> A_V5
+  A_F6 --> A_V6
+  A_F7 --> A_V7
+  A_F8 --> A_V8
+  A_F9 --> A_V9
+
+  note top of A_F3
+  direct; tech stop allowed with no pax
+  cf. Taxonomy
+  end note
+
+}
+
+'P3 --------up-> P2
+@enduml

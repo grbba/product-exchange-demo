@@ -1,0 +1,107 @@
+@startuml
+skinparam Linetype ortho
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+
+' Features that describe a product
+
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  .d.> StatusCode
+
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+}
+
+
+'=== Reference System Core Class ===
+class ReferenceSystem {
+  +identifier: Any
+  +description: Text
+  +system_type: ReferenceSystemType
+}
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: Text
+  +resource_name: Text
+  +resource_type: Text
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +link: Any // Any can be e.g. an url
+}
+
+class InternalReference {
+  +repository_name: Text
+  +version: Any
+}
+
+' === Relationships ===
+ReferenceSystem --> ReferenceSystemType : type
+ReferenceSystem --> ReferenceSource : definedBy
+
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+' Feature "1" ---> "1" ReferenceSystem : constrained by >
+
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +unit
+}
+
+class SingleValue {
+  +value
+}
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+class DiscreteSet {
+  +allowedValues: List
+}
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+Feature "1" --> "1" FeatureValue : has exactly one >
+Feature ---> ReferenceSystem : has as reference >
+
+@enduml

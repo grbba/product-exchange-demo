@@ -1,0 +1,27 @@
+@startuml interline_complexity
+!theme plain
+title Multi-Airline Problem: Complexity Multiplies
+
+actor Retailer
+participant "Airline A" as A1
+participant "Airline B" as A2
+participant "Airline C" as A3
+
+note over Retailer : Need: Paris -> Sydney\nvia connecting flights
+
+Retailer -> A1 : Search PAR->HKG
+Retailer -> A2 : Search HKG->SYD  
+Retailer -> A3 : Search PAR->SYD direct
+
+A1 -> Retailer : Offer format #1
+A2 -> Retailer : Offer format #2
+A3 -> Retailer : Offer format #3
+
+note over Retailer : Cannot combine intelligently:\n• Different product models\n• Incompatible policies\n• No shared taxonomy
+
+Retailer -> A1 : Try more combinations...
+Retailer -> A2 : Try more combinations...
+Retailer -> A3 : Try more combinations...
+
+note right : Exponential API calls\nfor multi-airline trips
+@enduml

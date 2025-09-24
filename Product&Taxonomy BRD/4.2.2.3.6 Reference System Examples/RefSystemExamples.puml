@@ -1,0 +1,49 @@
+@startuml Figure 9: IATA airport codes
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Feature Reference System" {
+
+class RS_IATA <<ReferenceSystem>>  {
+  identifier = "RS-IATA-AIRPORT-001"
+  description = "IATA 3-letter airport codes"
+  system_type = Enumeration
+}
+
+class IATARef <<ExternalReference>>  {
+  authority = "IATA"
+  resource_name = "IATA Airline and Airport Code Directory"
+  resource_type = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/?airport.search="
+}
+
+RS_IATA --> IATARef
+}
+
+@enduml
+
+
+@startuml Figure 10: UNECE Measurements
+' title ReferenceSystem: UNECE Measurement Units
+skinparam PackageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Layer 2: Feature Reference System" {
+' reuse core and enums
+class RS_UNECE <<ReferenceSystem>>{
+  identifier = "RS-UNECE-REC20-001"
+  description = "UNECE Recommendation 20 – Measurement units"
+  system_type = Measurement
+}
+
+class UNECERef <<ExternalReference>> {
+  authority = "UNECE"
+  resource_name = "Recommendation No. 20"
+  resource_type = "CodeList"
+  url = "https://unece.org/trade/cefact/recommendations/standard-units"
+}
+
+RS_UNECE --> UNECERef
+}
+@enduml

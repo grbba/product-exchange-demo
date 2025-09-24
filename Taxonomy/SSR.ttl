@@ -1,0 +1,109 @@
+@prefix grddl: <http://www.w3.org/2003/g/data-view#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix apmwg: <https://taxonomy.apmwg.ovh#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+
+apmwg:AVML a apmwg:SSR;
+   rdfs:label "AVML"@en;
+   skos:prefLabel "AVML"@en;
+   skos:definition "Asian Vegetarian Meal"@en .
+
+apmwg:BBML a apmwg:SSR;
+   rdfs:label "BBML"@en;
+   skos:prefLabel "BBML"@en;
+   skos:definition "Baby/Infant Meal"@en .
+
+apmwg:BLML a apmwg:SSR;
+   rdfs:label "BLML"@en;
+   skos:prefLabel "BLML"@en;
+   skos:definition "Bland/Soft Meal"@en .
+
+apmwg:CHML a apmwg:SSR;
+   rdfs:label "CHML"@en;
+   skos:prefLabel "CHML"@en;
+   skos:definition "Child Meal"@en .
+
+apmwg:DBML a apmwg:SSR;
+   rdfs:label "DBML"@en;
+   skos:prefLabel "DBML"@en;
+   skos:definition "Diabetic Meal"@en .
+
+apmwg:FPML a apmwg:SSR;
+   rdfs:label "FPML"@en;
+   skos:prefLabel "FPML"@en;
+   skos:definition "Fruit Platter Meal"@en .
+
+apmwg:GFML a apmwg:SSR;
+   rdfs:label "GFML"@en;
+   skos:prefLabel "GFML"@en;
+   skos:definition "Gluten-Intolerant Meal"@en .
+
+apmwg:HNML a apmwg:SSR;
+   rdfs:label "HNML"@en;
+   skos:prefLabel "HNML"@en;
+   skos:definition "Hindu (Non-Vegetarian) Meal"@en .
+
+apmwg:KSML a apmwg:SSR;
+   rdfs:label "KSML"@en;
+   skos:prefLabel "KSML"@en;
+   skos:definition "Kosher Meal"@en .
+
+apmwg:LCML a apmwg:SSR;
+   rdfs:label "LCML"@en;
+   skos:prefLabel "LCML"@en;
+   skos:definition "Low-Calorie Meal"@en .
+
+apmwg:LFML a apmwg:SSR;
+   rdfs:label "LFML"@en;
+   skos:prefLabel "LFML"@en;
+   skos:definition "Low-Fat/Cholesterol Meal"@en .
+
+apmwg:LSML a apmwg:SSR;
+   rdfs:label "LSML"@en;
+   skos:prefLabel "LSML"@en;
+   skos:definition "Low-Sodium Meal"@en .
+
+apmwg:MOML a apmwg:SSR;
+   rdfs:label "MOML"@en;
+   skos:prefLabel "MOML"@en;
+   skos:definition "Muslim Meal"@en .
+
+apmwg:NLML a apmwg:SSR;
+   rdfs:label "NLML"@en;
+   skos:prefLabel "NLML"@en;
+   skos:definition "Non-Lactose Meal"@en .
+
+apmwg:RVML a apmwg:SSR;
+   rdfs:label "RVML"@en;
+   skos:prefLabel "RVML"@en;
+   skos:definition "Raw Vegetarian Meal"@en .
+
+apmwg:SFML a apmwg:SSR;
+   rdfs:label "SFML"@en;
+   skos:prefLabel "SFML"@en;
+   skos:definition "Seafood Meal"@en .
+
+apmwg:VGML a apmwg:SSR;
+   rdfs:label "VGML"@en;
+   skos:prefLabel "VGML"@en;
+   skos:definition "Vegan Meal"@en .
+
+apmwg:VJML a apmwg:SSR;
+   rdfs:label "VJML"@en;
+   skos:prefLabel "VJML"@en;
+   skos:definition "Vegetarian Jain Meal"@en .
+
+apmwg:VLML a apmwg:SSR;
+   rdfs:label "VLML"@en;
+   skos:prefLabel "VLML"@en;
+   skos:definition "Vegetarian Lacto-Ovo Meal"@en .
+
+apmwg:VOML a apmwg:SSR;
+   rdfs:label "VOML"@en;
+   skos:prefLabel "VOML"@en;
+   skos:definition "Vegetarian Oriental Meal"@en .

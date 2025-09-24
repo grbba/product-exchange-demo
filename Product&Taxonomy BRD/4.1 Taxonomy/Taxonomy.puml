@@ -1,0 +1,109 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+package "Taxonomy" {
+
+  class ConceptScheme {
+    +scheme_id
+    +name : Text
+    +description : Text
+    +version : Text
+    +valid_from : Date
+    +valid_until : Date
+  }
+
+  class Concept {
+    +concept_id                     
+' opaque identifier        
+' optional short code
+    +status : {active, deprecated}
+    +is_top : Boolean           
+' TRUE = facet/root concept
+    +created_at : Date
+  }
+
+  class ConceptLabel {
+    +lang : Lang
+    +prefLabel : Text
+    +altLabel : Text[*]
+  }
+
+  class ConceptDefinition {
+    +lang : Lang
+    +definition : Text
+    +source : URI
+  }
+
+  ' Simple relation object keeps it explicit, business-readable
+  class ConceptRelation {
+    +type : {broader, narrower, related}
+    +since : Date
+    +until : Date
+    +note : Text
+  }
+
+  ' Cross-scheme or bilateral supplier↔retailer alignments
+  class ConceptAlignment {
+    +alignment_id
+    +type : {exact, close, broad, narrow, related}
+    +target_scheme : URI
+    +target_concept : URI
+    +since : Date
+  }
+
+  ConceptScheme "1" o-- "1..*" Concept : defines >
+  Concept "1" o-- "1..*" ConceptLabel : has >
+  Concept "1" o-- "0..*" ConceptDefinition : has >
+  Concept "1" -- "0..*" ConceptAlignment : maps >
+
+  ' Relations connect concepts (BT/NT/RT in business terms)
+  Concept "1" -- "0..*" ConceptRelation : from >
+  ConceptRelation -- "1" Concept : to >
+
+  class Collection {
+    +collection_id
+    +name : Text
+    +description : Text
+    +ordered : Boolean
+    +version : Text
+    +valid_from : Date
+    +valid_until : Date
+  }
+
+  ' membership of concepts in a collection (allows ordering by index)
+  class CollectionMember {
+    +index : Integer?
+    +role : {core, recommended, optional}  
+' optional per-member hint
+    +note : Text?
+  }
+
+  Collection "1" o-- "0..*" Collection : includes >      
+' nested collections allowed
+  Collection "1" -- "0..*" CollectionMember : has >
+  Concept "1" -- "0..*" CollectionMember : member >
+
+
+}
+
+' ---- Product tagging (classification) ----
+package "Product Model" {
+  class Product
+  class Feature
+
+  class Tag {
+  +tag_id
+  +applies_to : {Product, Feature}
+  +since : Date
+}
+
+Tag "1" *---- "1" Concept : categorizes >
+Product -- "0..*" Tag
+Feature -- "0..*" Tag
+
+
+}
+
+@enduml

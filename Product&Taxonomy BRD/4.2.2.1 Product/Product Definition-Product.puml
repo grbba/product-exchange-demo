@@ -1,0 +1,168 @@
+@startuml Figure 2: Product Definition v1
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+' left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Product Definition - Product" as AFM {
+
+ abstract class Product {
+  +identifier
+  +type : ProdcutType
+  +name : Text
+  +description : Text
+}
+
+abstract class AdditionalProductInformation  {
+  <b>Note:</b> used for information like rich media or 
+  contact information etc..
+}
+
+abstract class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+Product -l-> AdditionalProductInformation : has >
+LifecycleStatus  .l.> StatusCode : uses >
+
+abstract class Feature {
+   <b>Note:</b> see feature section for more details  
+}
+@enduml
+
+
+@startuml Figure 2: Product Definition v2
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+hide empty members
+
+' left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Product Definition - Product" as AFM {
+
+  ' The semantic *type* of extra information that can be attached to a Product
+  abstract class ProductInformationExtension {
+  ' abstract class ExtensionDetails {
+    +identifier
+    +name : Text    
+    +version      : Text  
+    +definitionUri : Text 
+    +description  : Text
+  }
+
+  ' The actual *instance* of extra information attached to one Product
+   ' details opaque payload; validated by definitionUri of the Extension
+   
+  abstract class ExtensionDetails {
+  ' abstract class ProductInformationExtension {
+    +details    : Any  
+    +isPrimary  : Boolean        
+    +validFrom  : Date
+    +validTo    : Date
+    +note       : Text
+  }
+
+ abstract class Product {
+  +identifier
+  +type : ProductType
+  +name : Text
+  +description : Text
+}
+
+enum ProductType {
+  transport
+  baggage
+  meal 
+  lounge
+  seat
+  other
+}
+
+' Product "1" o-- "0..*" ProductInformationExtension : has >
+' ProductInformationExtension "1" --> "1" ExtensionDetails : conforms to >
+
+Product "1" o-- "0..*" ExtensionDetails : has >
+ExtensionDetails "1" --> "1" ProductInformationExtension : conforms to >
+
+' abstract class AdditionalProductInformation  {
+'  <b>Note:</b> used for information like rich media or 
+'  contact information etc..
+
+abstract class LifecycleStatus {
+  +status : StatusCode
+  +since : Date
+  +reason : ReasonCode
+}
+
+enum StatusCode {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+Product ..> ProductType : uses >
+' Product -l-> AdditionalProductInformation : has >
+LifecycleStatus  .l.> StatusCode : uses >
+
+abstract class Feature {
+<b>Note:</b> see feature section for more details  
+}
+@enduml
+
+@startuml Example: Product with Information Extensions
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 80
+hide empty members
+
+' -- Assume Product, ProductInformationExtension, ExtensionDetails exist from Layer 1 --
+' -- The ExtnsionDetails are instatiated at layer 3 ( not 2 ) ( as we do know only here which media to attach ) 
+' -- the same goes for the ProductInformationExtension 
+' -- if this information is not specific to a specified product it can also be created on layer 2 
+' -- and be used by any specified product on layer 3
+
+package "Example Instance on Layer 3" as EX {
+  object "Product\nidentifier=TP-FR-AF-CDG-JFK\ntype=Transport\nname=CDG→JFK Flight" as P1
+  object "ProductInformationExtension\nidentifier=EXT-MEDIA\nname=Media Attachment\nversion=1.0\ndefinitionUri=urn:example:schema:media-attachment:v1\ndescription=Attach rich media to a Product" as EXT_MEDIA
+  object "ProductInformationExtension\nidentifier=EXT-CONTACT\nname=Supplier Contact\nversion=1.0\ndefinitionUri=urn:example:schema:supplier-contact:v1\ndescription=Supplier contact details for the Product" as EXT_CONTACT
+
+  ' Two concrete bindings (instances) with illustrative payloads
+  object "ExtensionDetails\nisPrimary=true\nnote=Hero + datasheet\nvalidFrom=2025-09-01\ndetails=[\n  {uri=https://cdn.example/hero.jpg, usage=hero, title=CDG-JFK Hero},\n  {uri=https://cdn.example/datasheet.pdf, usage=datasheet, title=Flight Datasheet}\n]" as ED_MEDIA
+  object "ExtensionDetails\nnote=Operations contact\ndetails={\n  party={identifier=AF-OPS, name=Air France Operations},\n  contacts=[\n    {channel=phone, value=+33-1-23-45-67-89, hours=24/7, timezone=Europe/Paris},\n    {channel=email, value=ops-support@airfrance.example}\n  ]\n}" as ED_CONTACT
+
+  ' Wiring (mirrors Layer 1 associations)
+  P1 o-- ED_MEDIA
+  P1 o-- ED_CONTACT
+  ED_MEDIA --> EXT_MEDIA
+  ED_CONTACT --> EXT_CONTACT
+}
+@enduml

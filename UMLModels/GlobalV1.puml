@@ -1,0 +1,295 @@
+@startuml global#2Layer1#Product
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+' left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Product Definition - Product" as AFM {
+
+ abstract class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+abstract class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  .l.> StatusCode : uses >
+
+abstract class Feature {
+<b>Note:</b> see feature section for more details  
+}
+@enduml
+
+
+
+@startuml global#2Layer1
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+' left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Product Definition" as AFM {
+
+ abstract class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  .l.> StatusCode : uses >
+
+abstract class Feature {
+    +identifier
+    +name: Text
+    +description: Text
+  }
+
+abstract class FeatureValue {
+    +unit
+  }
+
+abstract class SingleValue {
+    +value
+  }
+
+abstract class ValueRange {
+  +minValue
+  +maxValue
+}
+
+abstract class DiscreteSet {
+  +allowedValues: List
+}
+
+
+FeatureValue <|-d- SingleValue
+FeatureValue <|-d- ValueRange
+FeatureValue <|-d- DiscreteSet
+
+Feature --> "1" FeatureValue : has >
+
+class ReferenceSystem {
+    +identifier
+    +description
+    +system_type
+  }
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: Text
+  +resource_name: Text
+  +resource_type: Text
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +link: Any // Any can be e.g. an url
+}
+
+class InternalReference {
+  +repository_name: Text
+  +version: Any
+}
+
+' === Relationships ===
+ReferenceSystem -l-> ReferenceSystemType : is of type
+ReferenceSystem --> ReferenceSource : definedBy
+
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+
+FeatureValue <--l--- ReferenceSystem : applies to <
+}
+@enduml
+
+@startuml global#2Layer2
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+
+' === Layer 2: TransportProduct with Specialized Features ===
+package "Layer 2: TransportProduct" as TP {
+
+  enum TransportMode {
+    Air
+    Rail
+    Bus
+    Ferry
+    Other
+  }
+
+  class TransportProduct <<Product>> {
+    +identifier
+    +name: Text
+    +description: Text
+
+    +origin: OriginFeature
+    +destination: DestinationFeature
+    +validityPeriod: ValidityPeriodFeature
+    +transportMode: TransportModeFeature
+  }
+  
+  ' Product <|- TransportProduct: derived from <
+  TransportMode --> TransportModeFeature : uses >
+
+  class OriginFeature <<SingleValue>>
+  class DestinationFeature <<SingleValue>>
+  class ValidityPeriodFeature <<ValueRange>>
+  class TransportModeFeature <<SingleValue>> {
+    +mode: TransportMode
+  }
+
+  'SingleValue <|- OriginFeature: derived from <
+  'SingleValue <|- DestinationFeature: derived from <
+  'Feature <|- ValidityPeriodFeature: derived from <
+  'Feature <|-- TransportModeFeature: derived from <
+
+  'DestinationFeature -[hidden]-> OriginFeature
+  'ValidityPeriodFeature -[hidden]-> DestinationFeature
+  'TransportModeFeature -[hidden]-> ValidityPeriodFeature
+}
+
+@enduml
+@startuml global#2Layer3
+' === Layer 3: Concrete product instance ===
+
+package "Layer 3: Concrete Product Instance" as CPI {
+
+  object "LH1234_Economy : TransportProduct" as LH1234_Economy {
+    identifier = "LH1234_ECO"
+    name = "Flight LH1234 Economy Class"
+    description = "Economy seat on LH1234 flight"
+  }
+
+  object  "Origin_LHR : OriginFeature" as Origin_LHR  {
+    name = "Origin"
+    description = "London Heathrow Airport"
+  }
+
+  object  "Destination_JFK : DestinationFeature" as Destination_JFK  {
+    name = "Destination"
+    description = "John F. Kennedy Airport"
+  }
+
+  object "Validity_Summer2025 : ValidityPeriodFeature" as Validity_Summer2025 {
+    name = "Validity Period"
+    description = "Valid from June to August 2025"
+  }
+
+  object  "TransportMode_Air : TransportModeFeature" as TransportMode_Air {
+    name = "Transport Mode"
+    description = "Air transport mode"
+  }
+
+  ' Feature Values
+  object "Value_LHR : SingleValue" as Value_LHR {
+    value = "LHR"
+  }
+
+  object "Value_JFK : SingleValue" as Value_JFK {
+    value = "JFK"
+  }
+
+  object "Value_ValidSummer : SingleValue" as Value_ValidSummer {
+    value = "2025-06 to 2025-08"
+  }
+
+  object "Value_ModeAir : SingleValue" as Value_ModeAir {
+    value = "Air"
+  }
+
+  ' Reference Systems
+  object "IATA_Codes : ReferenceSystem" as IATA_Codes {
+    identifier = "IATA-Airport-Codes"
+    description = "IATA 3-letter airport code system"
+    system_type = "CodeSystem"
+  }
+
+  object "TransportModesRef : ReferenceSystem" as TransportModesRef {
+    identifier = "Transport-Modes"
+    description = "Standardized transport modes"
+    system_type = "Enumeration"
+  }
+
+  ' Connect features to values and reference systems
+  Origin_LHR --> Value_LHR
+  Origin_LHR --> IATA_Codes
+
+  Destination_JFK --> Value_JFK
+  Destination_JFK --> IATA_Codes
+
+  Validity_Summer2025 --> Value_ValidSummer
+
+  TransportMode_Air --> Value_ModeAir
+  TransportMode_Air --> TransportModesRef
+
+  ' Connect concrete product to feature instances
+  LH1234_Economy *-- Origin_LHR
+  LH1234_Economy *-- Destination_JFK
+  LH1234_Economy *-- Validity_Summer2025
+  LH1234_Economy *-- TransportMode_Air
+  
+}
+
+@enduml

@@ -1,0 +1,221 @@
+@startuml Figure 11: Product Rules
+'title Product Rules and Constraints Model (Enhanced Logical Operators)
+skinparam classAttributeIconSize 0
+skinparam Linetype ortho
+
+
+hide empty members
+
+' === Core Rule Elements ===
+class ProductRule {
+  +ruleID: String
+  +name: String
+  +description: String
+  +type: RuleType
+  +priority: Integer
+}
+
+enum RuleType {
+  Dependency
+  Exclusion
+  AvailabilityConstraint
+  ValueConstraint
+  Inclusion
+}
+
+enum ContextRef {
+  currentProduct
+  transport
+  order
+  customer
+  itinerary
+  segment
+}
+
+class RuleContext {
+  +contextID: String
+  +bindings: Map<ContextRef, Any>  
+}
+' e.g., {"transport": <Product>, "order": <Order>}
+
+ProductRule --> RuleContext : evaluated with
+RuleContext --> ContextRef
+
+' === Enhanced Logical Structure ===
+abstract class LogicalExpression {
+  +expressionID: String
+  +evaluate(): Boolean
+}
+
+class SimpleCondition extends LogicalExpression {
+  +conditionID: String
+  +description: String
+  +subjectRef: ContextRef  
+}
+' e.g., "transport", "currentProduct", "customer"
+
+class CompoundCondition extends LogicalExpression {
+  +operator: LogicalOperator
+  +description: String
+}
+
+class TaxonomyCondition extends SimpleCondition {
+  +taxonomyConceptID: String
+  +taxonomyScheme: String
+}
+' === Notes
+note bottom of TaxonomyCondition
+  Allows rules to trigger based on 
+  taxonomy classification rather 
+  than product features e.g. 
+  - Market regions (EU→NA)
+  - Cuisine types (Indian, French)
+  - Customer segments (Loyalty tiers)
+end note
+
+class TaxonomyConcept{
+  +conceptID: String
+  +label: String
+}
+
+enum LogicalOperator {
+  AND
+  OR
+  NOT
+  XOR
+  NAND
+  NOR
+}
+
+abstract class RuleTarget {
+  +targetID: String
+  +description: String
+  +action: TargetAction
+}
+
+class ProductTarget {
+    +productID: String
+}
+
+class TaxonomyTarget {
+    +conceptID: String
+}
+
+enum TargetAction {
+  ENABLE
+  DISABLE
+  SET_VALUE
+  ADD_TO_SELECTION
+  REMOVE_FROM_SELECTION
+  SHOW
+  HIDE
+  REQUIRE
+  FORBID
+}
+
+class RuleScope {
+  +scopeID: String
+  +description: String
+}
+
+enum ValueOperator {
+  EQUALS
+  NOT_EQUALS
+  LESS_THAN
+  LESS_THAN_OR_EQUAL
+  GREATER_THAN
+  GREATER_THAN_OR_EQUAL
+  IN
+  NOT_IN
+  CONTAINS
+  NOT_CONTAINS
+  STARTS_WITH
+  ENDS_WITH
+  MATCHES_PATTERN
+  SELECTED
+  NOT_SELECTED
+  EXISTS
+  NOT_EXISTS
+}
+
+class FeatureCondition extends SimpleCondition {
+  +featureID: String
+  +value: Any
+  +operator: ValueOperator
+}
+
+class ProductCondition extends SimpleCondition {
+  +productID: String
+  +operator: ValueOperator
+}
+
+class QuantityCondition extends SimpleCondition {
+  +itemID: String
+  +quantity: Integer
+  +operator: ValueOperator
+}
+
+class DateTimeCondition extends SimpleCondition {
+  +dateTime: DateTime
+  +operator: ValueOperator
+}
+
+class ScopeDefinition {
+  +channels: List<String>
+  +markets: List<String>
+  +customerSegments: List<String>
+  +effectiveFrom: DateTime
+  +effectiveTo: DateTime
+}
+
+' === Semantic Relationships ===
+ProductRule --> LogicalExpression : triggers on
+ProductRule --> RuleTarget : enforces
+ProductRule --> RuleScope : constrained by
+ProductRule --> RuleType : classified as
+
+CompoundCondition --> LogicalOperator : uses
+CompoundCondition --> LogicalExpression : contains [2..*]
+TaxonomyCondition --> TaxonomyConcept
+TaxonomyTarget --> TaxonomyConcept
+
+RuleTarget <|-- ProductTarget
+RuleTarget <|-- TaxonomyTarget
+RuleTarget --> TargetAction : performs
+RuleScope --> ScopeDefinition : defines context
+
+FeatureCondition --> ValueOperator : applies
+ProductCondition --> ValueOperator : applies
+QuantityCondition --> ValueOperator : applies
+DateTimeCondition --> ValueOperator : applies
+
+' === Notes
+
+note left of CompoundCondition
+  Supports nested logical expressions:
+  - (A AND B) OR (C AND NOT D)
+  - Complex boolean logic trees
+  - Parentheses grouping via nesting
+end note
+
+note bottom of LogicalOperator
+  Standard boolean operators:
+  - AND: All conditions must be true
+  - OR: At least one condition must be true  
+  - NOT: Negates the condition
+  - XOR: Exactly one condition must be true
+  - NAND: Not all conditions are true
+  - NOR: None of the conditions are true
+end note
+
+note bottom of TargetAction
+  Explicit actions the rule can perform:
+  - Control visibility (SHOW/HIDE)
+  - Control availability (ENABLE/DISABLE)
+  - Modify selections (ADD/REMOVE)
+  - Set constraints (REQUIRE/FORBID)
+  - Set values directly
+end note
+
+
+@enduml

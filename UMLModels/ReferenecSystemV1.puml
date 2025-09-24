@@ -1,0 +1,114 @@
+@startuml ReferenceSystem#Layer1
+' title ReferenceSystem – with System Type and Dual Source (External/Internal)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam PackageTitleAlignment center
+
+package "Layer 1: Product Definition - Referenece System" { 
+' === Reference System Core Class ===
+class ReferenceSystem {
+  +identifier: Any
+  +description: Text
+  +system_type: ReferenceSystemType
+}
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: Text
+  +resource_name: Text
+  +resource_type: Text
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +link: Any // Any can be e.g. an url
+}
+
+class InternalReference {
+  +repository_name: Text
+  +version: Any
+}
+
+' === Relationships ===
+ReferenceSystem --> ReferenceSystemType : type
+ReferenceSystem --> ReferenceSource : definedBy
+
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+}
+
+/'
+class RS_IATA {
+  identifier = "RS-IATA-AIRPORT-001"
+  description = "IATA 3-letter airport codes"
+  system_type = Enumeration
+}
+
+class IATARef {
+  authority = "IATA"
+  resource_name = "IATA Airline and Airport Code Directory"
+  resource_type = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/"
+}
+
+
+RS_IATA --> IATARef
+'/
+
+@enduml
+@startuml
+class RS_IATA {
+  identifier = "RS-IATA-AIRPORT-001"
+  description = "IATA 3-letter airport codes"
+  system_type = Enumeration
+}
+
+class IATARef {
+  authority = "IATA"
+  resource_name = "IATA Airline and Airport Code Directory"
+  resource_type = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/?airport.search="
+}
+
+RS_IATA --> IATARef
+
+@enduml
+
+
+@startuml
+' title ReferenceSystem: UNECE Measurement Units
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' reuse core and enums
+class RS_UNECE {
+  identifier = "RS-UNECE-REC20-001"
+  description = "UNECE Recommendation 20 – Measurement units"
+  system_type = Measurement
+}
+
+class UNECERef {
+  authority = "UNECE"
+  resource_name = "Recommendation No. 20"
+  resource_type = "CodeList"
+  url = "https://unece.org/trade/cefact/recommendations/standard-units"
+}
+
+RS_UNECE --> UNECERef
+@enduml
+
+
+ata.org/en/publications/directories/code-search/?airport.search=CDG

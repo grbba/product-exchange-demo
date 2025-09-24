@@ -1,0 +1,60 @@
+@startuml Figure 8: Reference System
+' title ReferenceSystem – with System Type and Dual Source (External/Internal)
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam PackageTitleAlignment center
+
+package "Layer 1: Product Definition - Referenece System" { 
+' === Reference System Core Class ===
+class ReferenceSystem {
+  +identifier: Any
+  +description: Text
+  +system_type: ReferenceSystemType
+}
+
+  class SchemaDescriptor {
+    +schemaUri : Text          ' URL/URN to the payload schema
+    +schemaVersion? : Text     ' e.g., "1.0.0"
+    +schemaHash? : Text        ' checksum to pin exact content
+    +contentType? : Text       ' e.g., "application/schema+json"
+    +notes? : Text             ' optional human-readable usage
+  }
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: Text
+  +resource_name: Text
+  +resource_type: Text
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +link: Any // Any can be e.g. an url
+}
+
+class InternalReference {
+  +repository_name: Text
+  +version: Any
+}
+
+' === Relationships ===
+ReferenceSystem --> ReferenceSystemType : type
+ReferenceSystem --> ReferenceSource : definedBy
+ ReferenceSystem "1" --> "1" SchemaDescriptor : validates payload via >
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+}
+
+@enduml

@@ -1,0 +1,29 @@
+
+@startuml distributed_implementation
+!theme plain
+title Implementation: From Problem to Solution
+
+package "Current State" {
+  [Opaque NDC Offers] as Current
+  note bottom : Look-to-book 1000:1\nMassive "fishing"
+}
+
+package "Phase 1: Standards" {
+  [IATA Product Exchange] as P1
+}
+
+package "Phase 2: Retailer Intelligence" {
+  [Product Knowledge Base] as P2
+}
+
+package "Phase 3: Smart Shopping" {
+  [Targeted Requests Only] as P3
+  note bottom : Look-to-book 50:1\n80% fewer API calls
+}
+
+Current -> P1 : Adopt IATA standards
+P1 -> P2 : Build product intelligence
+P2 -> P3 : Enable smart shopping
+
+note right : Key Advantage:\nNo central platform\nBilateral implementation
+@enduml

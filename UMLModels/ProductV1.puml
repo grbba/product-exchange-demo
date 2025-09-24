@@ -1,0 +1,262 @@
+@startuml
+' !define LIGHTBLUE  
+' !includeurl https://raw.githubusercontent.com/Drakemor/RedDress-PlantUML/master/style.puml 
+
+
+skinparam Linetype ortho
+
+' Core Product entity
+'package ProductDefinition {
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+
+' Features that describe a product
+class Feature {
+  note: see feature section 
+  for more details
+}
+
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  .d.> StatusCode
+
+' Describes a commercial bundle/offer
+/' 
+class ProductBundle {
+  +bundleID : String
+  +name : String
+  +channel : String
+  +price : Decimal
+  +currency : String
+  +validity : String
+}
+' ProductBundle "1" -- "1..*" Product
+'/
+' Product "0..*" --left-- "0..*" TaxonomyItem : < tags
+'/
+
+
+/'
+package ProductSchemas  {
+
+object Origin <<Feature>> {
+  +Value
+  +Unit
+}
+
+object Destination <<Feature>> {
+  +Value
+  +Unit
+}
+
+class Transport  <<Product>> {
+ +Type  of  Transport 
+}
+
+Transport "0..*" -d- "1" Origin : has >
+Transport "0..*" -d- "1" Destination : has >
+
+note right of Transport
+Transport Product 
+Schema is not complete
+here
+end note
+
+}
+
+Product <|--- Transport : specializes >
+' ProductDefinition --[hidden]d-> ProductSchemas
+ProductDefinition ..[hidden]. ProductSchemas
+
+
+/'
+package ConcreteProduct {
+
+object CDGAMS <<Transport>> {
+
+}
+
+object CDG<<Orgin>>
+object AMS<<Destination>>
+
+}
+
+ProductSchemas --[hidden]d-> ConcreteProduct
+'/
+
+@enduml
+@startuml Product Example
+' Product example
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+package "Product Definition Example" as PDF {
+
+  package "Layer 1: Product Definition" as L1 {
+    abstract class Product {
+      +identifier
+      +type
+      +name : Text
+      +description : Text
+    }
+  }
+
+package "Layer 2: Product Business Schemas" as L2 {
+  package "Boarding Product Schema" as BPS {
+    object BoardingProduct <<Product>> {
+      +schema_name = Priority Boarding @Gate
+      +schema_description = Provides priority access to the 
+      plane based on the zone bought.
+      -----
+      For features see next section; The attributes from the 'Product' 
+      are not yet instntiated. That will be done on the concrete product 
+      layer 
+  }
+  }
+
+  Product <|-- BoardingProduct
+
+  package "Transport Product Schema" as TPS {
+    object TransportProduct <<Product>> {
+      +schema_name: Transport
+      +schema_description : Provides transport by means of either
+      a plane, bus, train or boat from point A to point B
+      without any intermediate stops except for technical stops. 
+      -----
+      For features see next section; The attributes from the 'Product' 
+      are not yet instntiated. That will be done on the concrete product 
+      layer
+    }
+  }
+
+  Product <|-- TransportProduct
+}
+}
+
+
+@enduml
+
+@startuml
+'we need also the productschema which aggregates all of the product related things
+'the product, the features the rules etc etc
+
+class ProductSchema <<Blue>>
+{
+  +name
+}
+
+ProductSchema *-- Feature:  contains >
+ProductSchema *-- Rules:  contains >
+ProductSchema "1" *-- "1" Product: contains >
+Product *-- Feature: has >
+Rules -- Product : apply to >
+Rules -- Feature : apply to >
+@enduml
+
+@startuml
+' title Product Lifecycle (Supplier-Centric)
+' skinparam Linetype ortho
+' left to right direction
+top to bottom direction
+' skinparam nodesep 60
+' skinparam ranksep 60
+
+[*] --> new
+
+new: Metadata
+new: - created by
+new: - creation date
+new: - initial version
+
+new --> active : activate
+
+active: Metadata
+active: - available from
+active: - deliverable from
+
+active --> deprecated : deprecate
+active --> onhold : hold
+
+onhold:   Metadata
+onhold:    - hold date
+onhold:    - hold reason
+onhold:    - expected resume date
+
+onhold --> active : resume
+onhold --> deprecated : deprecate
+onhold --> deleted : delete
+
+deprecated: Metadata
+deprecated:  - deprecation date
+deprecated:  - replacement product identifier (optional)
+deprecated --> deleted : retire
+deprecated --> archived : archive
+
+archived:    Metadata
+archived:    - archived date
+archived:    - archived by
+archived:    - archival reason
+
+deleted : Terminal state
+deleted --> [*]
+archived --> [*]
+
+@enduml
+@startuml
+title Product Lifecycle
+' skinparam Linetype ortho
+
+
+[*] --> new
+
+state new 
+  new --> active : activate
+  ' new --> deleted : delete
+
+state active
+  active --> deprecated : deprecate
+  active --> onhold : hold
+ 
+state onhold
+  onhold --> active : resume
+  onhold --> deprecated : deprecate
+  onhold --> deleted : delete
+
+state deprecated :
+  deprecated --> deleted : retire
+  deprecated --> active : reactivate
+  deprecated --> archived : archive
+
+state archived 
+
+deleted : Terminal state
+deleted --> [*]
+archived --> [*]
+
+@enduml
+
+

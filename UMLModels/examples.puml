@@ -1,0 +1,352 @@
+@startuml seatwidthexample
+' title Feature Instantiation: Seat Width with Reference System
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Bsuiness Schemas" as PBS {
+
+  package "Seat Product Schema" {
+note as N1
+Seat width feature including a Reference System
+using UNECE recommendation 20 on units but could 
+well be ISO80000. We can predefine any number 
+of reference systems to be used here.
+end note
+
+' === Feature Instance ===
+class  "Seat Width" as SeatWidth <<Feature>> {
+  name = "Seat Width"
+  description = "The width of the seat in centimeters"
+}
+
+object "Seat Width Value" as SeatWidthValue <<ValueRange>> {
+  minValue = 43.0
+  maxValue = 48.0
+  unit = "CMT" // centimeters
+}
+
+object "UNECE Rec. 20" as UNECE <<ReferenceSystem>> {
+  systemID = "RS-UNECE-REC20-METRIC"
+  systemType = Measurement
+  description = "UNECE Recommendation No. 20 - Codes for Units of Measure"
+}
+
+object "UNECE Rec. 20 Source" as UNECEref <<ExternalReferece>> {
+  authority = "UNECE"
+  resourceName = "UNECE Rec. 20"
+  resourceType = "UnitList"
+  url = "https://unece.org/trade/cefact/recommendations/20"
+}
+
+' === Relationships ===
+SeatWidth --> SeatWidthValue : typically >
+SeatWidth --> UNECE : has as reference > 
+UNECE --> UNECEref : is defined by >
+  }
+}
+@enduml
+
+@startuml PriorityBoardingonlyviaWeb
+' title Example 1: Priority Boarding only via Web
+' skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Priority Boarding only via Web" { 
+object ProductRule {
+  ruleID = "R001"
+  name = "Priority boarding only via web"
+  type = AvailabilityConstraint
+  priority = 10
+}
+
+object CompoundCondition {
+  operator = AND
+}
+
+object ProductCondition {
+  productID = "PriorityBoarding"
+  operator = SELECTED
+}
+
+object FeatureCondition {
+  featureID = "Channel"
+  value = "Web"
+  operator = EQUALS
+}
+
+object RuleTarget {
+  description = "Enable Priority Boarding only on Web"
+  action = ENABLE
+}
+
+object RuleScope {
+  scopeID = "S001"
+  description = "Web channel only"
+}
+
+object ScopeDefinition {
+  channels = ["Web"]
+  markets = []
+  customerSegments = []
+}
+
+ProductRule --> CompoundCondition
+CompoundCondition --> ProductCondition
+CompoundCondition --> FeatureCondition
+ProductRule --> RuleTarget
+ProductRule --> RuleScope
+RuleScope --> ScopeDefinition
+}
+}
+
+@enduml
+
+@startuml WiFieqPremiumCabin
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "WiFi requires Premium cabin" { 
+
+}
+}
+
+@enduml
+@startuml StudentsLounge
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Students cannot buy Lounge Access" { 
+
+object ProductRule {
+  ruleID = "R004"
+  name = "Lounge Access forbidden for Student Segment"
+  type = Exclusion
+  priority = 40
+}
+
+object CompoundCondition {
+  operator = AND
+}
+
+object ProductCondition {
+  productID = "LoungeAccess"
+  operator = SELECTED
+}
+
+object FeatureCondition {
+  featureID = "CustomerSegment"
+  value = "Student"
+  operator = EQUALS
+}
+
+object RuleTarget {
+  description = "Forbid Lounge Access for Student customers"
+  action = FORBID
+}
+
+object RuleScope {
+  scopeID = "S004"
+  description = "Student customer segment"
+}
+
+object ScopeDefinition {
+  channels = []
+  markets = []
+  customerSegments = ["Student"]
+}
+
+ProductRule --> CompoundCondition
+CompoundCondition --> ProductCondition
+CompoundCondition --> FeatureCondition
+ProductRule --> RuleTarget
+ProductRule --> RuleScope
+RuleScope --> ScopeDefinition
+
+
+}
+}
+
+@enduml
+@startuml extraBag
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Extra baggage unavailable in US" { 
+object ProductRule {
+  ruleID = "R003"
+  name = "Extra baggage unavailable in US"
+  type = Exclusion
+  priority = 30
+}
+
+object CompoundCondition {
+  operator = AND
+}
+
+object ProductCondition {
+  productID = "ExtraBaggage"
+  operator = SELECTED
+}
+
+object FeatureCondition {
+  featureID = "Market"
+  value = "US"
+  operator = EQUALS
+}
+
+object RuleTarget {
+  description = "Forbid Extra Baggage in US"
+  action = FORBID
+}
+
+object RuleScope {
+  scopeID = "S003"
+  description = "US Market only"
+}
+
+object ScopeDefinition {
+  channels = []
+  markets = ["US"]
+  customerSegments = []
+}
+
+ProductRule --> CompoundCondition
+CompoundCondition --> ProductCondition
+CompoundCondition --> FeatureCondition
+ProductRule --> RuleTarget
+ProductRule --> RuleScope
+RuleScope --> ScopeDefinition
+}
+}
+
+@enduml
+@startuml example5
+
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Example3" { 
+
+}
+}
+
+@enduml
+
+@startuml IndianMealBlackoutExample
+'title Rule Instance: Indian meal blackout (EU→NA, Date1–Date2)
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Indian meal unavailable (EU→NA, Date1–Date2)" { 
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+' === Rule ===
+object ProductRule_RIND {
+  ruleID = "R-INDIAN-001"
+  name = "Indian meal blackout on EU→NA transports"
+  type = AvailabilityConstraint
+  priority = 10
+}
+
+' === Logical grouping ===
+object CompoundCondition_AND {
+  operator = AND
+  description = "Transport in EU→NA AND date in blackout window"
+}
+
+' === Conditions (context-aware) ===
+object TaxonomyCondition_Market {
+  taxonomyConceptID = "region:EU-NA"
+  taxonomyScheme    = "apmwg:market_taxonomy_scheme"
+  subjectRef        = "transport"
+  selectionScope    = "ANY_SELECTED"
+  description       = "At least one selected transport is tagged EU→NA"
+}
+
+object DateTimeCondition_Blackout {
+  operator     = IN
+  dateTime     = "Date1/Date2"  ' e.g., 2025-10-01/2025-12-31
+  subjectRef   = "order"
+  description  = "Travel/service date within blackout period"
+}
+
+' === Targets ===
+object TaxonomyTarget_DisableIndian {
+  conceptID   = "apmwg:66B0BOM6"  ' SKOS: Indian cuisine
+  action      = DISABLE
+  description = "Disable all products tagged as Indian cuisine"
+}
+
+' === Taxonomy references (for clarity) ===
+object TaxonomyConcept_EU_NA {
+  conceptID = "region:EU-NA"
+  label     = "EU→NA Market"
+}
+
+object TaxonomyConcept_Indian {
+  conceptID = "apmwg:66B0BOM6"
+  label     = "Indian (Cuisine)"
+}
+
+' === Evaluation context ===
+object RuleContext_CTX1 {
+  contextID = "CTX-1"
+  bindings  = "{ transport, order }"
+}
+
+' Optional: show bound entities at a glance (illustrative)
+object Transport_CDGGFK {
+  id      = "CDG-JFK"
+  tagged  = ["region:EU-NA"]
+}
+object Order_9876 {
+  id        = "ORD-9876"
+  travelDate= "2025-11-15"
+}
+
+' === Wiring ===
+ProductRule_RIND --> RuleContext_CTX1 : evaluated with
+
+RuleContext_CTX1 --> Transport_CDGGFK : transport
+RuleContext_CTX1 --> Order_9876       : order
+
+ProductRule_RIND --> CompoundCondition_AND : triggers on
+CompoundCondition_AND --> TaxonomyCondition_Market
+CompoundCondition_AND --> DateTimeCondition_Blackout
+
+TaxonomyCondition_Market --> TaxonomyConcept_EU_NA
+TaxonomyTarget_DisableIndian --> TaxonomyConcept_Indian
+
+ProductRule_RIND --> TaxonomyTarget_DisableIndian : enforces
+
+
+}
+}
+@enduml
+

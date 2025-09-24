@@ -1,0 +1,195 @@
+@startuml FullProductModel_WithSchemaProfile
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+' === Layer 1: IATA Abstract Product Model (AFM) ===
+package "Layer 1: Abstract Product Definition (IATA Standard)" as AFM {
+
+  abstract class Product {
+    +identifier
+    +type
+    +name: Text
+    +description: Text
+  }
+
+  class LifecycleStatus <<Metadata>> {
+    +status: StatusCode
+    +since: Date
+    +reason
+  }
+
+  enum StatusCode <<Metadata>> {
+    +active
+    +deprecated
+    +onhold
+    +new
+    +deleted
+    +archived
+  }
+
+  abstract class Feature {
+    +identifier
+    +name: Text
+    +description: Text
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+
+  abstract class SingleValue {
+    +value
+  }
+
+  abstract class ValueRange {
+    +minValue
+    +maxValue
+  }
+
+  abstract class DiscreteSet {
+    +allowedValues: List
+  }
+
+  class ReferenceSystem {
+    +identifier
+    +description
+    +system_type
+  }
+
+  enum ReferenceSystemType {
+    Measurement
+    Enumeration
+    CodeSystem
+    ColorSystem
+    Other
+  }
+
+  abstract class ReferenceSource {
+    +authority: Text
+    +resource_name: Text
+    +resource_type: Text
+  }
+
+  class ExternalReference {
+    +link: Any
+  }
+
+  class InternalReference {
+    +repository_name: Text
+    +version: Any
+  }
+
+  ' Relationships (Layer 1)
+  Product "1" -- "1" LifecycleStatus : has >
+  Product "1" *-- "1..*" Feature : has >
+  LifecycleStatus  .l.> StatusCode : uses >
+  Feature --> "1" FeatureValue : has >
+  FeatureValue <|-d- SingleValue
+  FeatureValue <|-d- ValueRange
+  FeatureValue <|-d- DiscreteSet
+  FeatureValue <--l--- ReferenceSystem : applies to <
+  ReferenceSystem --> ReferenceSource : definedBy
+  ReferenceSystem -l-> ReferenceSystemType : is of type
+  ReferenceSource <|-- ExternalReference
+  ReferenceSource <|-- InternalReference
+}
+
+' === Layer 2: IATA-defined Schema Example ===
+package "Layer 2: IATA Product Schema - TransportProduct" as TP {
+
+  enum TransportMode {
+    Air
+    Rail
+    Bus
+    Ferry
+    Other
+  }
+
+  class TransportProduct <<Product>> {
+    +identifier
+    +name: Text
+    +description: Text
+    +origin: OriginFeature
+    +destination: DestinationFeature
+    +validityPeriod: ValidityPeriodFeature
+    +transportMode: TransportModeFeature
+  }
+
+  class OriginFeature <<SingleValue>>
+  class DestinationFeature <<SingleValue>>
+  class ValidityPeriodFeature <<ValueRange>>
+  class TransportModeFeature <<SingleValue>> {
+    +mode: TransportMode
+  }
+
+  TransportMode --> TransportModeFeature : uses >
+  TransportProduct --> OriginFeature
+  TransportProduct --> DestinationFeature
+  TransportProduct --> ValidityPeriodFeature
+  TransportProduct --> TransportModeFeature
+}
+
+' === Layer X: Partner-defined Extensions Layer ===
+package "Layer X: Partner-Defined Extensions" as PARTNER {
+
+  abstract class PartnerDefinedProduct <<Product>> {
+    +partnerIdentifier
+  }
+
+  class PremiumRailProduct <<PartnerDefinedProduct>> {
+    +origin
+    +destination
+    +validityPeriod
+    +transportMode
+    +loungeAccess: LoungeAccessFeature
+  }
+
+  class LoungeAccessFeature <<SingleValue>> {
+    +allowed: Boolean
+  }
+
+  class FeatureExtension <<Feature>> {
+    +originator: Text
+    +intendedScope: Text
+  }
+
+  class PartnerReferenceSystem <<ReferenceSystem>> {
+    +partnerId: Text
+  }
+
+  PremiumRailProduct --> LoungeAccessFeature : has >
+  LoungeAccessFeature .up.> FeatureExtension
+  PartnerReferenceSystem .up.> ReferenceSystem
+}
+
+' === Schema Profile ===
+package "Schema Profiles" {
+
+  class SchemaProfile {
+    +identifier: Text
+    +name: Text
+    +version: Text
+    +authority: Text
+    +schemaScope: Text
+    +featuresUsed: List
+    +referenceSystemsUsed: List
+    +extensionsUsed: List
+    +validationRules: Text
+    +description: Text
+  }
+
+  SchemaProfile --> Product : defines >
+  SchemaProfile --> Feature : includes >
+  SchemaProfile --> ReferenceSystem : uses >
+  SchemaProfile --> FeatureExtension : allows >
+  SchemaProfile --> FeatureValue : expectsValuesOf >
+}
+
+@enduml
+
+
+
+

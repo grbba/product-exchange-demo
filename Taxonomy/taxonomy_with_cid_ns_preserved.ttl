@@ -1,0 +1,914 @@
+@prefix ns1: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ns2: <https://taxonomy.apmwg.ovh#> .
+@prefix ns3: <http://www.w3.org/2002/07/owl#> .
+@prefix ns4: <http://purl.org/dc/elements/1.1/> .
+@prefix ns5: <http://purl.org/dc/terms/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://taxonomy.apmwg.ovh> a ns3:Ontology ;
+    rdfs:label "IATA APMWG Product Taxonomy"@en ;
+    ns4:contributor "IATA Airline Product Management Working Group"@en ;
+    ns4:creator "Gregor Baues"@en ;
+    ns4:title "IATA Product Taxonomy"@en ;
+    rdfs:comment "This taxonomy is built to describe products further and what is not part of the promise to the customer to the contrary of the features as advertised of a product. If the product is e.g. an entrance to an amusement park you can add taxonomy nodes like 'fun' 'adventure' etc to that product but those are not part of the promise. The promise is the access to the amusement park."@en ;
+    ns3:imports ns4:,
+        <http://purl.org/iso25964/skos-thes> ;
+    ns3:versionInfo "1.0"@en ;
+    ns1:prefLabel "IATA APMWG Product Taxonomy"@en .
+
+ns2:AVML a ns2:SSR ;
+    ns1:prefLabel "AVML"@en .
+
+ns2:E7Y63352 a ns1:Concept ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition " A vegetarian meal often inspired by South Asian flavors, with spices and no meat, fish, or eggs."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Asian Vegetarian"@en .
+
+ns2:G5K95028 a ns1:Concept ;
+    ns1:broader ns2:Z9H87109 ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Sweet"@en .
+
+ns2:HNML a ns2:SSR ;
+    ns1:prefLabel "HNML"@en .
+
+ns2:KSML a ns2:SSR ;
+    ns1:prefLabel "KSML"@en .
+
+ns2:L9B71271 a ns1:Concept ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Prepared in accordance with Jewish dietary laws."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Kosher"@en .
+
+ns2:MOML a ns2:SSR ;
+    ns1:prefLabel "MOML"@en .
+
+ns2:N4N102947 a ns1:Concept ;
+    ns1:broader ns2:Z9H87109 ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Savory"@en .
+
+ns2:Q6S47514 a ns1:Concept ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Prepared according to Jain customs, without root vegetables (like garlic, onions, potatoes) and without animal products."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Vegetarian Jain"@en .
+
+ns2:S4E79190 a ns1:Concept ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Prepared according to Islamic dietary laws, excluding pork and alcohol."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Halal"@en .
+
+ns2:U0Q110866 a ns1:Concept ;
+    ns1:broader ns2:Z9H87109 ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Spicy"@en .
+
+ns2:VJML a ns2:SSR ;
+    ns1:prefLabel "VJML"@en .
+
+ns2:X4V55433 a ns1:Concept ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Includes dairy and eggs but excludes meat, fish, and poultry."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Vegetarian Lacto-Ovo"@en ;
+    ns2:linkedSSR ns2:vlml .
+
+ns2:_id_hindu a ns1:Concept ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Hindu"@en .
+
+ns2:airportdelivery a ns1:Concept ;
+    rdfs:label "Airport"@en ;
+    ns1:broader ns2:deliverylocation ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Airport"@en .
+
+ns2:airtravel a ns1:Concept ;
+    rdfs:label "Air"@en ;
+    ns1:broader ns2:transport_mode ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Air"@en .
+
+ns2:american a ns1:Concept ;
+    rdfs:label "American"@en ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "American"@en .
+
+ns2:apmwgCultureRegion a ns1:Concept ;
+    ns1:broader ns2:regions ;
+    ns1:example "US Hispanic Community"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cultur"@en .
+
+ns2:apmwgDesert a ns1:Concept ;
+    ns1:broader ns2:apmwgBiogeographic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Desert"@en .
+
+ns2:apmwgEconomic a ns1:Concept ;
+    ns1:broader ns2:regions ;
+    ns1:example "European Economic Community"@en,
+        "SiliconValley"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Economic"@en .
+
+ns2:apmwgFood a ns1:Collection ;
+    ns1:member ns2:alcoholic,
+        ns2:course,
+        ns2:cuisine,
+        ns2:drinks,
+        ns2:meal,
+        ns2:nonalcoholic,
+        ns2:nutrition,
+        ns2:timeofmeal ;
+    ns1:prefLabel "Food"@en .
+
+ns2:apmwgPolitical a ns1:Concept ;
+    ns1:broader ns2:regions ;
+    ns1:example "European Union"@en,
+        "Provinces of Canada"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Political"@en .
+
+ns2:apmwgRainforest a ns1:Concept ;
+    ns1:broader ns2:apmwgBiogeographic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Rainforest"@en .
+
+ns2:appetizer a ns1:Concept ;
+    rdfs:label "Appetizer"@en ;
+    ns1:broader ns2:course ;
+    ns1:definition "An appetizer is a small meal served at the beginning of the main course"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Appetizer"@en,
+        "Entradas"@es,
+        "Hors d'oeuvre"@fr,
+        "Başlangıçlar"@tr .
+
+ns2:areas a ns1:Concept ;
+    rdfs:label "Areas"@en ;
+    ns1:broader ns2:geography ;
+    ns1:definition "An area is a geographical entity not necessarily limit by administrative boundaries such as e.g. Sahara or Alps"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Areas"@en .
+
+ns2:basic a ns1:Concept ;
+    rdfs:label "Basic"@en ;
+    ns1:broadMatch ns2:economy ;
+    ns1:broader ns2:experience ;
+    ns1:definition """Service : Minimal service, focused on functionality. Customer interactions are generic and limited.
+Item:  Basic, functional, and often mass-produced with minimal attention to aesthetics or durability.
+Item: Design & Materials: Simple design, low-cost materials, and utilitarian in nature."""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Basic"@en .
+
+ns2:beach a ns1:Concept ;
+    rdfs:label "Beach"@en ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Beach"@en .
+
+ns2:beer a ns1:Concept ;
+    rdfs:label "Beer"@en ;
+    ns1:broader ns2:alcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Beer"@en .
+
+ns2:boxRetailItem a ns1:Concept ;
+    ns4:description "Used for products which can be shipped to customers independently e.g. Model Plane, Baggage, Cat boxes etc. "@en ;
+    ns1:broader ns2:stowage ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Box Retail Item"@en .
+
+ns2:bread a ns1:Concept ;
+    rdfs:label "Bread"@en ;
+    ns1:broader ns2:accompainment ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Bread"@en .
+
+ns2:breakfast a ns1:Concept ;
+    rdfs:label "Breakfast"@en ;
+    ns1:broader ns2:timeofmeal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Breakfast"@en,
+        "Zmorge"@gsw .
+
+ns2:bungee a ns1:Concept ;
+    ns1:broader ns2:adventure ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Bungee jumping"@en .
+
+ns2:c_d2bb068a a ns1:Concept ;
+    rdfs:label "Juices & Mixers"@en ;
+    ns1:broader ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Juices & Mixers"@en .
+
+ns2:cabin_baggage a ns1:Concept ;
+    rdfs:label "Cabin Baggage"@en ;
+    ns4:description "use that term to label a product called \"cabin baggage\" as the tag will improve searchability "@en ;
+    ns1:broader ns2:stowage ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cabin Baggage"@en .
+
+ns2:casino a ns1:Concept ;
+    ns1:broader ns2:entertainement ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Casino"@en .
+
+ns2:checked_baggage a ns1:Concept ;
+    rdfs:label "Checked Baggage"@en ;
+    ns1:broader ns2:stowage ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Checked Baggage"@en .
+
+ns2:cinema a ns1:Concept ;
+    ns1:broader ns2:entertainement ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cinema"@en .
+
+ns2:cities a ns1:Concept ;
+    rdfs:label "Cities"@en ;
+    ns1:broader ns2:geography ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cities"@en .
+
+ns2:cocktail a ns1:Concept ;
+    rdfs:label "Cocktail"@en ;
+    ns1:broader ns2:alcoholic,
+        ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cocktail"@en .
+
+ns2:coffee a ns1:Concept ;
+    rdfs:label "Coffee"@en ;
+    ns1:broader ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Coffee"@en .
+
+ns2:contients a ns1:Concept ;
+    rdfs:label "Continent"@en ;
+    ns1:broader ns2:geography ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Continent"@en .
+
+ns2:continental a ns1:Concept ;
+    rdfs:label "Continental"@en ;
+    ns1:broader ns2:climate ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Continental"@en .
+
+ns2:countries a ns1:Concept ;
+    rdfs:label "Country"@en ;
+    ns1:broader ns2:geography ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Country"@en .
+
+ns2:cultural a ns1:Concept ;
+    ns1:broader ns2:tours ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:note "Cultural-related tours incl. religious activities ( e.g. Hadj ) "@en ;
+    ns1:prefLabel "Cultural"@en .
+
+ns2:dessert a ns1:Concept ;
+    rdfs:label "Dessert"@en ;
+    ns1:broader ns2:course ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Dessert"@en .
+
+ns2:diaryfree a ns1:Concept ;
+    rdfs:label "Diary-Free"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Excludes all dairy products and thus eliminates in particular lactose"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Diary-Free"@en .
+
+ns2:diner a ns1:Concept ;
+    rdfs:label "Diner"@en ;
+    ns1:broader ns2:timeofmeal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Diner"@en .
+
+ns2:dry a ns1:Concept ;
+    rdfs:label "Dry"@en ;
+    ns1:broader ns2:climate ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Trocken"@de,
+        "Dry"@en .
+
+ns2:exhibition a ns1:Concept ;
+    ns1:broader ns2:tours ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Exhibition"@en .
+
+ns2:fall a ns1:Concept ;
+    ns1:broader ns2:season ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Fall"@en .
+
+ns2:family a ns1:Concept ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Family"@en .
+
+ns2:flexitarian a ns1:Concept ;
+    rdfs:label "Flexitarian"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Flexitarian"@en .
+
+ns2:french a ns1:Concept ;
+    rdfs:label "French"@en ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "French"@en .
+
+ns2:german a ns1:Concept ;
+    rdfs:label "German"@en ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "German"@en .
+
+ns2:glutenfree a ns1:Concept ;
+    rdfs:label "Gluten-Free"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition " Excludes gluten, a protein found in wheat, barley, and rye."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Gluten-Free"@en .
+
+ns2:golf a ns1:Concept ;
+    ns1:broader ns2:sport ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Golf"@en .
+
+ns2:history a ns1:Concept ;
+    rdfs:label "Historic"@en ;
+    ns1:broader ns2:tours ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Historic"@en .
+
+ns2:homedelivery a ns1:Concept ;
+    rdfs:label "Home"@en ;
+    ns1:broader ns2:deliverylocation ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Home"@en .
+
+ns2:indian a ns1:Concept ;
+    rdfs:label "Indian"@en ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Indian"@en .
+
+ns2:japanese a ns1:Concept ;
+    rdfs:label "Japanese"@en ;
+    ns1:broader ns2:cuisine ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Japanese"@en .
+
+ns2:keto a ns1:Concept ;
+    rdfs:label "Keto"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "High in fats, low in carbohydrates."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Keto"@en .
+
+ns2:linkedSSR a rdf:Property ;
+    rdfs:domain ns1:Concept .
+
+ns2:long_travel a ns1:Concept ;
+    rdfs:label "Long"@en ;
+    ns1:broader ns2:transport_duration ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Long"@en .
+
+ns2:loungedelivery a ns1:Concept ;
+    rdfs:label "Lounge"@en ;
+    ns1:broader ns2:deliverylocation ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Lounge"@en .
+
+ns2:lowcarb a ns1:Concept ;
+    rdfs:label "Low-Carb"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Reduces carbohydrate intake, often increasing protein and fat consumption."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Low-Carb"@en .
+
+ns2:lowsugar a ns1:Concept ;
+    rdfs:label "Low-Sugar"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Low-Sugar"@en .
+
+ns2:lunch a ns1:Concept ;
+    rdfs:label "Lunch"@en ;
+    ns1:broader ns2:timeofmeal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Lunch"@en .
+
+ns2:luxury_product a ns1:Concept ;
+    rdfs:label "Luxury"@en ;
+    ns1:altLabel "4-Star"@en ;
+    ns1:broadMatch ns2:premiumonboard ;
+    ns1:broader ns2:experience ;
+    ns1:definition """Service: Highly personalized and attentive service. Every detail is managed to create an exclusive and memorable experience.
+Item quality: Exceptional quality with meticulous craftsmanship. Products are built to last and often feature unique, high-end features.
+Item design & materials: Exquisite design, often handmade or with artisanal elements. Premium materials like leather, fine metals, and rare woods."""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Luxury"@en .
+
+ns2:maincourse a ns1:Concept ;
+    rdfs:label "Main Course"@en ;
+    ns1:broader ns2:course ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Main Course"@en .
+
+ns2:medium_travel a ns1:Concept ;
+    rdfs:label "Medium"@en ;
+    ns4:description "This is some description of the concept of medium haul flights "@en ;
+    ns1:broader ns2:transport_duration ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Medium"@en .
+
+ns2:mild a ns1:Concept ;
+    rdfs:label "Mild"@en ;
+    ns1:broader ns2:climate ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Mild"@en .
+
+ns2:museum a ns1:Concept ;
+    ns1:broader ns2:tours ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Museum"@en .
+
+ns2:nightlive a ns1:Concept ;
+    ns1:broader ns2:citylife ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Nightlife"@en,
+        "escapade de nuit"@fr .
+
+ns2:onboarddelivery a ns1:Concept ;
+    rdfs:label "Onboard"@en ;
+    ns1:broader ns2:deliverylocation ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Onboard"@en .
+
+ns2:paleo a ns1:Concept ;
+    rdfs:label "Paleo"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Focuses on foods presumed to have been eaten by early humans, including lean meats, fish, fruits, vegetables, nuts, and seeds."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Paleo"@en .
+
+ns2:parcel a ns1:Concept ;
+    rdfs:label "Cargo & Parcel Delivery"@en ;
+    ns4:description "Excluded for the time being to be reviewed later"@en ;
+    ns1:broader ns2:stowage ;
+    ns1:definition ""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cargo & Parcel"@en .
+
+ns2:personalservices rdfs:label "Personal Service Requests"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Personal Service Requests"@en .
+
+ns2:polar a ns1:Concept ;
+    rdfs:label "Polar"@en ;
+    ns1:broader ns2:climate ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Polar"@en .
+
+ns2:premium_product a ns1:Concept ;
+    rdfs:label "Premium"@en ;
+    ns1:broadMatch ns2:business ;
+    ns1:broader ns2:experience ;
+    ns1:definition """Service: Enhanced service with attention to detail. Some level of personalization, and proactive customer service.
+Item quality: High-quality products with superior performance and longer lifespan. Designed for comfort and satisfaction.
+Item design & materials: Sophisticated design with high-quality materials. Focus on aesthetics and functionality."""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Premium"@en .
+
+ns2:rail_travel a ns1:Concept ;
+    rdfs:label "Rail"@en ;
+    ns1:broader ns2:transport_mode ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Rail"@en .
+
+ns2:restaurant a ns1:Concept ;
+    ns1:broader ns2:entertainement ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Restaurant"@en .
+
+ns2:retreat a ns1:Concept ;
+    rdfs:label "Retreat"@en ;
+    ns1:altLabel "Seclusion"@en ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Retreat"@en .
+
+ns2:roadtravel a ns1:Concept ;
+    rdfs:label "Road"@en ;
+    ns1:broader ns2:transport_mode ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Road"@en .
+
+ns2:salad a ns1:Concept ;
+    rdfs:label "Salad"@en ;
+    ns1:broader ns2:accompainment ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Salad"@en .
+
+ns2:scuba a ns1:Concept ;
+    ns1:broader ns2:adventure ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Scubadiving"@en .
+
+ns2:sea_travel a ns1:Concept ;
+    rdfs:label "Sea"@en ;
+    ns1:broader ns2:transport_mode ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Sea"@en .
+
+ns2:seasonal a ns1:Concept ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Seasonal"@en .
+
+ns2:short_travel a ns1:Concept ;
+    rdfs:label "Short"@en ;
+    rdfs:comment "C'est moins de 2h"@fr ;
+    ns1:broader ns2:transport_duration ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Short"@en .
+
+ns2:sightseeing a ns1:Concept ;
+    ns1:broader ns2:citylife,
+        ns2:tours ;
+    ns1:definition "Organized sightseeing tour of a location with a guide, selfguides with tarnsport like a bus or by bike by foot etc ... "@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Sightseeing"@en .
+
+ns2:snack a ns1:Concept ;
+    rdfs:label "Snack"@en ;
+    ns1:broader ns2:timeofmeal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Snack"@en .
+
+ns2:sodas a ns1:Concept ;
+    rdfs:label "Sodas"@en ;
+    ns1:broader ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Sodas"@en .
+
+ns2:soup a ns1:Concept ;
+    rdfs:label "Soup"@en ;
+    ns1:broader ns2:accompainment ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Soup"@en .
+
+ns2:spirits a ns1:Concept ;
+    rdfs:label "Spirits"@en ;
+    ns1:broader ns2:alcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Spirits"@en .
+
+ns2:spring a ns1:Concept ;
+    ns1:broader ns2:season ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Spring"@en .
+
+ns2:standard a ns1:Concept ;
+    rdfs:label "Standard"@en ;
+    ns1:broadMatch ns2:premium_economy ;
+    ns1:broader ns2:experience ;
+    ns1:definition """Service: Reliable and consistent service that meets basic expectations. Some customer support is available, usually polite but not personalized.
+Item: Quality: Decent quality, offers good value for money, reliable for everyday use.
+Item :Design & Materials: Functional design with moderate attention to aesthetics. Materials are durable but not premium."""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Standard"@en .
+
+ns2:summer a ns1:Concept ;
+    ns1:broader ns2:season ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Summer"@en .
+
+ns2:surf a ns1:Concept ;
+    ns1:broader ns2:sport ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Surf"@en .
+
+ns2:tea a ns1:Concept ;
+    rdfs:label "Tea"@en ;
+    ns1:broader ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Tea"@en .
+
+ns2:theater a ns1:Concept ;
+    ns1:broader ns2:entertainement ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Theater"@en .
+
+ns2:tropical a ns1:Concept ;
+    rdfs:label "Tropical"@en ;
+    ns1:broader ns2:climate ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Tropical"@en .
+
+ns2:ultra_product a ns1:Concept ;
+    rdfs:label "Ultra Luxury"@en ;
+    ns1:altLabel "5-Star"@en ;
+    ns1:broadMatch ns2:premiumonboard ;
+    ns1:broader ns2:experience ;
+    ns1:definition """Service: Exceptionally personalized service, tailored to the customer’s specific preferences and needs. Services often include private, bespoke experiences that go beyond expectations.
+Item quality: The pinnacle of quality and craftsmanship. Products are often custom-made or limited edition, with attention to the finest details.
+Item design & materials: Unique, often one-of-a-kind designs, using the most exclusive and luxurious materials available. These products are as much about artistry as they are about functionality."""@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Ultra Luxury"@en .
+
+ns2:vegan a ns1:Concept ;
+    rdfs:label "Vegan"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Vegan"@en ;
+    ns2:linkedSSR ns2:vgml .
+
+ns2:vegetarian a ns1:Concept ;
+    rdfs:label "Vegetarian"@en ;
+    ns1:broader ns2:nutrition ;
+    ns1:definition "Excludes meat, but may include dairy and eggs."@en,
+        "Exclut la viande, mais peut inclure des produits laitiers et des œufs."@fr,
+        "肉を除外するが、乳製品や卵を含むことがある。"@ja ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Vegetarian"@en,
+        "Végétarien"@fr,
+        "ベジタリアン (Bejitarian)"@ja .
+
+ns2:water a ns1:Concept ;
+    rdfs:label "Water"@en ;
+    ns1:broader ns2:nonalcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Water"@en .
+
+ns2:wine a ns1:Concept ;
+    rdfs:label "Wine"@en ;
+    ns1:broader ns2:alcoholic ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Wine"@en .
+
+ns2:winter a ns1:Concept ;
+    ns1:broader ns2:season ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Winter"@en ;
+    ns1:related ns2:ski .
+
+ns2:zipline a ns1:Concept ;
+    ns1:broader ns2:adventure ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Ziplining"@en .
+
+ns2:business a ns1:Concept ;
+    rdfs:label "Business"@en ;
+    ns1:broader ns2:onb_expirience ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Business"@en .
+
+ns2:economy a ns1:Concept ;
+    rdfs:label "Economy"@en ;
+    ns1:broader ns2:onb_expirience ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Economy"@en .
+
+ns2:premium_economy a ns1:Concept ;
+    rdfs:label "Premium Economy"@en ;
+    ns1:broader ns2:onb_expirience ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Premium Economy"@en .
+
+ns2:ski a ns1:Concept ;
+    ns1:broader ns2:sport ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Ski"@en .
+
+ns2:vgml a ns2:SSR ;
+    rdfs:label "VGML"@en ;
+    rdfs:comment "Class for represneting SRR codes usable to further qualifiy the Taxonomy. They are provided here but could well be in their own Vocabulary in which case we would use the exact / broader match semantic to align the vocabularies"@en ;
+    ns1:prefLabel "VGML"@en .
+
+ns2:vlml a ns2:SSR ;
+    rdfs:label "VLML"@en ;
+    rdfs:comment "Vegetarian Lacto-Ovo Meal – Vegetarian with dairy and eggs, no meat or fish."@en ;
+    ns1:prefLabel "VLML"@en .
+
+ns2:apmwgBiogeographic a ns1:Concept ;
+    ns1:broader ns2:regions ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Biogeographic"@en .
+
+ns2:citylife a ns1:Concept ;
+    rdfs:label "City life"@en ;
+    ns1:altLabel "Metropolitan"@en ;
+    ns1:broader ns2:activities ;
+    ns1:definition "City groups all activities which are predominantly available in larger cities (but not limited to)"@en ;
+    ns1:example "Hop on/off Sightseeing bus tour "@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "City"@en .
+
+ns2:premiumonboard a ns1:Concept ;
+    rdfs:label "First"@en ;
+    ns1:broader ns2:onb_expirience ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "First"@en .
+
+ns2:Z9H87109 a ns1:Concept ;
+    ns1:broader ns2:meal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Taste"@en .
+
+ns2:accompainment a ns1:Concept ;
+    rdfs:label "Side Course"@en ;
+    ns1:altLabel "Side Course"@en ;
+    ns1:broader ns2:course ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Accompaniment"@en .
+
+ns2:adventure a ns1:Concept ;
+    rdfs:label "Adventure"@en ;
+    ns1:broader ns2:activities ;
+    ns1:definition "An unusual, exciting, or daring experience involving exploration, risk, or unexpected events."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Adventure"@en .
+
+ns2:drinks a ns1:Concept ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Beverage"@en ;
+    ns1:related ns2:course ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:sport a ns1:Concept ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Sport"@en .
+
+ns2:transport_duration a ns1:Concept ;
+    rdfs:label "Transport Duration"@en ;
+    rdfs:comment "Classification used to describe transport products in terms of the duration of the travel on a coarse grained level. the exact interpretation of what short medium and long mean is up to the appreciation of each individual organization when labeleing their products. Bilateral agreements may also clarify this in further detail and add ev additional classification like XS or XXL etc ... if required together with the min max duration attached as addded information to the taxonomy nodes "@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Transport Duration"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:deliverylocation a ns1:Concept ;
+    rdfs:label "Delivery Location"@en ;
+    ns1:definition "Delivery Location refers to the specific place where goods, services, or materials are to be delivered. This could be a physical address, such as a customers's home, business, or warehouse, or a designated spot within a broader area, such as a gate area, onboard of a plane or pickup point.  The delivery location is typically specified by the recipient or purchaser based and is crucial for ensuring that the delivery is made accurately and efficiently."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Lieferort"@de,
+        "Delivery Location"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:entertainement a ns1:Concept ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Entertainement"@en .
+
+ns2:onb_expirience a ns1:Concept ;
+    rdfs:label "Onboard Experience"@en ;
+    ns1:definition "All classifications for products delivered on board of a transport product. "@en ;
+    ns1:editorialNote "This facet will expand as other transport options become available / integrated into the airline retail offerings. This facet is today build around the 4 different cabin types which are present in the airline industry. "@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Onboard Experience"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:regions a ns1:Concept ;
+    rdfs:label "Region"@en ;
+    ns1:broader ns2:geography ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Region"@en .
+
+ns2:season a ns1:Concept ;
+    rdfs:label "Season"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Season"@en ;
+    ns1:related ns2:activities ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:stowage a ns1:Concept ;
+    rdfs:label "Physical Item"@en ;
+    ns4:description "Physical Items: travelling together with a pax ( excl. travelling by themselves ) Classifies products aiming ay transporting items not requiring the owner of the items to be present at the same time at the means of transport used. To the contrary of the other concepts on Cabin and Checked Baggage"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:note """Cool
+Vulnerable/fragile
+Express/time definite
+Life
+Pharmaceutical : Proposals to think about to be added to the Phys Item facet"""@en ;
+    ns1:prefLabel "Physical Item"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:transport_mode a ns1:Concept ;
+    rdfs:label "Transport Mode"@en ;
+    rdfs:comment "For a transport product characterizes the broader means of transportation. Air is plane, helicopter, hot air ballon ( e.g. for expirence related products ) Rail in general is a train. Road cand be Bus, Limo, VTC, Uber, etc... Sea would typically be a boat but could be anything else which floats and would enable transportation and could be more specialized if not part of the product definition"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Transport Mode"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:alcoholic a ns1:Concept ;
+    ns1:broader ns2:drinks ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Alcoholic"@en .
+
+ns2:climate a ns1:Concept ;
+    rdfs:label "Climate"@en ;
+    ns1:definition "Climate encompasses the long-term patterns of temperature, humidity, wind, precipitation, and other atmospheric conditions in a particular region. Unlike weather, which describes short-term conditions, climate represents the average and variability of these conditions over extended periods, typically 30 years or more."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Klima"@de,
+        "Climate"@en,
+        "Climat"@fr ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:experience a ns1:Concept ;
+    rdfs:label "Product Experience"@en ;
+    ns1:definition "Focuses on the customer’s perception of the products and service provided, including customer support, ease of access, and personalization."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Product Experience"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:geography a ns1:Concept ;
+    rdfs:label "Geographie"@de,
+        "Geography"@en ;
+    ns5:source "'https://en.wikipedia.org/wiki/Geography?wprov=sfti1#"@en ;
+    ns1:definition "Geographical classifications of products e.g. an adventure experience offered may be offer as a product only in a given geography so the product shall be labeled as such. The precise location , as the promise to the customer, shall be part of the product definition and be reflected as such as either individual products and/or product variants"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Geographie"@de,
+        "Geography"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:timeofmeal a ns1:Concept ;
+    rdfs:label "Time"@en ;
+    rdfs:comment "Time of day when a meal is served. Snack can possibly be served anytime"@en ;
+    ns1:broader ns2:meal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Time"@en .
+
+ns2:tours a ns1:Concept ;
+    ns1:broader ns2:activities ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Tours"@en .
+
+ns2:course a ns1:Concept ;
+    rdfs:label "Course"@en ;
+    ns1:broader ns2:meal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Course"@en .
+
+ns2:meal a ns1:Concept ;
+    rdfs:label "Meal"@en ;
+    ns1:definition "The Meal facet allows to a) describe that other products ( such as lounge, or flight, etc.  ... ) provide meals and b) the actual meals served by them selves either as generic products like breakfast of relay specific meals that that can be ordered"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Meal"@en ;
+    ns1:related <http://data.iata.org/vocabularies/products/01.03.00.00/> ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:SSR a ns3:Class ;
+    rdfs:subClassOf ns3:Thing ;
+    ns1:definition """IATA SSR stands for Special Service Request in the context of air travel. It's a standard code set defined by IATA (International Air Transport Association) used by airlines, travel agents, and reservation systems to communicate special passenger needs or services.
+Class for represneting SRR codes usable to further qualifiy the Taxonomy. They are provided here but could well be in their own Vocabulary in which case we would use the exact / broader match semantic to align the vocabularies"""@en ;
+    ns1:prefLabel "SSR"@en .
+
+ns2:cuisine a ns1:Concept ;
+    rdfs:label "Cuisine"@en ;
+    ns1:broader ns2:meal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Cuisine"@en .
+
+ns2:nonalcoholic a ns1:Concept ;
+    ns1:broader ns2:drinks ;
+    ns1:definition "All beverages not containing any alcohol such as coffee, tea, soft drinks, smoothies, alcohol free cocktails, etc ..."@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Non-Alcoholic"@en .
+
+ns2:activities a ns1:Concept ;
+    rdfs:label "Activities"@en ;
+    ns1:definition "Activities"@en ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Activities"@en ;
+    ns1:topConceptOf ns2:product_taxonomy_scheme .
+
+ns2:nutrition a ns1:Concept ;
+    rdfs:label "Nutrition"@en ;
+    ns1:broader ns2:meal ;
+    ns1:inScheme ns2:product_taxonomy_scheme ;
+    ns1:prefLabel "Nutrition"@en .
+
+ns2:product_taxonomy_scheme a ns1:ConceptScheme ;
+    rdfs:label """
+IATA-APMWG"""@en ;
+    rdfs:comment "https://standards.atlassian.net/wiki/spaces/APMWG/pages/922025985/Taxonomy+Sub-group"^^xsd:anyURI ;
+    ns1:definition "This Schema is defining the APMWG product taxonomy. It does not describe the features  of the products i.e. the parts which form the promise towards the customer but elements which describe products in a more intangible fashion allowing to search faster and better for products"@en ;
+    ns1:prefLabel "IATA-APMWG "@en .
+

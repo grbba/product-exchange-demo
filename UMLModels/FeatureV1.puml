@@ -1,0 +1,348 @@
+@startuml Feature#Layer1
+' title Feature Requirements
+
+' skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 100
+
+package "Layer 1: Product Definition - Feature" as L1F {
+' === Feature Core ===
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+}
+
+note left of Feature
+<b>"Any"</b> means that the 
+way to identify a 
+feature needs 
+to be determined.
+end note
+
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +unit
+}
+
+class SingleValue {
+  +value
+}
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+class DiscreteSet {
+  +allowedValues: List
+}
+
+class ReferenceSystem {
+  <b>note</b>: see reference system section
+  for more details.
+}
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+Feature "1" --> "1" FeatureValue : has exactly one >
+Feature <-r- ReferenceSystem : applies to <
+
+}
+
+@enduml
+
+--------
+
+@startuml Feature#Layer1#examples
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 100
+
+package "Product Feature Definition Example" as PDF {
+  package "Layer 1: Product Feature Definition" as L1F { 
+    abstract class Feature {
+      +identifier: Any
+      +name: Text
+      +description: Text
+    }
+
+    abstract class FeatureValue {
+      +unit
+    }
+
+    abstract class SingleValue {
+      +value
+    }
+
+    abstract class ValueRange {
+      +minValue
+      +maxValue
+    }
+
+    abstract class DiscreteSet {
+      +allowedValues: List
+    }
+    FeatureValue <|-- SingleValue
+    FeatureValue <|-- ValueRange
+    FeatureValue <|-- DiscreteSet
+
+    Feature "1" --> "1" FeatureValue : has exactly one >
+  }
+
+  package "Layer 2: Product Business Schemas" as L2F {
+
+    package "Transport Product Schema" as TPS {
+
+      class DestinationFeature <<Feature>> {
+          name = "Destination"
+      }
+
+      object "Value_JFK : SingleValue" as Value_JFK_L2 {
+        value = "JFK"
+      }
+      DestinationFeature --> Value_JFK_L2 : typically >
+
+      class OriginFeature <<Feature>> {
+          name = "Origin"
+      }
+
+      object "Value_CDG : SingleValue" as Value_CDG_L2 {
+        value = "CDG"
+      } 
+      OriginFeature --> Value_CDG_L2 : typically >
+
+    }
+
+  }
+
+' L1F ----d[hidden]-> L2F
+ValueRange --d[hidden]-> L2F
+
+note as SN
+Each <<Feature>> labled specific feature
+is a specilaization of the Layer 1 
+Feature definition.
+The value_JFK is here for illustration 
+purposes to be considered as a typical 
+value. We do not show here units and 
+the reference system to be used for
+such a feature.
+end note
+
+L1F ..d.. SN
+L2F ..r.. SN
+
+}
+
+
+
+
+@enduml
+
+
+
+
+
+
+
+-------
+@startuml
+title Feature Instantiation: Seat Width with Reference System
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Feature Instance ===
+class Feature {
+
+}
+
+class "Seat width <<ClassFeature>>" as SeatWidth {
+  identifier = FID-00012
+  name = "Seat Width"
+  description = "The width of the seat in centimeters"
+  authority = IATA
+}
+
+Feature <|-- SeatWidth
+
+object "ValueRange <<Value>>" as SeatWidthValue {
+  min value = 43.0
+  max value = 48.0
+  unit = CMT
+}
+
+object "ReferenceSystem: UNECE Rec. 20" as UNECE {
+  identifier = "RS-UNECE-REC20-METRIC"
+  system_type = Measurement
+  description = "UNECE Recommendation No. 20 - Codes for Units of Measure"
+}
+
+object "ExternalReference: UNECE Rec. 20" as UNECEref {
+  authority = "UNECE"
+  resource_name = "UNECE Rec. 20"
+  resource_type = "UnitList"
+  url = "https://unece.org/trade/cefact/recommendations/20"
+}
+
+' === Relationships ===
+SeatWidth --> SeatWidthValue : has value >
+SeatWidth --> UNECE : has as reference >
+UNECE --> UNECEref : is defined by >
+
+@enduml
+
+@startuml FeatureDistanceExample
+' title Feature Requirements
+
+' skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Feature Core ===
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+  +owner: IATA
+}
+
+note right of Feature
+<b>"Any"</b> means that the way to identify a 
+feature needs to be deteremined.
+end note
+
+' === Reference System ===
+/'class ReferenceSystem {
+  +systemID: String
+  +systemType: ReferenceSystemType
+  +description: String
+}
+
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+Feature "1" ---> "1" ReferenceSystem : constrained by >
+'/
+
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +unit
+}
+
+class SingleValue {
+  +value
+}
+
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+class DiscreteSet {
+  +allowedValues: List
+}
+
+class ReferenceSystem {
+  note: see reference system section
+  for more details.
+}
+
+FeatureValue <|-- SingleValue
+FeatureValue <|-- ValueRange
+FeatureValue <|-- DiscreteSet
+
+Feature "1" --> "1" FeatureValue : has exactly one >
+Feature ---> ReferenceSystem : has as reference >
+
+
+
+object "UNECE Rec. 20" as UNECE <<ReferenceSystem>> {
+  identifier = "RS-UNECE-REC20"
+  system_type = Measurement
+  description = "UNECE Recommendation No. 20 - Codes for Units of Measure"
+  owner: IATA
+}
+
+UNECE --> ReferenceSystem : instance of >
+
+class "Distance" as Distance <<Feature>> {
+  identifier = "SFID00004"
+  name = "Distance"
+  description = "The distance between two points in nautical miles"
+  owner = IATA
+}
+
+object DistanceValue <<SingleValue>> {
+  value = 3894
+  unit = NMM
+}
+
+SingleValue <|-- DistanceValue
+
+Feature <|-- Distance
+Distance --> DistanceValue: typically >
+Distance --> UNECE: has as reference >
+
+@enduml
+
+
+@startuml seatwidthexample
+' title Feature Instantiation: Seat Width with Reference System
+
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+
+package "Layer 2: Product Bsuiness Schemas" as PBS {
+
+  package "Seat Product Schema" {
+note as N1
+Seat width feature including a Reference System
+using UNECE recommendation 20 on units but could 
+well be ISO80000. We can predefine any number 
+of reference systems to be used here.
+end note
+
+' === Feature Instance ===
+class  "Seat Width" as SeatWidth <<Feature>> {
+  name = "Seat Width"
+  description = "The width of the seat in centimeters"
+}
+
+object "Seat Width Value" as SeatWidthValue <<ValueRange>> {
+  minValue = 43.0
+  maxValue = 48.0
+  unit = "CMT" // centimeters
+}
+
+object "UNECE Rec. 20" as UNECE <<ReferenceSystem>> {
+  systemID = "RS-UNECE-REC20-METRIC"
+  systemType = Measurement
+  description = "UNECE Recommendation No. 20 - Codes for Units of Measure"
+}
+
+object "UNECE Rec. 20 Source" as UNECEref <<ExternalReferece>> {
+  authority = "UNECE"
+  resourceName = "UNECE Rec. 20"
+  resourceType = "UnitList"
+  url = "https://unece.org/trade/cefact/recommendations/20"
+}
+
+' === Relationships ===
+SeatWidth --> SeatWidthValue : typically >
+SeatWidth --> UNECE : has as reference > 
+UNECE --> UNECEref : is defined by >
+  }
+}
+
+@enduml

@@ -1,0 +1,70 @@
+
+@startuml product_catalog_architecture
+!theme plain
+title Product Catalog Architecture: Semantic Product Information Exchange
+
+package "Supplier Systems" {
+  [Airline A\nInventory] as InvA
+  [Airline B\nInventory] as InvB
+  [Hotel Partner\nInventory] as InvH
+  [Car Rental\nInventory] as InvC
+}
+
+package "Semantic Commerce Platform" {
+  [Product Catalog\nAPI] as PCAPI
+  [Semantic Search\nEngine] as SSE
+  [Offer Assembly\nService] as OAS
+  database "Unified Product\nCatalog" as UPC {
+    [Flight Products] as FP
+    [Ancillary Products] as AP  
+    [Partner Products] as PP
+    [Semantic Attributes] as SA
+  }
+}
+
+package "Retailer Systems" {
+  [Travel Agent\nPortal] as TAP
+  [Corporate Booking\nTool] as CBT
+  [Mobile App] as MA
+  [API Integration] as API
+}
+
+' Product information flows
+InvA -> PCAPI : Product updates\n(Semantic attributes:\nflexibility, comfort, policies)
+InvB -> PCAPI : Product updates\n(Standardized format)
+InvH -> PCAPI : Hotel product data\n(Location, amenities, ratings)
+InvC -> PCAPI : Car rental options\n(Vehicle class, features)
+
+PCAPI -> UPC : Store semantic\nproduct metadata
+
+' Shopping flows  
+TAP -> SSE : Intent-based search\n("Flexible + Lounge + WiFi")
+CBT -> SSE : Corporate criteria\n("Policy compliant + Upgradeable")
+MA -> SSE : Leisure traveler\n("Value + Comfort")
+
+SSE -> UPC : Query semantic\nattributes
+UPC -> SSE : Matching products\n(pre-filtered)
+SSE -> OAS : Assemble qualified offers
+OAS -> TAP : Targeted results
+OAS -> CBT : Policy-compliant options
+OAS -> MA : Personalized offers
+
+note as N1
+**Key Principles:**
+• Suppliers maintain pricing/availability control
+• Rich semantic metadata enables smart filtering  
+• Products combinable across suppliers
+• Intent-driven rather than broad searching
+• Catalog separate from real-time pricing
+end note
+
+note as N2  
+**Benefits:**
+• 60-80% reduction in API calls
+• Look-to-book ratios: 50:1 vs 1000:1
+• Cross-supplier optimization
+• Intelligent product comparison
+• Supplier sovereignty preserved
+end note
+
+@enduml

@@ -1,0 +1,268 @@
+@startuml
+title Product Class: Transport & Instance: CDG to JFK Flight
+
+skinparam classAttributeIconSize 0
+
+' === Transport Product Class ===
+object "Product: TransportSchema" as TransportSchema {
+  identifier = "Transport"
+  name = "Generic Transport"
+  description = "Transport product with a departure and arrival location and mode"
+}
+
+object "Feature: departureStation" as DepartureF {
+  featureID = "departureStation"
+  name = "Departure Station"
+}
+
+object "Feature: arrivalStation" as ArrivalF {
+  featureID = "arrivalStation"
+  name = "Arrival Station"
+}
+
+object "Feature: transportMode" as ModeF {
+  featureID = "transportMode"
+  name = "Transport Mode"
+}
+
+TransportSchema --> DepartureF : defines
+TransportSchema --> ArrivalF : defines
+TransportSchema --> ModeF : defines
+
+' === Reference System for Locations ===
+object "ReferenceSystem: IATA Airport Codes" as IATA {
+  systemID = "RS-IATA-AIRPORT-CODES"
+  systemType = CodeSystem
+  description = "IATA 3-letter airport codes"
+}
+
+object "ExternalReference: IATA" as IATAExt {
+  authority = "IATA"
+  resourceName = "IATA Airport Codes"
+  resourceType = "CodeList"
+  url = "https://www.iata.org/en/publications/directories/code-search/"
+}
+
+DepartureF --> IATA : constrainedBy
+ArrivalF --> IATA : constrainedBy
+IATA --> IATAExt : definedBy
+ModeF --> RS_TransportModes: constrained by
+
+' === Core Reference System ===
+object "ReferenceSystem: Transport Modes" as RS_TransportModes {
+  systemID = "RS-INTERNAL-TRANSPORT-MODES"
+  description = "Internally maintained list of allowed transport modes"
+  systemType = Enumeration
+}
+
+' === Internal Reference Source ===
+object "InternalReference: Transport Modes Enum" as InternalSource {
+  authority = "Retailer Supplier Domain"
+  resourceName = "TransportModes"
+  resourceType = "Enumeration"
+  repositoryName = "ProductDataRepo"
+  version = "1.0.0"
+}
+
+' === Allowed Transport Modes ===
+object "Mode: air" as AirMode {
+  value = "air"
+}
+object "Mode: rail" as RailMode {
+  value = "rail"
+}
+object "Mode: road" as RoadMode {
+  value = "road"
+}
+object "Mode: sea" as SeaMode {
+  value = "sea"
+}
+
+' === Relationships ===
+RS_TransportModes --> InternalSource : definedBy
+RS_TransportModes --> AirMode : includes
+RS_TransportModes --> RailMode : includes
+RS_TransportModes --> RoadMode : includes
+RS_TransportModes --> SeaMode : includes
+
+
+' === Instance: Flight from CDG to JFK ===
+/'
+object "Product: CDG to JFK Flight" as CDGJFK {
+  productID = "FLIGHT-CDG-JFK-001"
+  name = "Flight from CDG to JFK"
+  productClass = "Transport"
+}
+
+object "Value: CDG" as CDGVal {
+  value = "CDG"
+  unit = ""
+}
+
+object "Value: JFK" as JFKVal {
+  value = "JFK"
+  unit = ""
+}
+
+object "Value: air" as AirVal {
+  value = "air"
+  unit = ""
+}
+
+CDGJFK --> DepartureF : hasFeature
+CDGJFK --> ArrivalF : hasFeature
+CDGJFK --> ModeF : hasFeature
+
+DepartureF --> CDGVal : hasValue
+ArrivalF --> JFKVal : hasValue
+ModeF --> AirVal : hasValue
+'/
+@enduml
+@startuml LH example with instance
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Core Model" {
+
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+Product "1" -- "1" LifecycleStatus : has >
+
+' Features that describe a product
+class Feature {
+  note: see feature section 
+  for more details
+}
+
+LifecycleStatus  .d.> StatusCode
+
+  class Product {
+    +identifier
+    +type
+    +name : Text
+    +description : Text
+  }
+
+  class Feature {
+    +identifier: Any
+    +name: Text
+    +description: Text
+  }
+
+  abstract class FeatureValue {
+    +unit
+  }
+
+  class SingleValue {
+    +value
+  }
+
+  class ValueRange {
+    +minValue
+    +maxValue
+  }
+
+  class DiscreteSet {
+    +allowedValues: List
+  }
+
+  FeatureValue <|-- SingleValue
+  FeatureValue <|-- ValueRange
+  FeatureValue <|-- DiscreteSet
+
+  Feature --> FeatureValue : has exactly one >
+
+  Product "1" *-- "1..*" Feature : has >
+}
+
+' === Layer 2: Product Class Specialization ===
+package "Layer 2: Product Class: TransportProduct" {
+
+  enum TransportMode {
+    Air
+    Rail
+    Bus
+    Ferry
+    Car
+    Other
+  }
+
+  TransportProduct --> TransportMode: uses >
+
+  class TransportProduct {
+    +transportMode: TransportMode
+    +origin: Location
+    +destination: Location
+    +validityPeriod: DateRange
+  }
+
+  Product <|-- TransportProduct
+
+  note right of TransportProduct
+    Domain-specific attributes like:
+    - transportMode
+    - origin/destination
+    - validityPeriod
+    are represented as Feature instances
+    attached to the base Product
+  end note
+}
+
+' === Layer 3: Feature Mapping Example ===
+package "Layer 3: Feature Instances for LH1234" {
+
+object "Feature_Origin : Feature" as Feature_Origin {
+    name = "Origin"
+    description = "Point of departure"
+  }
+  object "Feature_Destination : Feature" as Feature_Destination {
+    name = "Destination"
+    description = "Point of arrival"
+  }
+
+  object "Feature_TransportMode : Feature" as Feature_TransportMode{
+    name = "Transport Mode"
+    description = "Mode of transport (Air, Rail...)"
+  }
+
+  object "Feature_Validity : Feature" as Feature_Validity{
+    name = "Validity Period"
+    description = "Date range of product validity"
+  }
+
+  Feature_Origin --> SingleValue
+  Feature_Destination --> SingleValue
+  Feature_TransportMode --> DiscreteSet
+  Feature_Validity --> ValueRange
+
+  object "LH1234_Economy : TransportProduct" as LH1234_Economy {
+    identifier = "LH1234_ECO"
+    name = "Flight LH1234 Economy Class"
+  }
+
+  LH1234_Economy *-- Feature_Origin
+  LH1234_Economy *-- Feature_Destination
+  LH1234_Economy *-- Feature_TransportMode
+  LH1234_Economy *-- Feature_Validity
+}
+
+@enduml

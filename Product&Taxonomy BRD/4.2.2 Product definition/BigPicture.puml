@@ -1,0 +1,59 @@
+
+@startuml Figure 1: Big picture
+
+skinparam Linetype ortho
+skinparam nodesep 120
+skinparam Ranksep 50
+skinparam packageStyle rectangle
+skinparam hide empty
+
+package "The Big Picture" as TBP {
+package "Product definition - Layer 1" as ProductDefinition {
+class Product {
+    +identifier
+    +name
+
+}
+
+class Feature {
+    +identifier
+    +name
+}
+
+Product ---> Feature: has >
+
+}
+
+
+package "Product schema - Layer 2" as ProductSchema {
+
+class Transport <<ProductClass>> {
+}
+class Distance <<ClassFeature>> {
+}
+
+Product <|-left- Transport: <b>specializes
+Feature <|-left- Distance: <b>specializes 
+
+
+Transport ---> Distance: <b>has >
+
+}
+
+package "Specified product - Layer 3" as ConcreteProduct {
+
+object "CDGJFK:Transport" as CDGJFK {
+
+}
+
+object "CDGJFKDist:Distance" as CDGJFKDist{
+
+}
+
+CDGJFK ---> CDGJFKDist : > <b>has
+CDGJFK -right-> Transport: <b>instance of 
+CDGJFKDist -right-> Distance: <b>instance of  
+}
+
+}
+@enduml

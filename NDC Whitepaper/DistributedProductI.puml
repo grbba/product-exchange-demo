@@ -1,0 +1,36 @@
+
+@startuml distributed_product_intelligence
+' !theme plain
+title Future: Retailer Product Intelligence
+
+actor Customer
+participant "Retailer" as Retailer
+participant "Retailer Product\nCatalog" as PK
+participant "Supplier Airline A" as A1
+participant "Supplier Airline B" as A2
+
+== Continuous Product Exchange ==
+A1 -> Retailer : Product information updates\n(IATA standard)
+A2 -> Retailer : Product information updates\n(IATA standard)
+note over Retailer,  PK
+Product information concerns Schema updates, products, 
+features, taxonomy, rules etc.. i.e. any arterfact improving
+the smart shopping expirience
+end note
+Retailer -> PK : Store with retailer taxonomy
+
+== Smart Shopping ==
+Customer -> Retailer : "Flexible business travel"
+
+Retailer -> PK : Query: Which products\nmatch requirements?
+PK -> Retailer : Airline A: 2 products match\nAirline B: 0 products match
+
+Retailer -> A1 : Targeted request:\nOnly for matching products
+A1 -> Retailer : Pricing for qualified products only
+
+note over Retailer : No request to Airline B\n(pre-filtered out)
+
+Retailer -> Customer : Relevant options only
+
+note right : Result:\n80% fewer API calls\nOnly qualified shopping
+@enduml

@@ -1,0 +1,49 @@
+@startuml Figure 3: Lifecycle
+' title Product Lifecycle (Supplier-Centric)
+' skinparam Linetype ortho
+' left to right direction
+top to bottom direction
+' skinparam nodesep 60
+' skinparam ranksep 60
+
+[*] --> new
+
+new: Metadata
+new: - created by
+new: - creation date
+new: - initial version
+
+new --> active : activate
+
+active: Metadata
+active: - available from
+active: - deliverable from
+
+active --> deprecated : deprecate
+active --> onhold : hold
+
+onhold:   Metadata
+onhold:    - hold date
+onhold:    - hold reason
+onhold:    - expected resume date
+
+onhold --> active : resume
+onhold --> deprecated : deprecate
+onhold --> deleted : delete
+
+deprecated: Metadata
+deprecated:  - deprecation date
+deprecated:  - replacement product identifier (optional)
+deprecated --> deleted : retire
+' deprecated --> archived : archive
+
+'archived:    Metadata
+'archived:    - archived date
+'archived:    - archived by
+'archived:    - archival reason
+
+deleted : Terminal state
+deleted --> [*]
+'archived --> [*]
+
+@enduml

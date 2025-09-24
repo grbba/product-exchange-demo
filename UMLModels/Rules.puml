@@ -1,0 +1,116 @@
+@startuml RulesVersion1
+package Rules {
+
+enum RuleType {
+  Inclusion
+  Exclusion
+  Conditional
+}
+
+enum TargetType {
+  Product
+  Feature
+  ProductType
+}
+
+enum Operator {
+  =
+  !=
+  >
+  <
+  >=
+  <=
+  in
+  not_in
+}
+
+class ChannelConstraint {
+  +allowedChannels: List<Channel>
+  +excludedChannels: List<Channel>
+}
+
+enum Channel {
+  WEBSHOP
+  MOBILE
+  AGENCY
+  NDC
+  KIOSK
+  CALL_CENTER
+  STAFF_ASSISTED
+  OTHER
+}
+
+class MarketConstraint {
+  +salesCountry: List<String>
+  +usageRegion: List<String>
+}
+
+class CustomerConstraint {
+  +segments: List<String> // e.g. ["Gold", "Corporate", "Student"]
+  +isLoyaltyMember: Boolean
+  +customerType: String // e.g. "Business", "Leisure"
+}
+
+class ProductRule {
+  +ruleID : String
+  +ruleType : RuleType
+  +description : String
+}
+
+class RuleCondition {
+  +featureName : String
+  +expectedValue : String
+  +operator : Operator
+}
+
+class RuleTarget {
+  +targetType : TargetType
+  +targetID : String
+}
+
+class RuleScope {
+  +location : String
+  +segmentID : String
+  +productClass: String
+  +channelConstraint: ChannelConstraint
+  +marketConstraint: MarketConstraint
+  +customerConstraint: CustomerConstraint
+}
+
+ProductRule "1" -- "1..*" RuleTarget
+ProductRule "0..*" -- "0..*" RuleCondition
+ProductRule "0..1" -- "0..1" RuleScope
+
+}
+
+package Examples {
+object Rule_PriorityBoarding_EUOnly <<ProductRule>> {
+  ruleID = "RUL001"
+  ruleType = "Inclusion"
+  description = "Priority Boarding is only available for flights departing from European airports."
+}
+
+object RuleScope_Transport_EU <<RuleScope>> {
+  productClass = "Transport"
+}
+
+object Condition_OriginInEU <<RuleCondition>> {
+  type = "FeatureInRegion"
+  featureName = "Origin"
+  region = "EU"
+  referenceSystemID = "RS_IATA_AIRPORT"
+}
+
+object Target_Allow_PriorityBoarding <<RuleTarget>> {
+  action = "allow"
+  products = ["PriorityBoarding"]
+}
+
+Rule_PriorityBoarding_EUOnly --> RuleScope_Transport_EU
+Rule_PriorityBoarding_EUOnly --> Condition_OriginInEU
+Rule_PriorityBoarding_EUOnly --> Target_Allow_PriorityBoarding
+
+
+}
+Rules ----[hidden]> Examples
+@enduml

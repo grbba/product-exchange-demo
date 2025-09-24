@@ -1,0 +1,130 @@
+@startuml Figure XY: global view
+' specializations across layers have been replaced by stereotypes 
+' for better readability
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+
+
+' left to right direction
+
+' === Layer 1: Abstract Core Model ===
+package "Layer 1: Abstract Product Definition" as AFM {
+
+ abstract class Product {
+  +identifier
+  +type
+  +name : Text
+  +description : Text
+}
+
+class ProductRule {
+  +ruleID: String
+  +name: String
+  +description: String
+  +type: RuleType
+}
+
+class TaxonomyConcept {
+  +conceptID: String
+  +prefLabel: String
+}
+
+class LifecycleStatus <<Metadata>> {
+  +status : StatusCode
+  +since : Date
+  +reason
+}
+
+enum StatusCode <<Metadata>> {
+  +active
+  +deprecated
+  +onhold
+  +new
+  +deleted
+  +archived
+}
+
+
+
+Product "1" -- "1" LifecycleStatus : has >
+Product "1" *-- "1..*" Feature : has >
+LifecycleStatus  ..> StatusCode : uses >
+Product "1" -r- "0..n" TaxonomyConcept: classified by >
+Product "1" -l- "0..n" ProductRule: subject to >
+
+abstract class Feature {
+    +identifier
+    +name: Text
+    +description: Text
+  }
+
+abstract class FeatureValue {
+    +unit
+  }
+
+abstract class SingleValue {
+    +value
+  }
+
+abstract class ValueRange {
+  +minValue
+  +maxValue
+}
+
+abstract class DiscreteSet {
+  +allowedValues: List
+}
+
+
+FeatureValue <|--- SingleValue
+FeatureValue <|--- ValueRange
+FeatureValue <|-- DiscreteSet
+
+Feature --> "1" FeatureValue : has >
+
+class ReferenceSystem {
+    +identifier
+    +description
+    +system_type
+  }
+
+' === Reference System Type Enum ===
+enum ReferenceSystemType {
+  Measurement
+  Enumeration
+  CodeSystem
+  ColorSystem
+  Other
+}
+
+' === Abstract Reference Source ===
+abstract class ReferenceSource {
+  +authority: Text
+  +resource_name: Text
+  +resource_type: Text
+}
+
+' === Subtypes for Reference Sources ===
+class ExternalReference {
+  +link: Any // Any can be e.g. an url
+}
+
+class InternalReference {
+  +repository_name: Text
+  +version: Any
+}
+
+' === Relationships ===
+ReferenceSystem -l-> ReferenceSystemType : is of type
+ReferenceSystem --> ReferenceSource : definedBy
+
+ReferenceSource <|-- ExternalReference
+ReferenceSource <|-- InternalReference
+
+
+FeatureValue <--l--- ReferenceSystem : applies to <
+}
+@enduml

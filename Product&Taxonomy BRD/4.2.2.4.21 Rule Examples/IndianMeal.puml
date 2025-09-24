@@ -1,0 +1,95 @@
+@startuml Figure 12: IndianMealBlackoutExample
+'title Rule Instance: Indian meal blackout (EU→NA, Date1–Date2)
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+
+package "Layer 2: Product Business Schemas" as PBS {
+
+package "Indian meal unavailable (EU→NA, Date1–Date2)" { 
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+' === Rule ===
+object ProductRule_RIND {
+  ruleID = "R-INDIAN-001"
+  name = "Indian meal blackout on EU→NA transports"
+  type = AvailabilityConstraint
+  priority = 10
+}
+
+' === Logical grouping ===
+object CompoundCondition_AND {
+  operator = AND
+  description = "Transport in EU→NA AND date in blackout window"
+}
+
+' === Conditions (context-aware) ===
+object TaxonomyCondition_Market {
+  taxonomyConceptID = "region:EU-NA"
+  taxonomyScheme    = "apmwg:market_taxonomy_scheme"
+  subjectRef        = "transport"
+  selectionScope    = "ANY_SELECTED"
+  description       = "At least one selected transport is tagged EU→NA"
+}
+
+object DateTimeCondition_Blackout {
+  operator     = IN
+  dateTime     = "Date1/Date2"  ' e.g., 2025-10-01/2025-12-31
+  subjectRef   = "order"
+  description  = "Travel/service date within blackout period"
+}
+
+' === Targets ===
+object TaxonomyTarget_DisableIndian {
+  conceptID   = "apmwg:66B0BOM6"  ' SKOS: Indian cuisine
+  action      = DISABLE
+  description = "Disable all products tagged as Indian cuisine"
+}
+
+' === Taxonomy references (for clarity) ===
+object TaxonomyConcept_EU_NA {
+  conceptID = "region:EU-NA"
+  label     = "EU→NA Market"
+}
+
+object TaxonomyConcept_Indian {
+  conceptID = "apmwg:66B0BOM6"
+  label     = "Indian (Cuisine)"
+}
+
+' === Evaluation context ===
+object RuleContext_CTX1 {
+  contextID = "CTX-1"
+  bindings  = "{ transport, order }"
+}
+
+' Optional: show bound entities at a glance (illustrative)
+object Transport_CDGGFK {
+  id      = "CDG-JFK"
+  tagged  = ["region:EU-NA"]
+}
+object Order_9876 {
+  id        = "ORD-9876"
+  travelDate= "2025-11-15"
+}
+
+' === Wiring ===
+ProductRule_RIND --> RuleContext_CTX1 : evaluated with
+
+RuleContext_CTX1 --> Transport_CDGGFK : transport
+RuleContext_CTX1 --> Order_9876       : order
+
+ProductRule_RIND --> CompoundCondition_AND : triggers on
+CompoundCondition_AND --> TaxonomyCondition_Market
+CompoundCondition_AND --> DateTimeCondition_Blackout
+
+TaxonomyCondition_Market --> TaxonomyConcept_EU_NA
+TaxonomyTarget_DisableIndian --> TaxonomyConcept_Indian
+
+ProductRule_RIND --> TaxonomyTarget_DisableIndian : enforces
+
+
+}
+}
+@enduml
