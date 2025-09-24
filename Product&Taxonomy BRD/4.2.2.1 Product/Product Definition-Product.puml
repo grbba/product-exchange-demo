@@ -66,26 +66,36 @@ hide empty members
 package "Layer 1: Product Definition - Product" as AFM {
 
   ' The semantic *type* of extra information that can be attached to a Product
-  abstract class ProductInformationExtension {
+  ' abstract class ProductInformationExtension {
   ' abstract class ExtensionDetails {
-    +identifier
-    +name : Text    
-    +version      : Text  
-    +definitionUri : Text 
-    +description  : Text
-  }
+   ' +identifier
+   ' +name : Text    
+   ' +version      : Text  
+   ' +definitionUri : Text 
+   ' +description  : Text
+  
 
   ' The actual *instance* of extra information attached to one Product
    ' details opaque payload; validated by definitionUri of the Extension
    
-  abstract class ExtensionDetails {
-  ' abstract class ProductInformationExtension {
-    +details    : Any  
-    +isPrimary  : Boolean        
-    +validFrom  : Date
-    +validTo    : Date
-    +note       : Text
+  abstract class "AdditionalProductInformation" as ExtensionDetails {
+  <b>Note:</b> see extension section for more details  
   }
+
+  note bottom of ExtensionDetails
+  This is used to specialize specific additional content to
+  be conveyed with the porduct. E.g. rich media or contact information
+  but where such information is not actually part of the promise 
+  nor can such information be covered by the taxonomy
+  end note
+  
+  ' abstract class ProductInformationExtension {
+   ' +details    : Any  
+   ' +isPrimary  : Boolean        
+    '+validFrom  : Date
+    '+validTo    : Date
+    ' +note       : Text
+  '}
 
  abstract class Product {
   +identifier
@@ -107,7 +117,7 @@ enum ProductType {
 ' ProductInformationExtension "1" --> "1" ExtensionDetails : conforms to >
 
 Product "1" o-- "0..*" ExtensionDetails : has >
-ExtensionDetails "1" --> "1" ProductInformationExtension : conforms to >
+' ExtensionDetails "1" --> "1" ProductInformationExtension : conforms to >
 
 ' abstract class AdditionalProductInformation  {
 '  <b>Note:</b> used for information like rich media or 
@@ -129,7 +139,7 @@ enum StatusCode {
 
 Product "1" -- "1" LifecycleStatus : has >
 Product "1" *-- "1..*" Feature : has >
-Product ..> ProductType : uses >
+Product ..l....> ProductType : uses >
 ' Product -l-> AdditionalProductInformation : has >
 LifecycleStatus  .l.> StatusCode : uses >
 
