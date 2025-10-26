@@ -28,7 +28,16 @@ export type ReferenceSystem = {
   source?: string;
 };
 
-export type Concept = { id: string; label: string; altLabels?: string[] };
+export type Concept = {
+  id: string;
+  label: string;
+  altLabels?: string[];
+  definition?: string;
+  broader?: string[];
+  narrower?: string[];
+  topConceptOf?: string[];
+  inSchemes?: string[];
+};
 export type ConceptScheme = { id: string; label: string; topConcepts: string[] };
 export type Collection = { id: string; label: string; members: string[] };
 
@@ -54,6 +63,7 @@ export type ProductSchema = {
   description?: string;
   category: SchemaCategory;
   tags: string[];
+  assignedCollections: string[];
   featureTemplates: Feature[];
   createdAt: string;
   updatedAt: string;
@@ -127,28 +137,35 @@ export const defaultSchemaTemplate = (): ProductSchema => {
     description: "",
     category: "transport",
     tags: [],
+    assignedCollections: [],
     featureTemplates: [],
     createdAt: timestamp,
     updatedAt: timestamp,
   };
 };
+const unique = <T,>(values: T[]) => Array.from(new Set(values));
 
-export const defaultProductFromSchema = (schema: ProductSchema): Product => ({
+export const resolveCollectionMembers = (collectionIds: string[], collections: Collection[]): string[] => {
+  const lookup = new Map(collections.map((collection) => [collection.id, collection.members] as const));
+  return unique(collectionIds.flatMap((collectionId) => lookup.get(collectionId) ?? []));
+};
+
+export const defaultProductFromSchema = (schema: ProductSchema, collections: Collection[]): Product => ({
   id: uid(),
   name: `${schema.name} Product`,
   type: schemaCategoryLabel(schema.category),
   lifecycleStatus: "Draft",
   features: cloneFeatures(schema.featureTemplates),
-  tags: [...schema.tags],
+  tags: unique([...schema.tags, ...resolveCollectionMembers(schema.assignedCollections, collections)]),
   additionalInfo: {},
 });
 
-export const instantiateProduct = (schema: ProductSchema): ProductInstance => {
+export const instantiateProduct = (schema: ProductSchema, collections: Collection[]): ProductInstance => {
   const timestamp = new Date().toISOString();
   return {
     id: uid(),
     schemaId: schema.id,
-    product: defaultProductFromSchema(schema),
+    product: defaultProductFromSchema(schema, collections),
     createdAt: timestamp,
     updatedAt: timestamp,
   };

@@ -23,7 +23,7 @@ import {
 import SaveIcon from "@mui/icons-material/Save";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
-import type { Concept, ProductSchema, ReferenceSystem, SchemaCategory } from "../domain";
+import type { Collection, Concept, ProductSchema, ReferenceSystem, SchemaCategory } from "../domain";
 import { schemaCategoryLabel, updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
 import DiagramCard from "./DiagramCard";
@@ -39,7 +39,10 @@ type SchemaWorkspaceProps = {
   onExportSchema: (schema: ProductSchema) => void;
   onTagSchema: (schemaId: string, conceptId: string) => void;
   onRemoveSchemaTag: (schemaId: string, conceptId: string) => void;
+  onAssignCollection: (schemaId: string, collectionId: string) => void;
+  onRemoveCollection: (schemaId: string, collectionId: string) => void;
   onPersistSchemas: () => void;
+  collections: Collection[];
   conceptLabel: (id: string) => string;
   orderedConcepts: Concept[];
   referenceSystems: ReferenceSystem[];
@@ -56,7 +59,10 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
   onExportSchema,
   onTagSchema,
   onRemoveSchemaTag,
+  onAssignCollection,
+  onRemoveCollection,
   onPersistSchemas,
+  collections,
   conceptLabel,
   orderedConcepts,
   referenceSystems,
@@ -66,15 +72,17 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
     [schemas, selectedSchemaId]
   );
 
-  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
-  useEffect(() => {
-    setSelectedFeatureId(selectedSchema?.featureTemplates[0]?.id ?? null);
-  }, [selectedSchema]);
-
   const [newSchemaCategory, setNewSchemaCategory] = useState<SchemaCategory>(categories[0] ?? "transport");
   const [newSchemaName, setNewSchemaName] = useState("");
   const [newSchemaDescription, setNewSchemaDescription] = useState("");
   const [conceptSelection, setConceptSelection] = useState("");
+  const [collectionSelection, setCollectionSelection] = useState("");
+  const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedFeatureId(selectedSchema?.featureTemplates[0]?.id ?? null);
+    setCollectionSelection("");
+  }, [selectedSchema]);
 
   const handleCreate = () => {
     const name = newSchemaName.trim();
@@ -98,6 +106,16 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
   const handleFeaturesChange = (features: ProductSchema["featureTemplates"]) => {
     updateSchema((schema) => ({ ...schema, featureTemplates: features }));
   };
+
+  const handleAssignCollection = () => {
+    if (!selectedSchema || !collectionSelection) return;
+    onAssignCollection(selectedSchema.id, collectionSelection);
+    setCollectionSelection("");
+  };
+
+  const availableCollections = selectedSchema
+    ? collections.filter((collection) => !selectedSchema.assignedCollections.includes(collection.id))
+    : collections;
 
   return (
     <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
@@ -154,7 +172,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                     onClick={() => onSelectSchema(schema.id)}
                     sx={{ borderRadius: 2, mb: 0.5 }}
                   >
-                  <ListItemText
+                    <ListItemText
                       primary={schema.name}
                       secondary={`Type: ${schemaCategoryLabel(schema.category)}`}
                     />
@@ -250,6 +268,53 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                   </FormControl>
                   <Button variant="outlined" onClick={handleAddConcept} disabled={!conceptSelection}>
                     Add tag
+                  </Button>
+                </Stack>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Collections
+                </Typography>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 2 }}>
+                  {selectedSchema.assignedCollections.length ? (
+                    selectedSchema.assignedCollections.map((collectionId) => {
+                      const collection = collections.find((item) => item.id === collectionId);
+                      const label = collection?.label ?? collectionId;
+                      return (
+                        <Chip
+                          key={collectionId}
+                          label={label}
+                          onDelete={() => onRemoveCollection(selectedSchema.id, collectionId)}
+                          size="small"
+                        />
+                      );
+                    })
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No collections assigned.
+                    </Typography>
+                  )}
+                </Stack>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
+                  <FormControl size="small" sx={{ minWidth: 200 }}>
+                    <InputLabel id="schema-collection-select">Assign collection</InputLabel>
+                    <Select
+                      labelId="schema-collection-select"
+                      label="Assign collection"
+                      value={collectionSelection}
+                      onChange={(event) => setCollectionSelection(event.target.value)}
+                    >
+                      <MenuItem value="">
+                        <em>— choose —</em>
+                      </MenuItem>
+                      {availableCollections.map((collection) => (
+                        <MenuItem key={collection.id} value={collection.id}>
+                          {collection.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button variant="outlined" onClick={handleAssignCollection} disabled={!collectionSelection}>
+                    Assign collection
                   </Button>
                 </Stack>
               </CardContent>

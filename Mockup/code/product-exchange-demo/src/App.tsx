@@ -30,6 +30,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import SchemaWorkspace from "./components/SchemaWorkspace";
 import ProductWorkspace from "./components/ProductWorkspace";
+import TaxonomyWorkspace from "./components/TaxonomyWorkspace";
 import {
   COLLECTIONS,
   DEFAULT_CONCEPTS,
@@ -39,6 +40,7 @@ import {
   createRule,
   defaultSchemaTemplate,
   instantiateProduct,
+  resolveCollectionMembers,
   schemaCategoryLabel,
   updateTimestamp,
 } from "./domain";
@@ -128,7 +130,12 @@ const App: React.FC = () => {
 
   const [schemas, setSchemas] = useState<ProductSchema[]>(() => {
     const stored = loadSchemas();
-    if (stored.length) return stored;
+    if (stored.length) {
+      return stored.map((schema) => ({
+        ...schema,
+        assignedCollections: schema.assignedCollections ?? [],
+      }));
+    }
     const schema = defaultSchemaTemplate();
     schema.name = "New Product Schema";
     return [schema];
@@ -141,7 +148,8 @@ const App: React.FC = () => {
     instances.find((instance) => instance.schemaId === productSchemaSelection)?.id ?? null
   );
 
-  const { concepts, conceptLabel, orderedConcepts } = useTaxonomy(DEFAULT_CONCEPTS);
+  const taxonomy = useTaxonomy(DEFAULT_CONCEPTS, COLLECTIONS);
+  const { concepts, collections, conceptLabel, orderedConcepts } = taxonomy;
 
   const [rules, setRules] = useState<Rule[]>([
     {
@@ -159,6 +167,9 @@ const App: React.FC = () => {
     message: "",
     severity: "info",
   });
+  const notify = (message: string, severity: AlertColor = "info") => {
+    setSnack({ open: true, message, severity });
+  };
 
   useEffect(() => {
     persistSchemas(schemas);
@@ -207,8 +218,8 @@ const App: React.FC = () => {
     };
     setSchemas((previous) => [...previous, schema]);
     setSchemaSelection(schema.id);
-    setProductSchemaSelection(schema.id);
-    setSnack({ open: true, message: `Schema '${name}' created`, severity: "success" });
+   setProductSchemaSelection(schema.id);
+    notify(`Schema '${name}' created`, "success");
   };
 
   const handleUpdateSchema = (schemaId: string, updater: (schema: ProductSchema) => ProductSchema) => {
@@ -225,7 +236,7 @@ const App: React.FC = () => {
     if (productSchemaSelection === schemaId) {
       setProductSchemaSelection(remainingSchemas[0]?.id ?? null);
     }
-    setSnack({ open: true, message: "Schema deleted", severity: "info" });
+    notify("Schema deleted", "info");
   };
 
   const handleExportSchema = (schema: ProductSchema) => {
@@ -234,7 +245,7 @@ const App: React.FC = () => {
 
   const handlePersistSchemas = () => {
     persistSchemas(schemas);
-    setSnack({ open: true, message: "Schemas saved", severity: "success" });
+    notify("Schemas saved", "success");
   };
 
   const handleTagSchema = (schemaId: string, conceptId: string) => {
@@ -251,16 +262,108 @@ const App: React.FC = () => {
     );
   };
 
+  const handleAssignCollection = (schemaId: string, collectionId: string) => {
+    const schema = schemas.find((item) => item.id === schemaId);
+    if (!schema) return;
+    if (schema.assignedCollections.includes(collectionId)) {
+      notify("Collection already assigned", "info");
+      return;
+    }
+    const collection = collections.find((item) => item.id === collectionId);
+    if (!collection) {
+      notify("Collection not found", "error");
+      return;
+    }
+
+    setSchemas((previous) =>
+      previous.map((current) =>
+        current.id === schemaId
+          ? updateTimestamp({
+              ...current,
+              assignedCollections: [...current.assignedCollections, collectionId],
+            })
+          : current
+      )
+    );
+
+    setInstances((previous) =>
+      previous.map((instance) => {
+        if (instance.schemaId !== schemaId) return instance;
+        const nextTags = new Set(instance.product.tags);
+        let changed = false;
+        for (const member of collection.members) {
+          if (!nextTags.has(member)) {
+            nextTags.add(member);
+            changed = true;
+          }
+        }
+        if (!changed) return instance;
+        return updateTimestamp({
+          ...instance,
+          product: { ...instance.product, tags: Array.from(nextTags) },
+        });
+      })
+    );
+
+    notify(`Collection '${collection.label}' assigned`, "success");
+  };
+
+  const handleRemoveCollection = (schemaId: string, collectionId: string) => {
+    const schema = schemas.find((item) => item.id === schemaId);
+    if (!schema) return;
+    if (!schema.assignedCollections.includes(collectionId)) {
+      notify("Collection already removed", "info");
+      return;
+    }
+
+    const remainingCollectionIds = schema.assignedCollections.filter((id) => id !== collectionId);
+    const remainingMembers = new Set(resolveCollectionMembers(remainingCollectionIds, collections));
+    const schemaTags = new Set(schema.tags);
+    const protectedTags = new Set<string>([...remainingMembers, ...schemaTags]);
+
+    setSchemas((previous) =>
+      previous.map((current) =>
+        current.id === schemaId
+          ? updateTimestamp({
+              ...current,
+              assignedCollections: current.assignedCollections.filter((id) => id !== collectionId),
+            })
+          : current
+      )
+    );
+
+    const collection = collections.find((item) => item.id === collectionId);
+    if (collection) {
+      const removable = new Set(collection.members.filter((member) => !protectedTags.has(member)));
+      if (removable.size) {
+        setInstances((previous) =>
+          previous.map((instance) => {
+            if (instance.schemaId !== schemaId) return instance;
+            const nextTags = instance.product.tags.filter((tag) => !removable.has(tag));
+            if (nextTags.length === instance.product.tags.length) return instance;
+            return updateTimestamp({
+              ...instance,
+              product: { ...instance.product, tags: nextTags },
+            });
+          })
+        );
+      }
+      notify(`Collection '${collection.label}' removed`, "info");
+    } else {
+      notify("Collection removed", "info");
+    }
+  };
+
   const handleInstantiate = (schemaId: string, name: string) => {
     const schema = schemas.find((item) => item.id === schemaId);
     if (!schema) return;
-    const instance = instantiateProduct(schema);
+    const instance = instantiateProduct(schema, collections);
     instance.product.name = name;
     instance.product.type = schemaCategoryLabel(schema.category);
     setInstances((previous) => [...previous, instance]);
     setProductSchemaSelection(schemaId);
     setSelectedInstanceId(instance.id);
-    setSnack({ open: true, message: `Product '${name}' created`, severity: "success" });
+    notify(`Product '${name}' created`, "success");
   };
 
   const handleUpdateInstance = (instanceId: string, updater: (instance: ProductInstance) => ProductInstance) => {
@@ -274,7 +377,7 @@ const App: React.FC = () => {
       const candidates = remainingInstances.filter((instance) => instance.schemaId === productSchemaSelection);
       setSelectedInstanceId(candidates[0]?.id ?? null);
     }
-    setSnack({ open: true, message: "Product deleted", severity: "info" });
+    notify("Product deleted", "info");
   };
 
   const handleExportInstance = (instance: ProductInstance) => {
@@ -283,7 +386,7 @@ const App: React.FC = () => {
 
   const handlePersistInstances = () => {
     persistInstances(instances);
-    setSnack({ open: true, message: "Products saved", severity: "success" });
+    notify("Products saved", "success");
   };
 
   const handleTagProduct = (instanceId: string, conceptId: string) => {
@@ -333,7 +436,8 @@ const App: React.FC = () => {
     );
   };
 
-  const activeProduct = selectedInstance?.product ?? instantiateProduct(schemas[0] ?? defaultSchemaTemplate()).product;
+  const activeProduct =
+    selectedInstance?.product ?? instantiateProduct(schemas[0] ?? defaultSchemaTemplate(), collections).product;
   const ruleResults = useMemo(() => evaluateRules(activeProduct, rules), [activeProduct, rules]);
 
   const exportSupplierPayload = () => {
@@ -344,10 +448,10 @@ const App: React.FC = () => {
       refs: REF_SYSTEMS,
       conceptSchemes: CONCEPT_SCHEMES.map((scheme) => scheme.id),
       concepts,
-      collections: COLLECTIONS,
+      collections,
     };
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-    setSnack({ open: true, message: "Payload copied to clipboard", severity: "success" });
+    notify("Payload copied to clipboard", "success");
     return payload;
   };
 
@@ -366,10 +470,10 @@ const App: React.FC = () => {
         })),
       };
       setRetailerPayload({ receivedAt: new Date().toISOString(), product: remapped });
-      setSnack({ open: true, message: "Retailer ingest OK", severity: "success" });
+      notify("Retailer ingest OK", "success");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      setSnack({ open: true, message: `Import failed: ${message}`, severity: "error" });
+      notify(`Import failed: ${message}`, "error");
     }
   };
 
@@ -383,10 +487,11 @@ const App: React.FC = () => {
         </Toolbar>
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>
           <Tab id="tab-0" label="Product Schemas" />
-          <Tab id="tab-1" label="Specified Products" />
-          <Tab id="tab-2" label="Reference Systems" />
-          <Tab id="tab-3" label="Rules" />
-          <Tab id="tab-4" label="Exchange" />
+          <Tab id="tab-1" label="Taxonomy" />
+          <Tab id="tab-2" label="Specified Products" />
+          <Tab id="tab-3" label="Reference Systems" />
+          <Tab id="tab-4" label="Rules" />
+          <Tab id="tab-5" label="Exchange" />
         </Tabs>
       </AppBar>
 
@@ -404,6 +509,9 @@ const App: React.FC = () => {
             onPersistSchemas={handlePersistSchemas}
             onTagSchema={handleTagSchema}
             onRemoveSchemaTag={handleRemoveSchemaTag}
+            onAssignCollection={handleAssignCollection}
+            onRemoveCollection={handleRemoveCollection}
+            collections={collections}
             conceptLabel={conceptLabel}
             orderedConcepts={orderedConcepts}
             referenceSystems={REF_SYSTEMS}
@@ -412,6 +520,19 @@ const App: React.FC = () => {
       )}
 
       {tab === 1 && (
+        <Box sx={{ p: 2 }}>
+          <TaxonomyWorkspace
+            concepts={concepts}
+            setConcepts={taxonomy.setConcepts}
+            collections={collections}
+            setCollections={taxonomy.setCollections}
+            conceptLabel={conceptLabel}
+            onNotify={notify}
+          />
+        </Box>
+      )}
+
+      {tab === 2 && (
         <Box sx={{ p: 2 }}>
           <ProductWorkspace
             schemas={schemas}
@@ -434,7 +555,7 @@ const App: React.FC = () => {
         </Box>
       )}
 
-      {tab === 2 && (
+      {tab === 3 && (
         <Box sx={{ p: 2 }}>
           <Card variant="outlined" sx={{ borderRadius: 3 }}>
             <CardHeader title="Reference Systems Registry" subheader="Used to validate or qualify feature values." />
@@ -463,7 +584,7 @@ const App: React.FC = () => {
         </Box>
       )}
 
-      {tab === 3 && (
+      {tab === 4 && (
         <Box sx={{ p: 2 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <Box sx={{ flex: 1 }}>
@@ -736,7 +857,10 @@ const App: React.FC = () => {
                 <CardHeader
                   title="Run Rules"
                   action={
-                    <Button startIcon={<PlayArrowIcon />} onClick={() => setSnack({ open: true, message: "Rules evaluated", severity: "info" })}>
+                    <Button
+                      startIcon={<PlayArrowIcon />}
+                      onClick={() => notify("Rules evaluated")}
+                    >
                       Run
                     </Button>
                   }
@@ -765,7 +889,7 @@ const App: React.FC = () => {
         </Box>
       )}
 
-      {tab === 4 && (
+      {tab === 5 && (
         <Box sx={{ p: 2 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
             <Box sx={{ flex: 1 }}>
