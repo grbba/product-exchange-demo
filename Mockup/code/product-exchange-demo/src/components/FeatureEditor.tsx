@@ -19,6 +19,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import type { Concept, Feature, FeatureValue, ReferenceSystem, SingleValue, ValueRange, DiscreteSet } from "../domain";
 import { uid } from "../domain";
+import InfoTooltipIcon from "./InfoTooltipIcon";
 
 type FeatureEditorProps = {
   title: string;
@@ -31,6 +32,8 @@ type FeatureEditorProps = {
   conceptOptions?: Concept[];
   onAddTag?: (featureId: string, conceptId: string) => void;
   onRemoveTag?: (featureId: string, conceptId: string) => void;
+  titleTooltip?: string;
+  addButtonTooltip?: string;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -50,6 +53,8 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   conceptOptions,
   onAddTag,
   onRemoveTag,
+  titleTooltip,
+  addButtonTooltip,
 }) => {
   const setFeature = (featureId: string, updater: (feature: Feature) => Feature) => {
     onChange(features.map((feature) => (feature.id === featureId ? updater(feature) : feature)));
@@ -116,10 +121,16 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h6">{title}</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
-          Add feature
-        </Button>
+        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+          {title}
+          {titleTooltip ? <InfoTooltipIcon title={titleTooltip} /> : null}
+        </Typography>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
+            Add feature
+          </Button>
+          {addButtonTooltip ? <InfoTooltipIcon title={addButtonTooltip} /> : null}
+        </Stack>
       </Stack>
       <Stack spacing={2}>
         {features.map((feature) => (
@@ -226,13 +237,13 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                 {feature.values.map((value, index) => {
                   const key = discreteKey(feature.id, index);
                   return (
-                  <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Chip label={value.kind} size="small" />
-                      <IconButton onClick={() => removeValue(feature.id, index)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Stack>
+                    <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Chip label={value.kind} size="small" />
+                        <IconButton onClick={() => removeValue(feature.id, index)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
                       <Box sx={{ mt: 2 }}>
                         {value.kind === "SingleValue" && (
                           <Stack spacing={1.5}>

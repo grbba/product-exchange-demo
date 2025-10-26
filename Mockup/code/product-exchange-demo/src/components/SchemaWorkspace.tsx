@@ -27,6 +27,8 @@ import type { Collection, Concept, ProductSchema, ReferenceSystem, SchemaCategor
 import { schemaCategoryLabel, updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
 import DiagramCard from "./DiagramCard";
+import InfoTooltipIcon from "./InfoTooltipIcon";
+import { schemaTooltips } from "../tooltipText";
 
 type SchemaWorkspaceProps = {
   categories: SchemaCategory[];
@@ -125,7 +127,13 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
           <CardContent>
             <Stack spacing={1.5}>
               <FormControl size="small">
-                <InputLabel id="schema-category-label">Product type</InputLabel>
+                <InputLabel
+                  id="schema-category-label"
+                  sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                >
+                  Product type
+                  <InfoTooltipIcon title={schemaTooltips.createSchemaCategory.text} />
+                </InputLabel>
                 <Select
                   labelId="schema-category-label"
                   label="Product type"
@@ -142,27 +150,44 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
               </FormControl>
               <TextField
                 size="small"
-                label="Schema name"
+                label={<Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                    Schema name
+                    <InfoTooltipIcon title={schemaTooltips.createSchemaName.text} />
+                  </Box>}
                 value={newSchemaName}
                 onChange={(event) => setNewSchemaName(event.target.value)}
               />
               <TextField
                 size="small"
-                label="Description"
+                label={<Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                    Description
+                    <InfoTooltipIcon title={schemaTooltips.createSchemaDescription.text} />
+                  </Box>}
                 value={newSchemaDescription}
                 onChange={(event) => setNewSchemaDescription(event.target.value)}
                 multiline
                 minRows={2}
               />
-              <Button variant="contained" onClick={handleCreate} disabled={!newSchemaName.trim()}>
-                Create schema
-              </Button>
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Button variant="contained" onClick={handleCreate} disabled={!newSchemaName.trim()}>
+                  Create schema
+                </Button>
+                <InfoTooltipIcon title={schemaTooltips.createSchemaButton.text} />
+              </Stack>
             </Stack>
           </CardContent>
         </Card>
 
         <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardHeader title="Schemas" subheader={`${schemas.length} defined`} />
+          <CardHeader
+            title={(
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <span>Schemas</span>
+                <InfoTooltipIcon title={schemaTooltips.schemaList.text} />
+              </Stack>
+            )}
+            subheader={`${schemas.length} defined`}
+          />
           <CardContent>
             <List dense disablePadding>
               {schemas.map((schema) => (
@@ -214,14 +239,20 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                   <TextField
                     fullWidth
                     size="small"
-                    label="Schema name"
+                    label={<Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                        Schema name
+                        <InfoTooltipIcon title={schemaTooltips.schemaDetailName.text} />
+                      </Box>}
                     value={selectedSchema.name}
                     onChange={(event) => updateSchema((schema) => ({ ...schema, name: event.target.value }))}
                   />
                   <TextField
                     fullWidth
                     size="small"
-                    label="Description"
+                    label={<Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+                        Description
+                        <InfoTooltipIcon title={schemaTooltips.schemaDetailDescription.text} />
+                      </Box>}
                     value={selectedSchema.description ?? ""}
                     multiline
                     minRows={3}
@@ -249,7 +280,13 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
                   <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel id="schema-tag-select">Add taxonomy concept</InputLabel>
+                    <InputLabel
+                      id="schema-tag-select"
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      Add taxonomy concept
+                      <InfoTooltipIcon title={schemaTooltips.schemaDetailAddTag.text} />
+                    </InputLabel>
                     <Select
                       labelId="schema-tag-select"
                       label="Add taxonomy concept"
@@ -266,13 +303,20 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                       ))}
                     </Select>
                   </FormControl>
-                  <Button variant="outlined" onClick={handleAddConcept} disabled={!conceptSelection}>
-                    Add tag
-                  </Button>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Button variant="outlined" onClick={handleAddConcept} disabled={!conceptSelection}>
+                      Add tag
+                    </Button>
+                    <InfoTooltipIcon title={schemaTooltips.schemaDetailTags.text} />
+                  </Stack>
                 </Stack>
                 <Divider sx={{ my: 2 }} />
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ mb: 1, display: "inline-flex", alignItems: "center", gap: 0.5 }}
+                >
                   Collections
+                  <InfoTooltipIcon title={schemaTooltips.schemaCollections.text} />
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 2 }}>
                   {selectedSchema.assignedCollections.length ? (
@@ -296,7 +340,13 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
                   <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel id="schema-collection-select">Assign collection</InputLabel>
+                    <InputLabel
+                      id="schema-collection-select"
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
+                      Assign collection
+                      <InfoTooltipIcon title={schemaTooltips.schemaAssignCollection.text} />
+                    </InputLabel>
                     <Select
                       labelId="schema-collection-select"
                       label="Assign collection"
@@ -313,15 +363,20 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                       ))}
                     </Select>
                   </FormControl>
-                  <Button variant="outlined" onClick={handleAssignCollection} disabled={!collectionSelection}>
-                    Assign collection
-                  </Button>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Button variant="outlined" onClick={handleAssignCollection} disabled={!collectionSelection}>
+                      Assign collection
+                    </Button>
+                    <InfoTooltipIcon title={schemaTooltips.schemaAssignCollection.text} />
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>
 
             <FeatureEditor
               title="Feature templates"
+              titleTooltip={schemaTooltips.featureTemplates.text}
+              addButtonTooltip={schemaTooltips.addFeatureButton.text}
               features={selectedSchema.featureTemplates}
               selectedFeatureId={selectedFeatureId}
               onSelectFeature={setSelectedFeatureId}
