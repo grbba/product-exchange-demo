@@ -45,17 +45,14 @@ export type Rule = {
   conditions: (TaxonomyCondition | FeatureCondition)[];
 };
 
-export type MetamodelAsset = {
-  id: string;
-  name: string;
-  description: string;
-};
+export type SchemaCategory = "transport" | "baggage" | "seat" | "lounge" | "meal" | "other";
+
 
 export type ProductSchema = {
   id: string;
   name: string;
   description?: string;
-  baseAssetId: string;
+  category: SchemaCategory;
   tags: string[];
   featureTemplates: Feature[];
   createdAt: string;
@@ -93,23 +90,17 @@ export const COLLECTIONS: Collection[] = [
   { id: "COL-Ancillaries", label: "Ancillary Services", members: ["C-PriorityBoarding", "C-Seat"] },
 ];
 
-export const METAMODEL_ASSETS: MetamodelAsset[] = [
-  {
-    id: "asset-transport",
-    name: "Transport Product Metamodel",
-    description: "Structure for journeys between an origin and a destination.",
-  },
-  {
-    id: "asset-baggage",
-    name: "Baggage Service Metamodel",
-    description: "Structure for baggage allowances and ancillary baggage services.",
-  },
-  {
-    id: "asset-service",
-    name: "Ancillary Service Metamodel",
-    description: "Structure for additional services such as meals, lounge access, or seat upgrades.",
-  },
+export const SCHEMA_CATEGORIES: SchemaCategory[] = [
+  "transport",
+  "baggage",
+  "seat",
+  "lounge",
+  "meal",
+  "other",
 ];
+
+export const schemaCategoryLabel = (category: SchemaCategory) =>
+  category.charAt(0).toUpperCase() + category.slice(1);
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -134,7 +125,7 @@ export const defaultSchemaTemplate = (): ProductSchema => {
     id: uid(),
     name: "New Product Schema",
     description: "",
-    baseAssetId: METAMODEL_ASSETS[0]?.id ?? "asset-transport",
+    category: "transport",
     tags: [],
     featureTemplates: [],
     createdAt: timestamp,
@@ -145,7 +136,7 @@ export const defaultSchemaTemplate = (): ProductSchema => {
 export const defaultProductFromSchema = (schema: ProductSchema): Product => ({
   id: uid(),
   name: `${schema.name} Product`,
-  type: schema.name,
+  type: schemaCategoryLabel(schema.category),
   lifecycleStatus: "Draft",
   features: cloneFeatures(schema.featureTemplates),
   tags: [...schema.tags],

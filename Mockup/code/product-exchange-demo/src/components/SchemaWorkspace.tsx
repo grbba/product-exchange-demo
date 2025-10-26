@@ -20,33 +20,33 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
-import SaveIcon from "@mui/icons-material/Save";
-import type { Concept, MetamodelAsset, ProductSchema, ReferenceSystem } from "../domain";
-import { updateTimestamp } from "../domain";
+import type { Concept, ProductSchema, ReferenceSystem, SchemaCategory } from "../domain";
+import { schemaCategoryLabel, updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
 import DiagramCard from "./DiagramCard";
 
 type SchemaWorkspaceProps = {
-  assets: MetamodelAsset[];
+  categories: SchemaCategory[];
   schemas: ProductSchema[];
   selectedSchemaId: string | null;
   onSelectSchema: (schemaId: string) => void;
-  onCreateSchema: (assetId: string, name: string, description: string) => void;
+  onCreateSchema: (category: SchemaCategory, name: string, description: string) => void;
   onUpdateSchema: (schemaId: string, updater: (schema: ProductSchema) => ProductSchema) => void;
   onDeleteSchema: (schemaId: string) => void;
   onExportSchema: (schema: ProductSchema) => void;
-  onPersistSchemas: () => void;
   onTagSchema: (schemaId: string, conceptId: string) => void;
   onRemoveSchemaTag: (schemaId: string, conceptId: string) => void;
+  onPersistSchemas: () => void;
   conceptLabel: (id: string) => string;
   orderedConcepts: Concept[];
   referenceSystems: ReferenceSystem[];
 };
 
 const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
-  assets,
+  categories,
   schemas,
   selectedSchemaId,
   onSelectSchema,
@@ -54,9 +54,9 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
   onUpdateSchema,
   onDeleteSchema,
   onExportSchema,
-  onPersistSchemas,
   onTagSchema,
   onRemoveSchemaTag,
+  onPersistSchemas,
   conceptLabel,
   orderedConcepts,
   referenceSystems,
@@ -71,15 +71,15 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
     setSelectedFeatureId(selectedSchema?.featureTemplates[0]?.id ?? null);
   }, [selectedSchema]);
 
-  const [newSchemaAssetId, setNewSchemaAssetId] = useState<string>(() => assets[0]?.id ?? "");
+  const [newSchemaCategory, setNewSchemaCategory] = useState<SchemaCategory>(categories[0] ?? "transport");
   const [newSchemaName, setNewSchemaName] = useState("");
   const [newSchemaDescription, setNewSchemaDescription] = useState("");
   const [conceptSelection, setConceptSelection] = useState("");
 
   const handleCreate = () => {
     const name = newSchemaName.trim();
-    if (!name || !newSchemaAssetId) return;
-    onCreateSchema(newSchemaAssetId, name, newSchemaDescription.trim());
+    if (!name) return;
+    onCreateSchema(newSchemaCategory, name, newSchemaDescription.trim());
     setNewSchemaName("");
     setNewSchemaDescription("");
   };
@@ -101,22 +101,23 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
 
   return (
     <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-      <Box sx={{ flexBasis: { md: "30%" }, flexShrink: 0 }}>
+      <Box sx={{ flexBasis: { md: "32%" }, flexShrink: 0 }}>
         <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-          <CardHeader title="Create schema" subheader="Choose a metamodel asset and provide a name." />
+          <CardHeader title="Create schema" subheader="Select a product type and provide a name." />
           <CardContent>
             <Stack spacing={1.5}>
               <FormControl size="small">
-                <InputLabel id="schema-asset-label">Base metamodel</InputLabel>
+                <InputLabel id="schema-category-label">Product type</InputLabel>
                 <Select
-                  labelId="schema-asset-label"
-                  label="Base metamodel"
-                  value={newSchemaAssetId}
-                  onChange={(event) => setNewSchemaAssetId(event.target.value)}
+                  labelId="schema-category-label"
+                  label="Product type"
+                  value={newSchemaCategory}
+                  onChange={(event) => setNewSchemaCategory(event.target.value as SchemaCategory)}
+                  renderValue={(value) => schemaCategoryLabel(value as SchemaCategory)}
                 >
-                  {assets.map((asset) => (
-                    <MenuItem key={asset.id} value={asset.id}>
-                      {asset.name}
+                  {categories.map((category) => (
+                    <MenuItem key={category} value={category} sx={{ textTransform: "capitalize" }}>
+                      {schemaCategoryLabel(category)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -153,9 +154,9 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                     onClick={() => onSelectSchema(schema.id)}
                     sx={{ borderRadius: 2, mb: 0.5 }}
                   >
-                    <ListItemText
+                  <ListItemText
                       primary={schema.name}
-                      secondary={assets.find((asset) => asset.id === schema.baseAssetId)?.name ?? schema.baseAssetId}
+                      secondary={`Type: ${schemaCategoryLabel(schema.category)}`}
                     />
                   </ListItemButton>
                 </ListItem>
@@ -208,6 +209,9 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
                     minRows={3}
                     onChange={(event) => updateSchema((schema) => ({ ...schema, description: event.target.value }))}
                   />
+                  <Typography variant="body2" color="text.secondary">
+                    Product type: <strong>{schemaCategoryLabel(selectedSchema.category)}</strong>
+                  </Typography>
                 </Stack>
                 <Divider sx={{ my: 2 }} />
                 <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 2 }}>
@@ -263,7 +267,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
 
             <DiagramCard
               title="Schema diagram"
-              subtitle={selectedSchema.name}
+              subtitle={`${selectedSchema.name} • ${schemaCategoryLabel(selectedSchema.category)}`}
               features={selectedSchema.featureTemplates}
               conceptLabel={conceptLabel}
             />

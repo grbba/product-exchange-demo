@@ -34,14 +34,15 @@ import {
   COLLECTIONS,
   DEFAULT_CONCEPTS,
   CONCEPT_SCHEMES,
-  METAMODEL_ASSETS,
   REF_SYSTEMS,
+  SCHEMA_CATEGORIES,
   createRule,
   defaultSchemaTemplate,
   instantiateProduct,
+  schemaCategoryLabel,
   updateTimestamp,
 } from "./domain";
-import type { Product, ProductInstance, ProductSchema, Rule, TaxonomyCondition } from "./domain";
+import type { Product, ProductInstance, ProductSchema, Rule, SchemaCategory, TaxonomyCondition } from "./domain";
 import { useTaxonomy } from "./taxonomy";
 import { loadInstances, loadSchemas, persistInstances, persistSchemas } from "./storage";
 
@@ -195,11 +196,11 @@ const App: React.FC = () => {
     ? instances.find((instance) => instance.id === selectedInstanceId) ?? null
     : null;
 
-  const handleCreateSchema = (assetId: string, name: string, description: string) => {
+  const handleCreateSchema = (category: SchemaCategory, name: string, description: string) => {
     const base = defaultSchemaTemplate();
     const schema: ProductSchema = {
       ...base,
-      baseAssetId: assetId,
+      category,
       name,
       description,
       featureTemplates: [],
@@ -255,7 +256,7 @@ const App: React.FC = () => {
     if (!schema) return;
     const instance = instantiateProduct(schema);
     instance.product.name = name;
-    instance.product.type = schema.name;
+    instance.product.type = schemaCategoryLabel(schema.category);
     setInstances((previous) => [...previous, instance]);
     setProductSchemaSelection(schemaId);
     setSelectedInstanceId(instance.id);
@@ -392,7 +393,7 @@ const App: React.FC = () => {
       {tab === 0 && (
         <Box sx={{ p: 2 }}>
           <SchemaWorkspace
-            assets={METAMODEL_ASSETS}
+            categories={SCHEMA_CATEGORIES}
             schemas={schemas}
             selectedSchemaId={schemaSelection}
             onSelectSchema={setSchemaSelection}
