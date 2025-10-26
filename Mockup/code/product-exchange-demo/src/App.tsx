@@ -482,7 +482,7 @@ const App: React.FC = () => {
       <AppBar position="sticky" color="default" elevation={0}>
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Product Exchange Workbench
+            Product Information Exchange Workbench
           </Typography>
         </Toolbar>
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>

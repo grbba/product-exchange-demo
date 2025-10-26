@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
-import type { Feature, FeatureValue, ReferenceSystem, SingleValue, ValueRange, DiscreteSet } from "../domain";
+import type { Concept, Feature, FeatureValue, ReferenceSystem, SingleValue, ValueRange, DiscreteSet } from "../domain";
 import { uid } from "../domain";
 
 type FeatureEditorProps = {
@@ -28,6 +28,9 @@ type FeatureEditorProps = {
   onChange: (features: Feature[]) => void;
   conceptLabel: (id: string) => string;
   referenceSystems: ReferenceSystem[];
+  conceptOptions?: Concept[];
+  onAddTag?: (featureId: string, conceptId: string) => void;
+  onRemoveTag?: (featureId: string, conceptId: string) => void;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -44,10 +47,42 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   onChange,
   conceptLabel,
   referenceSystems,
+  conceptOptions,
+  onAddTag,
+  onRemoveTag,
 }) => {
   const setFeature = (featureId: string, updater: (feature: Feature) => Feature) => {
     onChange(features.map((feature) => (feature.id === featureId ? updater(feature) : feature)));
   };
+
+  const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
+  const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
+
+  const discreteKey = (featureId: string, index: number) => `${featureId}:${index}`;
+
+  useEffect(() => {
+    setTagSelections((previous) => {
+      const next = { ...previous };
+      for (const key of Object.keys(next)) {
+        if (!features.some((feature) => feature.id === key)) {
+          delete next[key];
+        }
+      }
+      return next;
+    });
+
+    setDiscreteInputs((previous) => {
+      const next: Record<string, string> = {};
+      for (const feature of features) {
+        feature.values.forEach((value, index) => {
+          if (value.kind !== "DiscreteSet") return;
+          const key = discreteKey(feature.id, index);
+          next[key] = previous[key] ?? value.values.join(", ");
+        });
+      }
+      return next;
+    });
+  }, [features]);
 
   const addFeature = () => {
     const feature: Feature = { id: uid(), name: "New Feature", description: "", values: [], tags: [] };
@@ -129,7 +164,12 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                 {feature.tags.length ? (
                   <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
                     {feature.tags.map((tag) => (
-                      <Chip key={tag} label={conceptLabel(tag)} size="small" />
+                      <Chip
+                        key={tag}
+                        label={conceptLabel(tag)}
+                        size="small"
+                        onDelete={onRemoveTag ? () => onRemoveTag(feature.id, tag) : undefined}
+                      />
                     ))}
                   </Stack>
                 ) : (
@@ -137,6 +177,43 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                     No taxonomy tags.
                   </Typography>
                 )}
+
+                {conceptOptions && onAddTag ? (
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <InputLabel id={`feature-tag-${feature.id}`}>Add taxonomy concept</InputLabel>
+                      <Select
+                        labelId={`feature-tag-${feature.id}`}
+                        label="Add taxonomy concept"
+                        value={tagSelections[feature.id] ?? ""}
+                        onChange={(event) =>
+                          setTagSelections((previous) => ({ ...previous, [feature.id]: event.target.value }))
+                        }
+                      >
+                        <MenuItem value="">
+                          <em>— choose —</em>
+                        </MenuItem>
+                        {conceptOptions.map((concept) => (
+                          <MenuItem key={concept.id} value={concept.id}>
+                            {concept.label}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        const selection = tagSelections[feature.id];
+                        if (!selection) return;
+                        onAddTag(feature.id, selection);
+                        setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
+                      }}
+                      disabled={!tagSelections[feature.id]}
+                    >
+                      Add tag
+                    </Button>
+                  </Stack>
+                ) : null}
               </Stack>
 
               <Box
@@ -146,7 +223,9 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
                 }}
               >
-                {feature.values.map((value, index) => (
+                {feature.values.map((value, index) => {
+                  const key = discreteKey(feature.id, index);
+                  return (
                   <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Chip label={value.kind} size="small" />
@@ -252,9 +331,11 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             <TextField
                               size="small"
                               label="Comma separated values"
-                              value={value.values.join(", ")}
+                              value={discreteInputs[key] ?? value.values.join(", ")}
                               onChange={(event) => {
-                                const values = event.target.value
+                                const raw = event.target.value;
+                                setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
+                                const values = raw
                                   .split(",")
                                   .map((entry) => entry.trim())
                                   .filter(Boolean);
@@ -292,7 +373,8 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                         )}
                       </Box>
                     </Card>
-                ))}
+                  );
+                })}
               </Box>
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                 <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addValue(feature.id, "SingleValue")}>

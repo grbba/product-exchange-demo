@@ -68,7 +68,6 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
   referenceSystems,
 }) => {
   const [newProductName, setNewProductName] = useState("");
-  const [tagTarget, setTagTarget] = useState<"product" | "feature">("product");
   const [conceptSelection, setConceptSelection] = useState("");
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
 
@@ -121,19 +120,20 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
 
   const handleAddTag = () => {
     if (!selectedInstance || !conceptSelection) return;
-    if (tagTarget === "product") {
-      onTagProduct(selectedInstance.id, conceptSelection);
-    } else if (tagTarget === "feature" && selectedFeatureId) {
-      onUpdateInstance(selectedInstance.id, (instance) => {
-        const features = instance.product.features.map((feature) =>
-          feature.id === selectedFeatureId && !feature.tags.includes(conceptSelection)
-            ? { ...feature, tags: [...feature.tags, conceptSelection] }
-            : feature
-        );
-        return updateTimestamp({ ...instance, product: { ...instance.product, features } });
-      });
-    }
+    onTagProduct(selectedInstance.id, conceptSelection);
     setConceptSelection("");
+  };
+
+  const handleAddFeatureTag = (featureId: string, conceptId: string) => {
+    if (!selectedInstance) return;
+    onUpdateInstance(selectedInstance.id, (instance) => {
+      const features = instance.product.features.map((feature) =>
+        feature.id === featureId && !feature.tags.includes(conceptId)
+          ? { ...feature, tags: [...feature.tags, conceptId] }
+          : feature
+      );
+      return updateTimestamp({ ...instance, product: { ...instance.product, features } });
+    });
   };
 
   const handleRemoveFeatureTag = (featureId: string, tagId: string) => {
@@ -290,17 +290,6 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
                   )}
                 </Stack>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
-                  <ToggleButtonGroup
-                    size="small"
-                    value={tagTarget}
-                    exclusive
-                    onChange={(_, value) => value && setTagTarget(value)}
-                  >
-                    <ToggleButton value="product">Product</ToggleButton>
-                    <ToggleButton value="feature" disabled={!selectedFeatureId}>
-                      Feature
-                    </ToggleButton>
-                  </ToggleButtonGroup>
                   <FormControl size="small" sx={{ minWidth: 200 }}>
                     <InputLabel id="product-tag-select">Assign taxonomy concept</InputLabel>
                     <Select
@@ -334,22 +323,10 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
               onChange={handleFeaturesChange}
               conceptLabel={conceptLabel}
               referenceSystems={referenceSystems}
+              conceptOptions={orderedConcepts}
+              onAddTag={handleAddFeatureTag}
+              onRemoveTag={handleRemoveFeatureTag}
             />
-
-            {selectedFeatureId && (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", px: 1 }}>
-                {selectedInstance.product.features
-                  .find((feature) => feature.id === selectedFeatureId)
-                  ?.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={conceptLabel(tag)}
-                      onDelete={() => handleRemoveFeatureTag(selectedFeatureId, tag)}
-                      size="small"
-                    />
-                  ))}
-              </Stack>
-            )}
 
             <DiagramCard
               title="Product diagram"
