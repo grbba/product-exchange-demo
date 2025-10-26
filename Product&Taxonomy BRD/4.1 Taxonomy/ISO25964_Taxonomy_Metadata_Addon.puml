@@ -1,0 +1,96 @@
+@startuml
+title Mapping concepts for alignment between taxonomies
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+hide empty members
+
+' ===== Existing core (referenced) =====
+class ConceptScheme {
+  +name : Text
+  .. optional ..
+  +description : Text
+}
+
+class Concept {
+    +id: Identifer
+    +definition: Text
+    +isTop : Boolean
+}
+
+class Mapping {
+  +type : {exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch}
+  +justification : Text?
+}
+
+' ===== New: Taxonomy metadata =====
+class Taxonomy {
+  +taxonomy_id : Identifier
+  +title : Text
+  +namespace_uri : IRI          
+   ' base URI for identifiers (e.g., https://example.org/tax/)
+  .. optional ..
+  +short_name : Text
+  +mapping_policy : Text      
+   ' scope/criteria for asserting matches
+ 
+  /'
+  +version_label : String       ' human readable (e.g., 2025.10)
+  +version_iri : IRI?           ' machine-readable versioned IRI
+  +status : {draft, released, deprecated, archived}
+  +issued : Date                ' first publication date
+  +modified : Date              ' last updated date
+  +publisher : Text
+  +creator : Text
+  +contact : Text?              ' email or URL
+  +license : IRI?               ' SPDX or license URL
+  +rights : Text?
+  +default_language : LanguageTag
+  +languages : Set<LanguageTag>
+  +homepage : IRI?
+  +jurisdiction : Text?
+  +description : Text?
+
+  +provenance : Text?           ' change notes / source provenance
+  '/
+}
+
+' Ownership: a Taxonomy contains one or more ConceptSchemes
+Taxonomy "1" o-- "1..*" ConceptScheme : owns >
+
+' Each Concept belongs to one ConceptScheme (shown in main model)
+ConceptScheme "1" o-- "0..*" Concept : contains
+
+' ===== Mapping context (alignment) =====
+' Source/target taxonomy for a Mapping are DERIVED via the Concepts' schemes
+' (no extra wiring needed at runtime if you can traverse Concept -> ConceptScheme -> Taxonomy).
+note "Alignment context:\n• Source/target Taxonomy for a Mapping are derived via:\n  Mapping.sourceConcept → ConceptScheme → Taxonomy\n  Mapping.targetConcept → ConceptScheme → Taxonomy\n• Keep Taxonomy.namespace_uri and version consistent \n  to make cross‑scheme mappings unambiguous.\n• mapping_policy records criteria (e.g., editorial rules, thresholds)\n  used to assert matches." as N1
+N1 .r. Taxonomy
+N1 .. Mapping
+
+' Optional: a MappingSet to group mappings for a specific alignment delivery
+class MappingSet {
+  +mappingset_id : Identifier
+  +title : Text
+  +version_label : String
+  +created : Date
+  +modified : Date
+  /'
+  +author : Text
+  ..optional..
+  +scope : Text
+  +license : IRI
+  +notes : Text
+  '/
+}
+MappingSet "1" o-- "0..*" Mapping : includes >
+Taxonomy "1" -- "0..*" MappingSet : producedBy >
+Taxonomy "1" -- "0..*" MappingSet : targets >
+
+@enduml

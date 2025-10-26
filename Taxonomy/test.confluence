@@ -1,0 +1,10 @@
+<csp:parameters xmlns:csp="https://confluence.smart.publisher/csp">
+  <csp:file_id>123456</csp:file_id>
+  <csp:labels_list>user-story,scope,pending</csp:labels_list>
+  <csp:parent_id>654321</csp:parent_id>
+  <csp:properties>
+    <csp:key>content-appearance-published</csp:key>
+    <csp:value>fixed-width</csp:value>
+  </csp:properties>
+</csp:parameters>
+<!-- Page content in Confluence Storage format -->

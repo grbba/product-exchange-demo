@@ -1,0 +1,91 @@
+@startuml
+title ISO 25964 — Classification Hook Subdiagram (Concepts, Tags, Product/Feature/Values, Reference System)
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+
+' ==============================
+' TAXONOMY CORE (MINIMAL)
+' ==============================
+package "Taxonomy" {
+  class Concept {
+    +concept_id : Identifier
+    +notation : Text?
+    +label[0..*] : Text ' (from Term layer; simplified here)
+  }
+}
+
+' ==============================
+' CLASSIFICATION HOOKS
+' ==============================
+package "Classification Hooks" {
+  class Tag {
+    +tag_id : Identifier
+    +note : Text?
+  }
+
+  class Product {
+    +product_id : Identifier
+    +name : Text
+  }
+
+  class Feature {
+    +feature_id : Identifier
+    +name : Text
+    +multiplicity : {single, multiple}
+  }
+
+  class FeatureValue {
+    +fv_id : Identifier
+    +assigned_at : DateTime?
+    +literal_value : Text?  ' optional fallback when no controlled concept
+    +numeric_value : Decimal? ' optional (not used when concept selected)
+  }
+
+  class ReferenceSystem {
+    +rs_id : Identifier
+    +name : Text
+    +kind : {discreteSet}  ' here we only model discrete sets
+    +ordered : Boolean
+  }
+
+  class ReferenceSystemMember {
+    +index : Integer?
+    +note : Text?
+  }
+
+  ' ---- Tagging hooks
+  Tag "1" *-- "1" Concept : categorizes >
+  Product "0..*" -- "0..*" Tag
+  Feature "0..*" -- "0..*" Tag
+
+  ' ---- Feature & Values
+  Feature "1" -- "0..*" FeatureValue : values >
+  Product "0..*" -- "0..*" FeatureValue : has >
+  FeatureValue "1" --> "1" Feature : for >
+
+  ' ---- Controlled value via taxonomy
+  FeatureValue "0..1" --> "1" Concept : selectedValue >
+
+  ' ---- Reference system as a discrete set of taxonomy concepts
+  ReferenceSystem "1" -- "1..*" ReferenceSystemMember : includes >
+  Concept "1" -- "0..*" ReferenceSystemMember : value >
+  Feature "0..1" --> "1" ReferenceSystem : uses >
+
+}
+
+' ==============================
+' RULES (STRUCTURAL NOTES)
+' ==============================
+note "Rules:\n• When Feature uses a ReferenceSystem(kind=discreteSet), its allowed values are exactly the Concepts in that ReferenceSystem.\n• FeatureValue.selectedValue must be a member of its Feature's ReferenceSystem, when present.\n• literal_value/numeric_value are only used if no Concept is selected (or for mixed-mode features if allowed by policy)." as R1
+R1 .. Feature
+R1 .. ReferenceSystem
+R1 .. FeatureValue
+
+@enduml

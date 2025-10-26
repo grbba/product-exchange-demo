@@ -1,0 +1,122 @@
+@startuml
+title ISO 25964 Taxonomy — Simplified (Post‑Coordination) with SKOS Top Concepts
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+hide empty members
+skinparam nodesep 100
+skinparam ranksep 150
+
+' ===== Core concepts =====
+class ConceptScheme {
+  +name : Text
+  .. optional ..
+  +description : Text
+}
+
+class Concept {
+  +id: Identifer
+  +definition: Text
+  +isTop : Boolean <<derived>>  
+' true when the Concept has no broader in this scheme
+}
+
+ConceptScheme "1" o-- "0..*" Concept : contains
+
+' SKOS-style top concepts
+ConceptScheme "0..*" -- "0..*" Concept : hasTopConcept
+
+/'
+note right of ConceptScheme
+  SKOS mapping:\n
+  • hasTopConcept / topConceptOf\n
+  • A top concept is one without a broader in this scheme.
+end note
+'/
+
+' In-scheme semantic relations (associations, not inheritance)
+Concept "0..*" --> "0..*" Concept : broader (BT) >
+Concept "0..*" <-- "0..*" Concept : narrower (NT) >
+Concept "0..*" -- "0..*" Concept : relatedTo (RT) >
+
+/'
+note right of Concept
+  broader/narrower: thesaurus hierarchy (generic/partitive/instantial), acyclic per scheme; polyhierarchy allowed.\n
+  relatedTo: associative link (non-hierarchical).\n
+  isTop = (no incoming broader within the same ConceptScheme).
+end note
+'/
+
+' ===== Terms =====
+class Term {
+  +label : Text
+  +lang : LanguageTag
+}
+
+class PreferredTerm <<PT>> {
+}
+class NonPreferredTerm <<UF>> {
+  .. optional ..
+  +use_note : Text
+}
+
+Term <|-- PreferredTerm
+Term <|-- NonPreferredTerm
+
+Concept "1" -- "1..*" Term : has terms
+Concept "1" -- "1..1" PreferredTerm : preferred per language
+Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants
+
+' ===== Collections (many-to-many with optional ordering via join entity) =====
+class Collection {
+  +name : Text
+  +type : {facet, array, microthesaurus, set}
+  +ordered : Boolean
+  .. optional ..
+  +description : Text?
+}
+
+class CollectionMember {
+  .. optional ..
+  +index : Integer           
+' position if Collection.ordered = true
+  +role  : {core, recommended, optional}
+  +note  : Text
+}
+
+ConceptScheme "0..*" -- "0..*" Collection : groups
+Collection "1" -- "0..*" CollectionMember : has >
+Concept   "1" -- "0..*" CollectionMember : member >
+Collection "0..1" o-- "0..*" Collection : includes (nested)
+
+' ===== Cross-scheme mappings (ISO 25964-2) =====
+class Mapping {
+  +type : {exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch}
+  .. optional ..
+  +justification : Text
+}
+
+Concept "1" <-- "0..*" Mapping : source
+Mapping "0..*" --> "1" Concept : target
+
+/'note
+  Post-coordination only (no pre-coordinated compounds).
+  Cross-scheme only for Mapping (*Match types).
+end note
+'/
+
+' ===== Example note =====
+/'
+note "Example: In scheme 'Services', Concept 'Meal' is a top concept:\n• isTop = true\n• It appears in ConceptScheme.hasTopConcept\n• All meal-related concepts hang off 'Meal' via broader links." as EX
+EX .. Concept
+EX .. ConceptScheme
+'/
+
+@enduml

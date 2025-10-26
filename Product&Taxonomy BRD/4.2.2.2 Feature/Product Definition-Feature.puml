@@ -32,8 +32,8 @@ class Feature {
 
 ' === Feature Value – Abstract + 3 Exclusive Subtypes ===
 abstract class FeatureValue {
-  +name
-  +unit
+  +name: Text
+  +unit: 
 }
 
 class SingleValue {
@@ -63,8 +63,8 @@ FeatureValue <|--- ValueRange
 FeatureValue <|--- DiscreteSet
 
 Feature "1" *-d-> "1..n" FeatureValue : values {ordered}
-FeatureValue <--r-- ReferenceSystem : overides default <
-Feature <--r-- ReferenceSystem : default applies to <
+FeatureValue <--- ReferenceSystem : overides default <
+Feature <-up-- ReferenceSystem : default applies to <
 
 note top of Feature
 All values for a given 

@@ -5,33 +5,55 @@ skinparam nodesep 100
 
 package "Product Feature Definition Example" as PDF {
   package "Layer 1: Product Feature Definition" as L1F { 
-    abstract class Feature {
-      +identifier: Any
-      +name: Text
-      +description: Text
-    }
+class Feature {
+  +identifier: Any
+  +name: Text
+  +description: Text
+  +featureValueSemantics: MultiplicitySemantics
+}
 
-    abstract class FeatureValue {
-      +unit
-    }
+'note left of Feature
+'<b>"Any"</b> means that the 
+'way to identify a 
+'feature needs 
+'to be determined.
+'end note
 
-    abstract class SingleValue {
-      +value
-    }
+' === Feature Value – Abstract + 3 Exclusive Subtypes ===
+abstract class FeatureValue {
+  +name: Text
+  +unit: 
+}
 
-    abstract class ValueRange {
-      +minValue
-      +maxValue
-    }
+class SingleValue {
+  +value
+}
 
-    abstract class DiscreteSet {
-      +allowedValues: List
-    }
-    FeatureValue <|-- SingleValue
-    FeatureValue <|-- ValueRange
-    FeatureValue <|-- DiscreteSet
+class DiscreteSet {
+  +values: List
+}
 
-    Feature "1" --> "1" FeatureValue : has exactly one >
+class ValueRange {
+  +minValue
+  +maxValue
+}
+
+
+
+class ReferenceSystem {
+  <b>note</b>: see reference system 
+  section for more details.
+}
+
+
+
+FeatureValue <|--- SingleValue
+FeatureValue <|--- ValueRange
+FeatureValue <|--- DiscreteSet
+
+Feature "1" *-d-> "1..n" FeatureValue : values {ordered}
+FeatureValue <--- ReferenceSystem : overides default <
+Feature <-up-- ReferenceSystem : default applies to <
   }
 
   package "Layer 2: Product Business Schemas" as L2F {

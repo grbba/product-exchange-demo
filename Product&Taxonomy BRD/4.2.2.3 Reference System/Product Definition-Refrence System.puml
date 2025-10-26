@@ -5,6 +5,15 @@ skinparam classAttributeIconSize 0
 skinparam linetype ortho
 skinparam PackageStyle rectangle
 skinparam PackageTitleAlignment center
+skinparam nodesep 150
+hide empty members
+
+/' 
+Reference systems are not part of the assets transported but shall be part of the agreement negatiations; the concrete 
+implementation is then up to the indivdual parties. The feature values and extended product information assets only reference 
+a common id to a well defined reference system which is implemented on both ends. The reuirements is 
+that the data receieve can be validated for syntactic and semantic(where possible) correctness.
+'/
 
 package "Layer 1: Product Definition - Referenece System" { 
 ' === Reference System Core Class ===
@@ -14,13 +23,49 @@ class ReferenceSystem {
   +system_type: ReferenceSystemType
 }
 
-  class SchemaDescriptor {
-    +schemaUri : Text          ' URL/URN to the payload schema
-    +schemaVersion? : Text     ' e.g., "1.0.0"
-    +schemaHash? : Text        ' checksum to pin exact content
-    +contentType? : Text       ' e.g., "application/schema+json"
-    +notes? : Text             ' optional human-readable usage
+' Generic validator contract (mechanism)
+
+abstract class Validator {
+    +identifier
+    +name : Text
+    +version : Text          
+    -description : Text
   }
+
+
+'    +schemaUri : Text         ' URL/URN to the payload schema
+'    -schemaVersion : Text     ' e.g., "1.0.0"
+'    -contentType : Text       ' e.g., "application/schema+json"
+'    -notes : Text             ' optional human-readable usage
+  ' Specialization: schema-driven validation (JSON Schema, SHACL, XSD, …)
+enum ShapeLanguage { 
+    JSONSchema
+    SHACL
+    XSD
+    Protobuf
+    Other 
+}
+
+class SchemaValidator extends Validator {
+    +shapeLanguage: ShapeLanguage
+    +schemaUri : Text         
+    -schemaVersion : Text        
+    -contentType : Text       
+    -notes : Text             
+  }
+  /' we also would need a sort of binding between the reference source and the 
+     validators as a reference source may use several different vaildators
+     which may have to be executed in an certain order
+     For our purpose this has been omitted as we say any 
+     feature or product extension can only have one way of representing 
+     values to said ref system.
+  '/
+
+  note bottom of SchemaValidator
+  example of a validator other validators are possible
+  e.g. just a check in the IATA database for Airport
+  codes that the code exists and is valid etc. 
+  end note
 
 ' === Reference System Type Enum ===
 enum ReferenceSystemType {
@@ -28,6 +73,7 @@ enum ReferenceSystemType {
   Enumeration
   CodeSystem
   ColorSystem
+  Schema
   Other
 }
 
@@ -51,7 +97,7 @@ class InternalReference {
 ' === Relationships ===
 ReferenceSystem --> ReferenceSystemType : type
 ReferenceSystem --> ReferenceSource : definedBy
- ReferenceSystem "1" --> "1" SchemaDescriptor : validates payload via >
+ReferenceSource "1" -l-> "1" Validator : uses >
 ReferenceSource <|-- ExternalReference
 ReferenceSource <|-- InternalReference
 

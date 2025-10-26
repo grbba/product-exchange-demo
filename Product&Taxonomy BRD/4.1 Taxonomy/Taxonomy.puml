@@ -15,12 +15,10 @@ package "Taxonomy" {
   }
 
   class Concept {
-    +concept_id                     
-' opaque identifier        
+    +concept_id          // Opaque identifier                   
 ' optional short code
     +status : {active, deprecated}
-    +is_top : Boolean           
-' TRUE = facet/root concept
+    +is_top : Boolean    // TRUE = facet/root concept
     +created_at : Date
   }
 
@@ -45,6 +43,7 @@ package "Taxonomy" {
   }
 
   ' Cross-scheme or bilateral supplier↔retailer alignments
+  ' Mapping Relations
   class ConceptAlignment {
     +alignment_id
     +type : {exact, close, broad, narrow, related}

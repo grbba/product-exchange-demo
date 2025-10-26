@@ -15,15 +15,7 @@ hide empty members
 ' === Layer 1: Abstract Core Model ===
 package "Layer 1: Product Definition - Product Information Extensions" as PIE {
 
-' that should be in the reference system section
-' but will show here as well to illustrate 
-  class SchemaDescriptor {
-    +schemaUri : Text        
-    +schemaVersion : Text   
-    +schemaHash : Text  
-    +contentType : Text       
-    +notes : Text        
-  }
+
 
 class ReferenceSystem {
   +identifier: Any
@@ -31,7 +23,7 @@ class ReferenceSystem {
   +system_type: ReferenceSystemType
 }
 
-ReferenceSystem "1" --> "1" SchemaDescriptor : validates payload via >
+' ReferenceSystem "1" --> "1" SchemaDescriptor : validates payload via >
 
 'this represnts the piece of informaton added to the product e.g. a picture
 'the picture is stored in the 'details' i.e. the payload. The data stored in here is
@@ -49,35 +41,110 @@ class "AdditionalProductInformation" as ExtensionDetails {
   '<b>Note:</b> used for information like rich media or 
   'contact information etc..
 
-  Product "1" o-- "0..*" ExtensionDetails : has >
-  ExtensionDetails "1" --> "1" ReferenceSystem : validated by >
+  ' Product "1" o-- "0..*" ExtensionDetails : has >
+  ExtensionDetails "1" --> "1" ReferenceSystem : defined by >
 
 
 }
 
 @enduml
 
-@startuml darwincore
+@startuml Darwin based Richmedia reference system
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+hide empty members
+
+package "Layer 2: Rich Media Reference System to be used for product information extensions" as PIE {
+
+class "RS_RichMedia" <<ReferenceSystem>> {
+  +identifier = "RS_RICHMEDIA"
+  +description = "Dublin Core metadata schema based description of rich media content https://dublincore.org"
+  +system_type = Schema
+}
+
+class "RS_DarwinCore" <<ExternalReference>> {
+  +authority = "DCMI"
+  +link = "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/"
+  +description= "used namespaces: dcterms: http://purl.org/dc/terms/ and
+    dctype:http://purl.org/dc/dcmitype/,"
+}
+
+/'
+'SHACL based content validation thus would expect the content to be 
+'validatd to be in SHACL format i.e the payload or details of the 
+'additions product information using actually a hypotheticla service here
+'This could be done using a schema based validation 
+'/
+
+class "DCServiceValidator" <<ServiceValidator>> {
+ +endpoint = "https://validator.example.org/shacl/dwc-media\ntimeoutMs=5000"
+}
+
+RS_RichMedia --> RS_DarwinCore: defined by >
+RS_DarwinCore --> DCServiceValidator: validated through >
+}
+@enduml
+
+
+'Now we want to define some media content and link that up to a product and/or feature
+@startuml example-darwincore
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+hide empty members
+
 'use for rich media darwin core schemas
-object P <<Product>> {
-identifier="TP-FR-AF-CDG-JFK"
-name="CDG→JFK Flight"
+'instatiate the information extension model on layer 2 a a rich media 
+
+package "Layer 3: Product Definition - Specific Product with Product Information Extensions" as PIE {
+object "TransportProduct\nTP-FR-AF-CDG-JFK" as TP1 {
+    schema = transport
+    productID = TP-FR-AF-CDG-JFK
+    supplierOperator = Air France
+    modeOfTransport = Air
 }
 
-object RS_DWC <<ReferenceSystem>> {
-    identifier=RS-DARWIN-CORE-MEDIA
-    name=DarwinCore MediaObject
+object "CDG-JFKPic" as PIC1 <<AdditionalProductInformation>>  {
 
-} IA\nn\nsourceKind=external\nauthority=GBIF\nschemaUri=https://example.org/schema/dwc-mediaobject-v1.json\nschemaVersion=1.0.0"
-
-object ED_MEDIA as "ExtensionDetails" {
-isPrimary=true
-validFrom=2025-10-01
-note=Hero photo
-details={\n  \"dwc:identifier\":\"urn:img:af:cdg-jfk:hero-001\",\n  \"dwc:title\":\"AF CDG→JFK – A350 at Gate\",\n \"dwc:license\":\"CC-BY-4.0\",\n  \"dwc:format\":\"image/jpeg\",\n  \"dwc:accessURI\":\"https://cdn.example/af/cdg-jfk/hero.jpg\"\n}
+    details : [
+      "dcterms:identifier":"urn:img:af:cdg-jfk:a350-001",
+      "dcterms:title":"AF CDG→JFK – A350 at Gate",
+      "dcterms:license":CC-BY-4.0",
+      "dcterms:format":"image/jpeg",
+      "dwc:accessURI":"https://cdn.example/af/cdg-jfk/a350.jpg" ]
+    isPrimary : yes
+    validFrom : 01/02/2020
+    validTo   : 31/21/2030
 }
 
+TP1 --> PIC1: has >
 
-P o-- ED_MEDIA
-ED_MEDIA --> RS_DWC
+class "RS_RichMedia" as RS_DWC <<ReferenceSystem>> {
+  +identifier = "RS_RICHMEDIA"
+  +description = "Dublin Core metadata schema based description of rich media content https://dublincore.org"
+  +system_type = Schema
+}
+
+PIC1 --> RS_DWC: definedBy >
+
+/'
+class "RS_DarwinCore" <<ExternalReference>> {
+  +authority = "DCMI"
+  +link = "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/"
+  +description= "used namespaces: dcterms: http://purl.org/dc/terms/ and
+    dctype:http://purl.org/dc/dcmitype/,"
+}
+
+class "DCServiceValidator" <<ServiceValidator>> {
+ +endpoint = "https://validator.example.org/shacl/dwc-media\ntimeoutMs=5000"
+}
+
+RS_DWC --> RS_DarwinCore: defined by >
+RS_DarwinCore --> DCServiceValidator: validated through >
+'/
+}
 @enduml

@@ -1347,3 +1347,33 @@ Example transport product instance:
 • Operational Vehicle Type: Boeing 777-300ER
 end note
 @enduml
+
+
+@startuml
+skinparam backgroundColor white
+skinparam activity {
+  BackgroundColor White
+  BorderColor Black
+  FontSize 14
+}
+' left to right direction
+' Using activity diagram with partitions to represent lanes/pools
+
+title "Exercise 1 — Refund Request (Level‑1 Solution)"
+partition "Customer Support" {
+  start
+  :Receive refund request;
+  :Verify eligibility;
+  if ("Eligible?") then ("Yes")
+    partition "Billing" {
+      :Issue refund;
+    }
+    :Notify customer;
+    stop
+  else ("No")
+    :Notify customer of decline;
+    stop
+  endif
+
+}
+@enduml

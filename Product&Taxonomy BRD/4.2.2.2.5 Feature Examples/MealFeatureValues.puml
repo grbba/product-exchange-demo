@@ -1,0 +1,257 @@
+@startuml
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 100
+hide empty members
+
+package "Meal Product — Swiss Fondue (ID=001)" as PROD {
+  ' ===== Product Info (lightweight container, optional) =====
+  object "Product\nidentifier=001\nname=Swiss Fondue\nstatus=Active\nsince=2021-02-01" as P1
+
+  ' ===== Feature 1: Meal Type =====
+  object "Feature\nidentifier=4572\nname=Meal Type\ndescription=Type of meal based on ingredients" as F_MEALTYPE
+  object "SingleValue\nvalue=VGML\nunit=code" as FV_MEALTYPE
+  object "ReferenceSystem\nname=Meal Type Codes\nsource=IATA SSR / APMWG / ANY" as RS_MEALTYPE
+
+  ' ===== Feature 2: Ingredients =====
+  object "Feature\nidentifier=4573\nname=Ingredients\ndescription=Comprehensive list of ingredients" as F_ING
+  object "DiscreteSet\nvalues=[\n  Gruyère Cheese : 150 grams,\n  Emmental Cheese : 100 grams,\n  White wine : 30 ml,\n  Nutmeg,\n  Pepper,\n  Crusty bread\n]" as FV_ING
+  object "ReferenceSystem\nname=Ingredient Names\nsource=Airline-defined (internal)" as RS_ING_NAMES
+  object "ReferenceSystem\nname=Units\nsource=ISO 80000" as RS_UNITS
+
+  ' ===== Feature 3: Nutritional Info =====
+  object "Feature\nidentifier=4574\nname=Nutritional Info\ndescription=Nutritional values in the meal" as F_NUTR
+  object "DiscreteSet\nvalues=[\n  Calories : 588 kcal,\n  Fat : 47 grams,\n  Carbohydrates : 12 grams\n]" as FV_NUTR
+  object "ReferenceSystem\nname=Nutrition Labels\nsource=Predefined list (TBD)" as RS_NUTR_LABELS
+
+  ' ===== Feature 4: Allergens =====
+  object "Feature\nidentifier=4575\nname=Allergens\ndescription=Allergic content present" as F_ALLER
+  object "DiscreteSet\nvalues=[ Gluten, Dairy ]" as FV_ALLER
+  object "ReferenceSystem\nname=Allergen List\nvalues=[Gluten, Dairy, Nuts, Seafood]\nsource=Predefined (TBD)" as RS_ALLER
+
+  ' ===== Feature 5: Total Weight =====
+  object "Feature\nidentifier=4576\nname=Total weight\ndescription=Total weight of the meal" as F_TW
+  object "SingleValue\nvalue=250\nunit=grams" as FV_TW
+
+  ' ===== Product -> Features =====
+  P1 -[hidden]down- F_MEALTYPE
+  P1 -[hidden]down- F_ING
+  P1 -[hidden]down- F_NUTR
+  P1 -[hidden]down- F_ALLER
+  P1 -[hidden]down- F_TW
+
+  ' ===== Feature -> FeatureValue (exactly one) =====
+  F_MEALTYPE --> FV_MEALTYPE : has exactly
+  F_ING      --> FV_ING      : has exactly
+  F_NUTR     --> FV_NUTR     : has exactly
+  F_ALLER    --> FV_ALLER    : has exactly
+  F_TW       --> FV_TW       : has exactly
+
+  ' ===== FeatureValue -> ReferenceSystems (usage) =====
+  FV_MEALTYPE ..> RS_MEALTYPE : uses
+  FV_ING ..> RS_ING_NAMES : uses (names)
+  FV_ING ..> RS_UNITS     : uses (units)
+  FV_NUTR ..> RS_NUTR_LABELS : uses (labels)
+  FV_NUTR ..> RS_UNITS       : uses (units)
+  FV_ALLER ..> RS_ALLER      : uses
+
+  ' ===== Business Rule (contextual, non-structural) =====
+  note bottom of P1
+    Business Rule:
+    This meal may only be attached to a Transport Product
+    within 90 days of departure.
+  end note
+}
+
+@enduml
+@startuml Meal Product – Swiss Fondue (Complete, Feature Instances, Ordered Ingredients)
+' ========= Styling =========
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 80
+skinparam ranksep 60
+hide empty members
+
+package "Meal Product — Swiss Fondue (ID=001)" as PROD {
+  ' ===== Product (lightweight container, optional) =====
+  object "Product\nidentifier=001\nname=Swiss Fondue\nstatus=Active\nsince=2021-02-01" as P1
+
+  ' ===== Feature 1: Meal Type =====
+  object "Feature\nidentifier=4572\nname=Meal Type\ndescription=Type of meal based on ingredients" as F_MEALTYPE <<Feature>>
+  object "SingleValue\nvalue=VGML\nunit=code" as FV_MEALTYPE
+  object "ReferenceSystem\nname=Meal Type Codes\nsource=IATA SSR / APMWG / ANY" as RS_MEALTYPE
+
+  ' ===== Feature 2: Ingredients (ORDERED COMPOSITION of SingleValue) =====
+  object "identifier=4573\nname=Ingredients\ndescription=Ordered list of ingredients" as F_ING <<Feature>>
+  object "ReferenceSystem\nname=Ingredient Names\nsource=Airline-defined (internal)" as RS_ING_NAMES
+  object "ReferenceSystem\nname=Units\nsource=ISO 80000" as RS_UNITS
+
+  ' --- Ordered SingleValue items ---
+  object "[01] SingleValue\nname=Gruyère Cheese\nvalue=150\nunit=grams" as ING_01 <<FeatureValue>>
+  object "[02] SingleValue\nname=Emmental Cheese\nvalue=100\nunit=grams" as ING_02 <<FeatureValue>>
+  object "[03] SingleValue\nname=White wine\nvalue=30\nunit=ml" as ING_03 <<FeatureValue>>
+  object "[04] SingleValue\nname=Nutmeg\n(unit: n/a)" as ING_04 <<FeatureValue>>
+  object "[05] SingleValue\nname=Pepper\n(unit: n/a)" as ING_05 <<FeatureValue>>
+  object "[06] SingleValue\nname=Crusty bread\n(unit: n/a)" as ING_06 <<FeatureValue>>
+
+  ' Composition edges (order is indicated in object labels)
+  F_ING *-- ING_01 : contains
+  F_ING *-- ING_02 : contains
+  F_ING *-- ING_03 : contains
+  F_ING *-- ING_04 : contains
+  F_ING *-- ING_05 : contains
+  F_ING *-- ING_06 : contains
+
+  ' Reference systems used by ingredient items (shared)
+  ING_01 ..> RS_ING_NAMES : uses (name)
+  ING_02 ..> RS_ING_NAMES
+  ING_03 ..> RS_ING_NAMES
+  ING_04 ..> RS_ING_NAMES
+  ING_05 ..> RS_ING_NAMES
+  ING_06 ..> RS_ING_NAMES
+
+  ING_01 ..> RS_UNITS : uses (unit)
+  ING_02 ..> RS_UNITS
+  ING_03 ..> RS_UNITS
+  ' ING_04/05/06 omit unit
+
+  ' ===== Feature 3: Nutritional Info =====
+  object "Feature\nidentifier=4574\nname=Nutritional Info\ndescription=Nutritional values in the meal" as F_NUTR
+  object "[01] SingleValue\nname=Calories\nvalue=588\nunit=kcal" as NUTR_01
+  object "[02] SingleValue\nname=Fat\nvalue=47\nunit=grams" as NUTR_02
+  object "[03] SingleValue\nname=Carbohydrates\nvalue=12\nunit=grams" as NUTR_03
+  object "ReferenceSystem\nname=Nutrition Labels\nsource=Predefined list (TBD)" as RS_NUTR_LABELS
+
+  F_NUTR *-- NUTR_01 : contains
+  F_NUTR *-- NUTR_02 : contains
+  F_NUTR *-- NUTR_03 : contains
+  NUTR_01 ..> RS_NUTR_LABELS
+  NUTR_02 ..> RS_NUTR_LABELS
+  NUTR_03 ..> RS_NUTR_LABELS
+  NUTR_01 ..> RS_UNITS
+  NUTR_02 ..> RS_UNITS
+  NUTR_03 ..> RS_UNITS
+
+  ' ===== Feature 4: Allergens =====
+  object "Feature\nidentifier=4575\nname=Allergens\ndescription=Allergic content present" as F_ALLER
+  object "[01] SingleValue\nname=Gluten" as ALLER_01
+  object "[02] SingleValue\nname=Dairy" as ALLER_02
+  object "ReferenceSystem\nname=Allergen List\nvalues=[Gluten, Dairy, Nuts, Seafood]\nsource=Predefined (TBD)" as RS_ALLER
+
+  F_ALLER *-- ALLER_01 : contains
+  F_ALLER *-- ALLER_02 : contains
+  ALLER_01 ..> RS_ALLER
+  ALLER_02 ..> RS_ALLER
+
+  ' ===== Feature 5: Total Weight =====
+  object "Feature\nidentifier=4576\nname=Total weight\ndescription=Total weight of the meal" as F_TW
+  object "SingleValue\nvalue=250\nunit=grams" as FV_TW
+
+  ' ===== Product -> Features (layout only) =====
+  P1 -[hidden]down- F_MEALTYPE
+  P1 -[hidden]down- F_ING
+  P1 -[hidden]down- F_NUTR
+  P1 -[hidden]down- F_ALLER
+  P1 -[hidden]down- F_TW
+
+  ' ===== Feature -> FeatureValue links =====
+  F_MEALTYPE --> FV_MEALTYPE : has exactly
+  F_TW       --> FV_TW       : has exactly
+
+  ' ===== FeatureValue -> ReferenceSystems (usage) =====
+  FV_MEALTYPE ..> RS_MEALTYPE : uses
+
+  ' ===== Business Rule (contextual, non-structural) =====
+  note bottom of P1
+    Business Rule:
+    This meal may only be attached to a Transport Product
+    within 90 days of departure.
+  end note
+}
+@enduml
+
+
+@startuml Meal Product – Swiss Fondue (Ingredients only, Feature Instances, Ordered Ingredients)
+' ========= Styling =========
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 80
+skinparam ranksep 60
+hide empty members
+
+package "Meal Product — Swiss Fondue" as PROD {
+  ' ===== Product (lightweight container, optional) =====
+  object "identifier=001\nname=Swiss Fondue\ntype=meal" as P1 <<MealProduct>>
+
+  ' ===== Feature 2: Ingredients (ORDERED COMPOSITION of SingleValue) =====
+  object "identifier=4573\nname=Ingredients\ndescription=Ordered list of ingredients" as F_ING <<Feature>>
+  object "ReferenceSystem\nname=Ingredient Names\nsource=Airline-defined (internal)" as RS_ING_NAMES
+  object "ReferenceSystem\nname=Units\nsource=ISO 80000" as RS_UNITS
+
+  ' --- Ordered SingleValue items ---
+  object "[01] SingleValue\nname=Gruyère Cheese\nvalue=150\nunit=grams" as ING_01 <<FeatureValue>>
+  object "[02] SingleValue\nname=Emmental Cheese\nvalue=100\nunit=grams" as ING_02 <<FeatureValue>>
+  object "[03] SingleValue\nname=White wine\nvalue=30\nunit=ml" as ING_03 <<FeatureValue>>
+  object "[04] SingleValue\nname=Nutmeg\n(unit: n/a)" as ING_04 <<FeatureValue>>
+  object "[05] SingleValue\nname=Pepper\n(unit: n/a)" as ING_05 <<FeatureValue>>
+  object "[06] SingleValue\nname=Crusty bread\n(unit: n/a)" as ING_06 <<FeatureValue>>
+
+  ' Composition edges (order is indicated in object labels)
+  F_ING *-- ING_01 : contains
+  F_ING *-- ING_02 : contains
+  F_ING *-- ING_03 : contains
+  F_ING *-- ING_04 : contains
+  F_ING *-- ING_05 : contains
+  F_ING *-- ING_06 : contains
+
+  ' Reference systems used by ingredient items (shared)
+  ING_01 ..> RS_ING_NAMES : uses (name)
+  ING_02 ..> RS_ING_NAMES
+  ING_03 ..> RS_ING_NAMES
+  ING_04 ..> RS_ING_NAMES
+  ING_05 ..> RS_ING_NAMES
+  ING_06 ..> RS_ING_NAMES
+
+  ING_01 ..> RS_UNITS : uses (unit)
+  ING_02 ..> RS_UNITS
+  ING_03 ..> RS_UNITS
+  ' ING_04/05/06 omit unit
+
+  ' ===== Product -> Features (layout only) =====
+ 
+  'P1 -[hidden]down- F_ING
+    P1 *-down- F_ING: has >
+
+}
+@enduml
+@startuml Meal Product – Swiss Fondue (only mandatory)
+' ========= Styling =========
+skinparam linetype ortho
+skinparam PackageStyle rectangle
+skinparam nodesep 80
+skinparam ranksep 60
+hide empty members
+
+package "Meal Product — Swiss Fondue" as PROD {
+  ' ===== Product (lightweight container, optional) =====
+  object "identifier=001\nname=Swiss Fondue\ntype=meal" as P1 <<MealProduct>>
+
+  ' ===== Feature 1: Meal Type =====
+  object "identifier=4572\nname=Meal Type\ndescription=Type of meal based on ingredients" as F_MEALTYPE <<Feature>><<Mandatory>>
+  object "SingleValue\nname = vegetarian\nvalue=VGML\nunit=taxonomy" as FV_MEALTYPE <<FeatureValue>>
+  object "ReferenceSystem\nname=Meal Type Concepts\nsource= APMWG Taxonomy" as RS_MEALTYPE
+
+
+  ' ===== Product -> Features (layout only) =====
+  P1 -[hidden]down- F_MEALTYPE
+
+
+  ' ===== Feature -> FeatureValue links =====
+  F_MEALTYPE --> FV_MEALTYPE : has exactly
+
+
+  ' ===== FeatureValue -> ReferenceSystems (usage) =====
+  FV_MEALTYPE ..> RS_MEALTYPE : uses
+  P1 *-down- F_MEALTYPE: has >
+}
+@enduml

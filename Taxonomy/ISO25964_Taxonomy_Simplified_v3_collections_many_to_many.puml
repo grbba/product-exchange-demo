@@ -1,0 +1,118 @@
+@startuml
+title ISO 25964 Taxonomy — Simplified Structural View (v3: collections are many‑to‑many)
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+
+' =====================================================
+' CORE CONCEPTUAL LAYER (simplified)
+' =====================================================
+package "Conceptual Layer" {
+  class ConceptScheme {
+    +name : Text
+    +description : Text?
+  }
+
+  class Concept {
+    +notation : Text?
+  }
+
+  ConceptScheme "1" o-- "0..*" Concept : contains
+
+  Concept "0..*" -- "0..*" Concept : relatedTo
+  Concept "0..*" -down-|> "0..*" Concept : broader/narrower
+
+  note right of Concept
+    • broader/narrower: hierarchy inside a scheme (no cycles)
+    • relatedTo: associative link inside a scheme
+  end note
+}
+
+' =====================================================
+' LEXICAL LAYER (Terms) — simplified
+' =====================================================
+package "Lexical Layer (Terms)" {
+  class Term {
+    +label : Text
+    +lang : LanguageTag
+  }
+
+  class PreferredTerm
+  class NonPreferredTerm {
+    +use_note : Text?
+  }
+
+  Term <|-- PreferredTerm
+  Term <|-- NonPreferredTerm
+
+  Concept "1" -- "1..*" Term : has terms
+  Concept "1" -- "1..1" PreferredTerm : preferred per language
+  Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants
+}
+
+' =====================================================
+' COORDINATION & COMPOUND EQUIVALENCE — simplified
+' =====================================================
+package "Coordination & Equivalence" {
+  class CoordinatedConcept {
+    +label : Text
+  }
+  CoordinatedConcept "1" *-- "2..*" Concept : composed of
+
+  class CompoundEquivalence {
+    +note : Text?
+  }
+  NonPreferredTerm "0..*" -- "0..*" CompoundEquivalence : triggers
+  CompoundEquivalence "1" -- "2..*" Concept : equals combination of
+}
+
+' =====================================================
+' COLLECTIONS (curation & ordering) — corrected multiplicity
+' =====================================================
+package "Collections" {
+  class Collection {
+    +name : Text
+    +type : {facet, array, microthesaurus, set}
+    +ordered : Boolean
+  }
+
+  ConceptScheme "0..*" -- "0..*" Collection : groups
+  Collection "0..*" -- "0..*" Concept : members (curated)
+
+  Collection "0..1" o-- "0..*" Collection : includes (nested)
+
+  note bottom of Collection
+    Concepts may appear in multiple Collections.
+    When ordered, an index per (Collection, Concept) pair is needed.
+    (Index/role metadata omitted here for simplicity.)
+  end note
+}
+
+' =====================================================
+' CROSS‑SCHEME MAPPINGS — clarified
+' =====================================================
+package "Cross‑Scheme Mappings" {
+  class Mapping {
+    +type : {exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch}
+  }
+
+  Concept "1" <-- "0..*" Mapping : source
+  Mapping "0..*" --> "1" Concept : target
+
+
+/'  note
+    Cross‑scheme only (between different ConceptSchemes).
+    Do not use for in‑scheme hierarchy/associations.
+  end note
+  '/
+  
+}
+
+@enduml

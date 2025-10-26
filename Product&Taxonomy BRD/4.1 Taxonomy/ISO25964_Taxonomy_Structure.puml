@@ -1,0 +1,184 @@
+@startuml
+title ISO 25964 Taxonomy (Structural Model) — Consolidated Proposal
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+
+' =====================================================
+' CORE CONCEPTUAL LAYER
+' =====================================================
+package "Conceptual Layer" {
+  class ConceptScheme {
+    +scheme_id : Identifier
+    +name : Text
+    +description : Text?
+  }
+
+  class Concept {
+    +concept_id : Identifier
+    +notation : Text?
+  }
+
+  ' ISO 25964 hierarchical relationship subtypes
+  interface ConceptRelationship {
+    +rel_id : Identifier
+    +start_valid : Date?
+    +end_valid : Date?
+  }
+
+  class BroaderNarrowerRelationship <<hierarchical>> {
+    +kind : {generic, partitive, instantial}  ' ISO 25964 categories
+  }
+
+  class RelatedRelationship <<associative>> {
+    +scope : Text?  ' optional brief scope note for the association
+  }
+
+  Concept "1" -- "0..*" ConceptRelationship : out >
+  ConceptRelationship "1" --> "1" Concept : in >
+
+  ConceptRelationship <|-- BroaderNarrowerRelationship
+  ConceptRelationship <|-- RelatedRelationship
+
+  ' Shorthand navigation labels
+  Concept "0..*" -down- "0..*" Concept : broader/narrower (derived)
+  Concept "0..*" -down- "0..*" Concept : related (derived)
+
+  ConceptScheme "1" o-- "0..*" Concept : contains >
+}
+
+' =====================================================
+' LEXICAL LAYER (TERMS) — ISO 25964 prefers concept-centric; terms per language
+' =====================================================
+package "Lexical Layer (Terms)" {
+  class Term {
+    +term_id : Identifier
+    +label : Text
+    +lang : LanguageTag
+    +script : Text?
+  }
+
+  class PreferredTerm <<designation>> {
+    +is_preferred : Boolean = true
+  }
+
+  class NonPreferredTerm <<designation>> {
+    +is_preferred : Boolean = false
+    +use_note : Text?  ' e.g., USE/UF guidance
+  }
+
+  Term <|-- PreferredTerm
+  Term <|-- NonPreferredTerm
+
+  Concept "1" -- "1..*" Term : has >
+  Concept "1" -- "1..1" PreferredTerm : preferredInLanguage >
+  Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants >
+}
+
+' =====================================================
+' COORDINATION & COMPOUND EQUIVALENCE
+' =====================================================
+package "Coordination & Equivalence" {
+  ' e.g., coordinated concept like "female pilot" built from existing concepts
+  class CoordinatedConcept {
+    +coord_id : Identifier
+    +label : Text
+  }
+  CoordinatedConcept "1" *-- "2..*" Concept : composedOf
+
+  ' ISO 25964 compound equivalence: a non-preferred term that maps to >1 concept
+  class CompoundEquivalence {
+    +ce_id : Identifier
+    +note : Text?
+  }
+  NonPreferredTerm "0..*" -- "0..*" CompoundEquivalence : triggers >
+  CompoundEquivalence "1" -- "2..*" Concept : equivalentTo (compound) >
+}
+
+' =====================================================
+' COLLECTIONS / FACETS / ARRAYS (CURATION & ORDERING)
+' =====================================================
+package "Collections" {
+  class Collection {
+    +collection_id : Identifier
+    +name : Text
+    +type : {facet, array, microthesaurus, set}
+    +description : Text?
+    +ordered : Boolean
+  }
+
+  class CollectionMember {
+    +index : Integer?             ' ordering when Collection.ordered = true
+    +role : {core, recommended, optional}  ' business-facing curation
+    +note : Text?
+  }
+
+  ConceptScheme "0..*" -- "0..*" Collection : groups >
+  Collection "1" -- "0..*" CollectionMember : has >
+  Concept "1" -- "0..*" CollectionMember : member >
+  Collection "0..1" o-- "0..*" Collection : includes >  ' nested collections
+}
+
+' =====================================================
+' MAPPINGS ACROSS SCHEMES (INTEROPERABILITY, ISO 25964-2)
+' =====================================================
+package "Mappings" {
+  class MappingSet {
+    +mappingset_id : Identifier
+    +name : Text
+    +scope : Text?
+  }
+
+  interface MappingAssertion {
+    +assertion_id : Identifier
+    +type : {exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch}
+    +justification : Text?
+  }
+
+  class ConceptMapping <<assertion>>
+
+  MappingAssertion <|-- ConceptMapping
+
+  MappingSet "1" o-- "0..*" MappingAssertion : contains >
+  Concept "1" <-- "1" ConceptMapping : source >
+  ConceptMapping "1" --> "1" Concept : target >
+  ConceptScheme "0..*" -- "0..*" MappingSet : between >
+}
+
+' =====================================================
+' CLASSIFICATION HOOK (TAGGING TO BUSINESS OBJECTS)
+' (kept lightweight; governance metadata intentionally excluded)
+' =====================================================
+package "Classification Hook" {
+  class Tag {
+    +tag_id : Identifier
+    +since : Date?
+    +applies_to : {Product, Feature, Other}
+  }
+
+  class Product
+  class Feature
+
+  Tag "1" *-- "1" Concept : categorizes >
+  Product "0..*" -- "0..*" Tag
+  Feature "0..*" -- "0..*" Tag
+}
+
+' =====================================================
+' VALIDATION/HOUSE RULES (expressed as notes to guide implementation)
+' =====================================================
+note "Rules (non-normative, structural guidance):\n• Each Concept has ≥1 Term per language used; exactly one PreferredTerm per {Concept,lang}.\n• Broader/Narrower relationships must be acyclic within a ConceptScheme.\n• Collections are not taxonomic hierarchies; they curate and may be ordered.\n• CompoundEquivalence is for UF that expands to multiple Concepts.\n• Mappings connect Concepts across schemes with ISO 25964 mapping types." as N1
+N1 .. Concept
+N1 .. Term
+N1 .. ConceptScheme
+N1 .. ConceptMapping
+N1 .. Collection
+
+@enduml

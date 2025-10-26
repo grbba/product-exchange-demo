@@ -1,0 +1,106 @@
+@startuml "Taxonomy and Product Definition link"
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+hide empty members
+
+sprite $aProcess jar:archimate/business-process
+sprite $aService jar:archimate/application-service
+sprite $aCapability jar:archimate/strategy-capability
+sprite $aComponent jar:archimate/application-component
+sprite $aObject jar:archimate/object
+
+' ==============================
+' Taxonomy (ISO 25964 fragment)
+' ==============================
+package "Layer 1: Taxonomy (ISO 25964 fragment)" as TAX  {
+  class Concept {
+    +concept_id : Identifier
+    +notation : Text?
+    +label[0..*] : Text
+  }
+
+/'class "MyConcept" as TAXC <<$aCapability>> {
+    +concept_id : Identifier
+    +notation : Text?
+    +label[0..*] : Text
+  }
+'/
+
+  ' A ReferenceSystem may enumerate its allowed concepts (discrete set)
+  ' class ReferenceSystemMember {
+   ' +index : Integer?
+   ' +note : Text?
+  ' }
+}
+
+' ==============================
+' Layer 1: Abstract Product Definition (from AFM)
+' ==============================
+package "Layer 1: Abstract Product Definition" as AFM {
+
+  note "Shows the assets from the \nproduct definition which can be\n tagged using taxonomy concepts" as F1
+
+  abstract class Product {
+    +identifier
+    +type
+    +name : Text
+    +description : Text
+  }
+
+  abstract class Feature {
+    +identifier
+    +name: Text
+    +description: Text
+  }
+
+  class Tag {
+    +tag_id : Identifier
+    +note : Text?
+  }
+abstract class FeatureValue {
+    +unit
+  }
+
+  ' Tag categorizes via taxonomy
+  Tag "1" *-- "1" Concept : categorizes >
+  AFM.Product "0..*" -- "0..*" Tag : tags >
+  AFM.Feature "0..*" -- "0..*" Tag : tags >
+  AFM.FeatureValue "0..*" -- "0..*" Tag : tags >
+  AFM.Product "1" *-- "1..*" AFM.Feature : has >
+
+  ' AFM relationships (kept as in base model)
+  Feature -l-> "1" FeatureValue : has >
+
+
+}
+
+note "ReferenceSystems have a specific use case \nwhen actually ReferenceSystem values\nfor discrete sets of information\ncan be represented by taxonomy values\nwill be discussed in a separate section " as N2
+
+N2 .l. TAX
+N2 .u. AFM
+
+' ==============================
+' Classification Hooks (Tags)
+' ==============================
+'package "Classification Hooks" as HOOKS {
+'}
+
+' ==============================
+' Constraints & Notes
+' ==============================
+' note "Constraints:\n• If AFM.ReferenceSystem.system_type in {Enumeration, CodeSystem, ColorSystem}, the allowed set is the Concepts linked via ReferenceSystemMember.\n• AFM.DiscreteSet.allowedValues is DERIVED from the members of the bound ReferenceSystem.\n• AFM.SingleValue.value MAY reference a TAX.Concept when the ReferenceSystem is discrete; otherwise it holds a literal compatible with unit.\n• AFM.ValueRange is only valid when ReferenceSystem.system_type = Measurement (or compatible numeric scale).\n• AFM.FeatureValue — ReferenceSystem (applies to) binds the domain for that Feature's values." as N1
+'N1 .. AFM.DiscreteSet
+'N1 .. AFM.SingleValue
+'N1 .. AFM.ValueRange
+'N1 .. AFM.ReferenceSystem
+'N1 .. TAX.Concept
+
+@enduml

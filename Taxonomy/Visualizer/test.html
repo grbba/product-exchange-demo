@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+  <style>#cy{width:100%;height:420px;border:1px solid #ddd;border-radius:12px}</style>
+</head>
+<body>
+<div id="cy"></div>
+<script>
+const elements = [
+  { data:{ id:"G5K95028", label:"Sweet / Sucré / Süß / Dulce" } },
+  { data:{ id:"Z9H87109", label:"apmwg:Z9H87109" } },
+  { data:{ source:"G5K95028", target:"Z9H87109", label:"skos:broader" } }
+];
+
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  elements,
+  layout: { name:'cose' },
+  style: [
+    { selector:'node', style:{ 'content':'data(label)', 'text-wrap':'wrap', 'text-valign':'center', 'shape':'round-rectangle', 'padding':'12px' } },
+    { selector:'edge', style:{ 'label':'data(label)', 'curve-style':'bezier', 'target-arrow-shape':'triangle' } }
+  ]
+});
+</script>
+</body>
+</html>

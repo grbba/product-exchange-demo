@@ -1,0 +1,292 @@
+{
+    "results": [
+        {
+            "id": 574619950,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/574619950",
+            "key": "AIDM",
+            "alias": "AIDM",
+            "name": "Airline Industry Data Model",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/AIDM/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=AIDM",
+                "permissions": "",
+                "theme": "/rest/api/space/AIDM/theme",
+                "homepage": "/rest/api/content/574620250"
+            },
+            "_links": {
+                "webui": "/spaces/AIDM",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/AIDM"
+            }
+        },
+        {
+            "id": 584089605,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/584089605",
+            "key": "ARMI",
+            "alias": "ARMI",
+            "name": "Airline Retailing Maturity Index",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/ARMI/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=ARMI",
+                "permissions": "",
+                "theme": "/rest/api/space/ARMI/theme",
+                "homepage": "/rest/api/content/584089905"
+            },
+            "_links": {
+                "webui": "/spaces/ARMI",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/ARMI"
+            }
+        },
+        {
+            "id": 1424719878,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/1424719878",
+            "key": "BIX",
+            "alias": "BIX",
+            "name": "Baggage Information eXchange",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/BIX/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=BIX",
+                "permissions": "",
+                "theme": "/rest/api/space/BIX/theme",
+                "homepage": "/rest/api/content/1424720047"
+            },
+            "_links": {
+                "webui": "/spaces/BIX",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/BIX"
+            }
+        },
+        {
+            "id": 574685462,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/574685462",
+            "key": "BSP4NDC",
+            "alias": "BSP4NDC",
+            "name": "BSP NDC Risk Management",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/BSP4NDC/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=BSP4NDC",
+                "permissions": "",
+                "theme": "/rest/api/space/BSP4NDC/theme",
+                "homepage": "/rest/api/content/574685577"
+            },
+            "_links": {
+                "webui": "/spaces/BSP4NDC",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/BSP4NDC"
+            }
+        },
+        {
+            "id": 1767801070,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/1767801070",
+            "key": "CUG",
+            "alias": "CUG",
+            "name": "Common Use Guides",
+            "type": "collaboration",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/CUG/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=CUG",
+                "permissions": "",
+                "theme": "/rest/api/space/CUG/theme",
+                "homepage": "/rest/api/content/1767801534"
+            },
+            "_links": {
+                "webui": "/spaces/CUG",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/CUG"
+            }
+        },
+        {
+            "id": 574193679,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/574193679",
+            "key": "EASD",
+            "alias": "EASD",
+            "name": "Enhanced and Simplified Distribution",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/EASD/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=EASD",
+                "permissions": "",
+                "theme": "/rest/api/space/EASD/theme",
+                "homepage": "/rest/api/content/574193791"
+            },
+            "_links": {
+                "webui": "/spaces/EASD",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/EASD"
+            }
+        },
+        {
+            "id": 578912259,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/578912259",
+            "key": "OA",
+            "alias": "OA",
+            "name": "Order Accounting",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/OA/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=OA",
+                "permissions": "",
+                "theme": "/rest/api/space/OA/theme",
+                "homepage": "/rest/api/content/578912546"
+            },
+            "_links": {
+                "webui": "/spaces/OA",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/OA"
+            }
+        },
+        {
+            "id": 578912597,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/578912597",
+            "key": "PlanSched",
+            "alias": "PlanSched",
+            "name": "Planning & Scheduling",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/PlanSched/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=PlanSched",
+                "permissions": "",
+                "theme": "/rest/api/space/PlanSched/theme",
+                "homepage": "/rest/api/content/578912884"
+            },
+            "_links": {
+                "webui": "/spaces/PlanSched",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/PlanSched"
+            }
+        },
+        {
+            "id": 582909974,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/582909974",
+            "key": "SRSIA",
+            "alias": "SRSIA",
+            "name": "Retailer Supplier Interlining with Offers and Orders",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/SRSIA/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=SRSIA",
+                "permissions": "",
+                "theme": "/rest/api/space/SRSIA/theme",
+                "homepage": "/rest/api/content/582910081"
+            },
+            "_links": {
+                "webui": "/spaces/SRSIA",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/SRSIA"
+            }
+        },
+        {
+            "id": 574914741,
+            "ari": "ari:cloud:confluence:9d24a5ad-4e02-4896-8bc1-e5de40ccf15f:space/574914741",
+            "key": "SWO",
+            "alias": "SWO",
+            "name": "Settlement with Orders",
+            "type": "global",
+            "status": "current",
+            "_expandable": {
+                "settings": "/rest/api/space/SWO/settings",
+                "metadata": "",
+                "identifiers": "",
+                "roles": "",
+                "icon": "",
+                "typeSettings": "",
+                "description": "",
+                "history": "",
+                "operations": "",
+                "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=SWO",
+                "permissions": "",
+                "theme": "/rest/api/space/SWO/theme",
+                "homepage": "/rest/api/content/574914848"
+            },
+            "_links": {
+                "webui": "/spaces/SWO",
+                "self": "https://standards.atlassian.net/wiki/rest/api/space/SWO"
+            }
+        }
+    ],
+    "start": 0,
+    "limit": 25,
+    "size": 10,
+    "_links": {
+        "base": "https://standards.atlassian.net/wiki",
+        "context": "/wiki",
+        "self": "https://standards.atlassian.net/wiki/rest/api/space"
+    }
+}%      

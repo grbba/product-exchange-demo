@@ -1,0 +1,174 @@
+@startuml APMWG ISO 25964 Taxonomy 
+' title APMWG ISO 25964 based Taxonomy Conceptual Model
+' !pragma layout smetana
+
+/' 
+- does not contain coordinated terms just yet  e.g. Sport Baggage which would optimize access to such infromation. It shall be 
+possible to do this in post coordination through the relation ships between the concepts 
+- all life cycle (status) and other metadata related information for managing the taxonomy is not present in this schema
+'/
+ left to right direction
+
+' skinparam linetype ortho
+' skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+hide empty members
+skinparam nodesep 150
+skinparam ranksep 100
+
+package "Layer 1 - APMWG ISO 25964 Taxonomy Model" {
+class Taxonomy {
+  +taxonomy_id : Identifier
+  +title : Text
+  +namespace_uri : IRI          
+  ' base URI for identifiers (e.g., https://example.org/tax/)
+  +version_label : String       
+  ' human readable (e.g., 2025.10)
+  +status : {draft, released, deprecated, archived}
+  +issued : Date
+  ' first publication date
+  +modified : Date  
+  ' last updated date
+  +publisher : Text
+  +creator : Text
+  +default_language : LanguageTag
+  +languages : Set<LanguageTag>           
+..optional..
+  +short_name : Text
+  '+version_iri : IRI           
+  ' machine-readable versioned IRI
+  +contact : Text              
+  ' email or URL
+  '+license : IRI?               ' SPDX or license URL
+  '+rights : Text?
+  '+homepage : IRI?
+  '+jurisdiction : Text?
+  +description : Text?
+  '+mapping_policy : Text?       ' scope/criteria for asserting matches
+  '+provenance : Text?           ' change notes / source provenance
+}
+
+
+class Concept {
+  +id: Identifer
+  +definition: Text
+  +isTop : Boolean
+' --> true when the Concept\nhas no broader in this scheme
+}
+
+' In-scheme semantic relations (associations, not inheritance)
+'Concept  <-right--> Concept : broader (BT) |\n narrower (NT) |\n relatedTo (RT) >
+Concept "0..*" -right--> "0..*" Concept : broader (BT) |\n narrower (NT) |\n relatedTo (RT) >
+'Concept "0..*" <--- "0..*" Concept : narrower (NT) >
+'Concept "0..*" --- "0..*" Concept : relatedTo (RT) >
+
+
+' ===== Core concepts =====
+class ConceptScheme {
+  +name : Text
+  .. optional ..
+  +description : Text
+}
+
+Taxonomy o-- ConceptScheme:  owns >
+
+ConceptScheme "1" o-- "0..*" Concept : contains
+
+' SKOS-style top concepts / Taxonomy Facets
+ConceptScheme "0..*" -- "0..*" Concept : hasTopConcept
+
+/'
+note right of ConceptScheme
+  SKOS mapping:\n
+  • hasTopConcept / topConceptOf\n
+  • A top concept is one without a broader in this scheme.
+end note
+'/
+
+note "broader/narrower:\nthesaurus hierarchy (generic/partitive/instantial),\nacyclic per scheme; polyhierarchy allowed.\nrelatedTo:\nassociative link (non-hierarchical).\nisTop = no incoming broader within the same ConceptScheme" as N2
+N2 .. Concept
+N2 .left[hidden]. ConceptScheme
+top to bottom direction
+' ===== Terms =====
+class Term {
+  +label : Text
+  +lang : LanguageTag
+}
+
+class PreferredTerm <<PT>> {
+}
+class NonPreferredTerm <<UF>> {
+  .. optional ..
+  +use_note : Text
+}
+
+Term <|-- PreferredTerm
+Term <|-- NonPreferredTerm
+
+Concept "1" -d- "1..*" Term : has terms
+Concept "1" -- "1..1" PreferredTerm 
+Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants
+
+' note  "One preferred term per language tag\n is associated with a concept" as N3
+' N3 -left- PreferredTerm
+
+
+' ===== Collections (many-to-many with optional ordering via join entity) =====
+class Collection {
+  +name : Text
+  +type : {facet, array, microthesaurus, set}
+  +ordered : Boolean
+  .. optional ..
+  +description : Text
+}
+
+class CollectionMember {
+  .. optional ..
+  +index : Integer           
+' position if Collection.ordered = true
+  +role  : {core, recommended, optional}
+  +note  : Text
+}
+
+ConceptScheme "0..*" -l- "0..*" Collection : groups
+Collection "1" -down- "0..*" CollectionMember : has >
+Concept   "1" -left- "0..*" CollectionMember : member >
+Collection "0..1" o-- "0..*" Collection : includes (nested)
+
+/' no mapping in the general one add this as a specific theme later
+
+enum MappingRelation {
+  exactMatch
+  closeMatch
+  broadMatch
+  narrowMatch
+  relatedMatch
+}
+
+' ===== Cross-scheme mappings (ISO 25964-2) =====
+class Mapping {
+  +type : MappingRelation
+  .. optional ..
+  +justification : Text
+}
+
+Mapping --> MappingRelation
+Concept "1" <-r- "0..*" Mapping : source
+Mapping "0..*" -r-> "1" Concept : target
+'/
+
+/'note
+  Post-coordination only (no pre-coordinated compounds).
+  Cross-scheme only for Mapping (*Match types).
+end note
+'/
+
+' ===== Example note =====
+/'
+note "Example: In scheme 'Services', Concept 'Meal' is a top concept:\n• isTop = true\n• It appears in ConceptScheme.hasTopConcept\n• All meal-related concepts hang off 'Meal' via broader links." as EX
+EX .. Concept
+EX .. ConceptScheme
+'/
+}
+@enduml

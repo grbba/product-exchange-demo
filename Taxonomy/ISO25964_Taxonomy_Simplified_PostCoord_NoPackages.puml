@@ -1,0 +1,100 @@
+@startuml
+title ISO 25964 Taxonomy — Simplified (Post‑Coordination Only, Package‑Free)
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+
+' ===== Core concepts =====
+class ConceptScheme {
+  +name : Text
+  +description : Text?
+}
+
+class Concept {
+  +notation : Text?
+}
+
+ConceptScheme "1" o-- "0..*" Concept : contains
+
+' In-scheme semantic relations (association arrows, not inheritance)
+Concept "0..*" --> "0..*" Concept : broader >
+Concept "0..*" -- "0..*" Concept : relatedTo
+
+note right of Concept
+  broader/narrower is a thesaurus hierarchy (generic/partitive/instantial),
+  acyclic within a scheme; polyhierarchy allowed.
+  relatedTo is an associative link (non-hierarchical).
+end note
+
+' ===== Terms =====
+class Term {
+  +label : Text
+  +lang : LanguageTag
+}
+
+class PreferredTerm
+class NonPreferredTerm {
+  +use_note : Text?
+}
+
+Term <|-- PreferredTerm
+Term <|-- NonPreferredTerm
+
+Concept "1" -- "1..*" Term : has terms
+Concept "1" -- "1..1" PreferredTerm : preferred per language
+Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants
+
+' ===== Collections (many-to-many with optional ordering via join entity) =====
+class Collection {
+  +name : Text
+  +type : {facet, array, microthesaurus, set}
+  +ordered : Boolean
+  +description : Text?
+}
+
+class CollectionMember {
+  +index : Integer?            ' position if Collection.ordered = true
+  +role  : {core, recommended, optional}?
+  +note  : Text?
+}
+
+ConceptScheme "0..*" -- "0..*" Collection : groups
+Collection "1" -- "0..*" CollectionMember : has >
+Concept   "1" -- "0..*" CollectionMember : member >
+Collection "0..1" o-- "0..*" Collection : includes (nested)
+
+' ===== Cross-scheme mappings (ISO 25964-2) =====
+class Mapping {
+  +type : {exactMatch, closeMatch, broadMatch, narrowMatch, relatedMatch}
+  +justification : Text?
+}
+
+Concept "1" <-- "0..*" Mapping : source
+Mapping "0..*" --> "1" Concept : target
+
+/' note
+  Post‑coordination only:
+  • No pre‑coordinated compound concepts in this version.
+  • Combine base concepts at query/UX/rules time (A AND B).
+  • If a future need arises (distinct rules/fees/analytics), consider
+    introducing a CoordinatedConcept as a first‑class concept.
+  Cross‑scheme only:
+  • Use Mapping (*Match types) to align Concepts across different schemes.
+end note
+'/
+
+' ===== House rules =====
+note "Guidance:\n• One preferred term per language for each Concept.\n• Hierarchies must not loop (no cycles).\n• Collections curate; ordering is per Collection via CollectionMember.index.\n• Use relatedTo for associative links; keep semantics lightweight." as N1
+N1 .. Concept
+N1 .. Term
+N1 .. ConceptScheme
+N1 .. Collection
+
+@enduml

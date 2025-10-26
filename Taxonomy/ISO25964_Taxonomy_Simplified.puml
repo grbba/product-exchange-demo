@@ -1,0 +1,116 @@
+@startuml
+title ISO 25964 Taxonomy — Simplified Structural View (Stakeholder-Friendly)
+
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classFontSize 12
+skinparam class {
+  BackgroundColor White
+  ArrowColor Black
+  BorderColor Black
+}
+
+' =====================================================
+' CORE CONCEPTUAL LAYER (simplified)
+' =====================================================
+'package "Conceptual Layer" {
+  class ConceptScheme {
+    +name : Text
+    +description : Text?
+  }
+
+  class Concept {
+    +notation : Text?
+  }
+
+  ' Concepts belong to a scheme
+  ConceptScheme "1" o-- "0..*" Concept : contains
+
+  ' Simple associations instead of relationship classes
+  Concept "0..*" -- "0..*" Concept : relatedTo
+  Concept "0..*" -down-|> "0..*" Concept : broader/narrower
+
+  note right of Concept
+    • broader/narrower is a hierarchy (no cycles)
+    • relatedTo is an associative link
+  end note
+'}
+
+' =====================================================
+' LEXICAL LAYER (Terms) — simplified
+' =====================================================
+'package "Lexical Layer (Terms)" {
+  class Term {
+    +label : Text
+    +lang : LanguageTag
+  }
+
+  class PreferredTerm
+  class NonPreferredTerm {
+    +use_note : Text?
+  }
+
+  Term <|-- PreferredTerm
+  Term <|-- NonPreferredTerm
+
+  Concept "1" -- "1..*" Term : has terms
+  Concept "1" -- "1..1" PreferredTerm : preferred per language
+  Concept "0..*" -- "0..*" NonPreferredTerm : synonyms/variants
+'}
+
+' =====================================================
+' COORDINATION & COMPOUND EQUIVALENCE — simplified
+' =====================================================
+'package "Coordination & Equivalence" {
+  class CoordinatedConcept {
+    +label : Text
+  }
+  CoordinatedConcept "1" *-- "2..*" Concept : composed of
+
+  class CompoundEquivalence {
+    +note : Text?
+  }
+  NonPreferredTerm "0..*" -- "0..*" CompoundEquivalence : triggers
+  CompoundEquivalence "1" -- "2..*" Concept : equals combination of
+'}
+
+' =====================================================
+' COLLECTIONS (curation & ordering) — simplified
+' =====================================================
+'package "Collections" {
+  class Collection {
+    +name : Text
+    +type : {facet, array, microthesaurus, set}
+    +ordered : Boolean
+  }
+
+  ConceptScheme "0..*" -- "0..*" Collection : groups
+  Collection "1" -- "0..*" Concept : members
+  Collection "0..1" o-- "0..*" Collection : includes (nested)
+'}
+
+' =====================================================
+' MAPPINGS ACROSS SCHEMES (ISO 25964‑2) — simplified
+' =====================================================
+'package "Mappings" {
+  class Mapping {
+    +type : {exact, close, broad, narrow, related}
+    +justification : Text?
+  }
+
+  Concept "1" <-- "0..*" Mapping : source
+  Mapping "0..*" --> "1" Concept : target
+  ConceptScheme "0..*" -- "0..*" Mapping : organized in sets
+'}
+
+' =====================================================
+' NOTES / HOUSE RULES
+' =====================================================
+'note "Guidance:\n• One preferred term per language for each Concept.\n• Hierarchies must not loop (no cycles).\n• Collections are for curation and may be ordered; they are not hierarchies.\n• Compound equivalence: a non‑preferred term maps to a combination of Concepts.\n• Mappings connect Concepts across different schemes using standard types." as N1
+'N1 .. Concept
+'N1 .. Term
+'N1 .. ConceptScheme
+'N1 .. Collection
+
+@enduml
