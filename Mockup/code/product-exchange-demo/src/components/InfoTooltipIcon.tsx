@@ -20,7 +20,6 @@ const InfoTooltipIcon: React.FC<InfoTooltipIconProps> = ({ title }) => (
         lineHeight: 1,
         cursor: "help",
         paddingBottom: 1,
-        marginLeft: 4,
       }}
       aria-label="More info"
     >
