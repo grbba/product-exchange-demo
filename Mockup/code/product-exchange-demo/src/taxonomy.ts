@@ -5,32 +5,122 @@ const TAXONOMY_URL = "../../../../Taxonomy/export12.ttl";
 
 type Literal = { value: string; lang?: string };
 
-const literalPattern = /("""[\s\S]*?"""|"[^"]*")(?:@([a-zA-Z-]+))?/g;
-
-const extractLiterals = (body: string, predicate: string): Literal[] => {
-  const regex = new RegExp(`${predicate}\\s+([^;]+)`, "gi");
-  const literals: Literal[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(body)) !== null) {
-    const raw = match[1];
-    let literalMatch: RegExpExecArray | null;
-    while ((literalMatch = literalPattern.exec(raw)) !== null) {
-      const token = literalMatch[1];
-      const lang = literalMatch[2]?.toLowerCase();
-      const value = token.startsWith("\"\"\"")
-        ? token.slice(3, -3)
-        : token.slice(1, -1);
-      literals.push({ value: value.trim(), lang });
-    }
-  }
-  return literals;
-};
-
 const pickLiteralValue = (entries: Literal[], preferredLang = "en") => {
   if (!entries.length) return undefined;
   const normalized = preferredLang.toLowerCase();
   const preferred = entries.find((entry) => entry.lang === normalized);
   return (preferred ?? entries[0]).value;
+};
+
+type QuoteState = null | "single" | "triple";
+
+const startsTripleQuote = (text: string, index: number) => text.startsWith("\"\"\"", index);
+
+const splitOnDelimiter = (input: string, delimiter: string): string[] => {
+  const parts: string[] = [];
+  let current = "";
+  let state: QuoteState = null;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (char === "\"") {
+      const isTriple = startsTripleQuote(input, i);
+      if (state === "triple") {
+        if (isTriple) {
+          current += "\"\"\"";
+          i += 2;
+          state = null;
+        } else {
+          current += char;
+        }
+        continue;
+      }
+      if (state === "single") {
+        current += char;
+        if (input[i - 1] !== "\\") {
+          state = null;
+        }
+        continue;
+      }
+      if (isTriple) {
+        current += "\"\"\"";
+        i += 2;
+        state = "triple";
+        continue;
+      }
+      state = "single";
+      current += char;
+      continue;
+    }
+
+    if (char === delimiter && !state) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  parts.push(current);
+  return parts;
+};
+
+const splitStatements = (input: string): string[] => {
+  const statements: string[] = [];
+  let current = "";
+  let state: QuoteState = null;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (char === "\"") {
+      const isTriple = startsTripleQuote(input, i);
+      if (state === "triple") {
+        if (isTriple) {
+          current += "\"\"\"";
+          i += 2;
+          state = null;
+        } else {
+          current += char;
+        }
+        continue;
+      }
+      if (state === "single") {
+        current += char;
+        if (input[i - 1] !== "\\") {
+          state = null;
+        }
+        continue;
+      }
+      if (isTriple) {
+        current += "\"\"\"";
+        i += 2;
+        state = "triple";
+        continue;
+      }
+      state = "single";
+      current += char;
+      continue;
+    }
+
+    if (char === "." && !state) {
+      current += char;
+      const nextChar = input[i + 1];
+      if (!nextChar || /\s/.test(nextChar)) {
+        const statement = current.trim();
+        if (statement) statements.push(statement);
+        current = "";
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  const trailing = current.trim();
+  if (trailing) statements.push(trailing);
+
+  return statements;
 };
 
 const normalizeToken = (token: string) => {
@@ -48,62 +138,165 @@ const normalizeToken = (token: string) => {
   return cleaned;
 };
 
-const extractIris = (body: string, predicate: string): string[] => {
-  const regex = new RegExp(`${predicate}\\s+([^;]+)`, "gi");
-  const values: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(body)) !== null) {
-    const raw = match[1];
-    for (const fragment of raw.split(",")) {
-      const normalized = normalizeToken(fragment);
-      if (normalized) values.push(normalized);
-    }
-  }
-  return Array.from(new Set(values));
+const parseLiteral = (value: string): Literal | undefined => {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^("""[\s\S]*?"""|"[^"]*")(?:@([a-zA-Z-]+))?$/);
+  if (!match) return undefined;
+  const token = match[1];
+  const lang = match[2]?.toLowerCase();
+  const content = token.startsWith("\"\"\"") ? token.slice(3, -3) : token.slice(1, -1);
+  return { value: content.trim(), lang };
+};
+
+const parsePredicateSegment = (segment: string): { predicate: string; objects: string[] } | null => {
+  const trimmed = segment.trim();
+  if (!trimmed) return null;
+  const firstSpace = trimmed.indexOf(" ");
+  if (firstSpace === -1) return null;
+  const predicate = trimmed.slice(0, firstSpace);
+  const rest = trimmed.slice(firstSpace + 1).trim();
+  if (!rest) return null;
+  const objects = splitOnDelimiter(rest, ",")
+    .map((item) => item.trim())
+    .filter((item) => item.length);
+  return { predicate, objects };
 };
 
 const toConceptId = (subject: string) => normalizeToken(subject) ?? subject;
 
 export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Collection[] } => {
-  const conceptPattern = /([^\s]+)\s+a\s+skos:Concept\s*;([\s\S]*?)(?=\.\s*(?:\n|$))/gi;
-  const collectionPattern = /([^\s]+)\s+a\s+skos:Collection\s*;([\s\S]*?)(?=\.\s*(?:\n|$))/gi;
-
   const concepts = new Map<string, Concept>();
-  let match: RegExpExecArray | null;
-
-  while ((match = conceptPattern.exec(ttl)) !== null) {
-    const subject = match[1];
-    const body = match[2];
-    const id = toConceptId(subject);
-    const prefLabels = extractLiterals(body, "skos:prefLabel");
-    const label = pickLiteralValue(prefLabels) ?? id;
-    const altLabels = extractLiterals(body, "skos:altLabel").map((entry) => entry.value);
-    const definition = pickLiteralValue(extractLiterals(body, "skos:definition"));
-    const broader = extractIris(body, "skos:broader");
-    const narrower = extractIris(body, "skos:narrower");
-    const topConceptOf = extractIris(body, "skos:topConceptOf");
-    const inSchemes = extractIris(body, "skos:inScheme");
-
-    concepts.set(id, {
-      id,
-      label,
-      altLabels: altLabels.length ? Array.from(new Set(altLabels)) : undefined,
-      definition,
-      broader: broader.length ? broader : undefined,
-      narrower: narrower.length ? narrower : undefined,
-      topConceptOf: topConceptOf.length ? topConceptOf : undefined,
-      inSchemes: inSchemes.length ? inSchemes : undefined,
-    });
-  }
-
   const collections: Collection[] = [];
-  while ((match = collectionPattern.exec(ttl)) !== null) {
-    const subject = match[1];
-    const body = match[2];
-    const id = toConceptId(subject);
-    const label = pickLiteralValue(extractLiterals(body, "skos:prefLabel")) ?? id;
-    const members = extractIris(body, "skos:member");
-    collections.push({ id, label, members });
+
+  for (const statement of splitStatements(ttl)) {
+    if (!statement || statement.startsWith("@")) continue;
+
+    const subjectMatch = statement.match(/^([^\s]+)\s+/);
+    if (!subjectMatch) continue;
+    const subjectToken = subjectMatch[1];
+    const id = toConceptId(subjectToken);
+
+    const remainder = statement.slice(subjectMatch[0].length).trim();
+    const withoutDot = remainder.endsWith(".") ? remainder.slice(0, -1).trim() : remainder;
+
+    const segments = splitOnDelimiter(withoutDot, ";")
+      .map((part) => part.trim())
+      .filter((part) => part.length);
+
+    if (!segments.length) continue;
+
+    const [typeSegment, ...propertySegments] = segments;
+    const typeLower = typeSegment.toLowerCase();
+    const isConcept = /\ba\s+skos:concept\b/.test(typeLower);
+    const isCollection = /\ba\s+skos:collection\b/.test(typeLower);
+
+    if (!isConcept && !isCollection) continue;
+
+    const prefLabels: Literal[] = [];
+    const rdfsLabels: Literal[] = [];
+    const altLabels: string[] = [];
+    const definitions: Literal[] = [];
+    const broader: string[] = [];
+    const narrower: string[] = [];
+    const related: string[] = [];
+    const topConceptOf: string[] = [];
+    const inSchemes: string[] = [];
+    const members: string[] = [];
+
+    for (const segment of propertySegments) {
+      const parsed = parsePredicateSegment(segment);
+      if (!parsed) continue;
+      const { predicate, objects } = parsed;
+      if (!objects.length) continue;
+
+      switch (predicate) {
+        case "rdfs:label":
+          for (const obj of objects) {
+            const literal = parseLiteral(obj);
+            if (literal) rdfsLabels.push(literal);
+          }
+          break;
+        case "skos:prefLabel":
+          for (const obj of objects) {
+            const literal = parseLiteral(obj);
+            if (literal) prefLabels.push(literal);
+          }
+          break;
+        case "skos:altLabel":
+          for (const obj of objects) {
+            const literal = parseLiteral(obj);
+            if (literal) altLabels.push(literal.value);
+          }
+          break;
+        case "skos:definition":
+          for (const obj of objects) {
+            const literal = parseLiteral(obj);
+            if (literal) definitions.push(literal);
+          }
+          break;
+        case "skos:broader":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) broader.push(value);
+          }
+          break;
+        case "skos:narrower":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) narrower.push(value);
+          }
+          break;
+        case "skos:related":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) related.push(value);
+          }
+          break;
+        case "skos:topConceptOf":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) topConceptOf.push(value);
+          }
+          break;
+        case "skos:inScheme":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) inSchemes.push(value);
+          }
+          break;
+        case "skos:member":
+          for (const obj of objects) {
+            const value = normalizeToken(obj);
+            if (value) members.push(value);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (isConcept) {
+      const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
+      const definition = pickLiteralValue(definitions);
+      concepts.set(id, {
+        id,
+        label,
+        altLabels: altLabels.length ? Array.from(new Set(altLabels)) : undefined,
+        definition,
+        broader: broader.length ? Array.from(new Set(broader)) : undefined,
+        narrower: narrower.length ? Array.from(new Set(narrower)) : undefined,
+        related: related.length ? Array.from(new Set(related)) : undefined,
+        topConceptOf: topConceptOf.length ? Array.from(new Set(topConceptOf)) : undefined,
+        inSchemes: inSchemes.length ? Array.from(new Set(inSchemes)) : undefined,
+      });
+    } else if (isCollection) {
+      const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
+      collections.push({
+        id,
+        label,
+        members: members.length ? Array.from(new Set(members)) : [],
+      });
+    }
   }
 
   return { concepts: Array.from(concepts.values()), collections };

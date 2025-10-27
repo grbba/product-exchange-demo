@@ -35,6 +35,7 @@ export type Concept = {
   definition?: string;
   broader?: string[];
   narrower?: string[];
+  related?: string[];
   topConceptOf?: string[];
   inSchemes?: string[];
 };

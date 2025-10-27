@@ -142,6 +142,7 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
   const selectedConcept = selectedId ? conceptById.get(selectedId) ?? null : null;
   const broaderLabels = selectedConcept ? formatConceptLabels(selectedConcept.broader, conceptLabel) : [];
   const narrowerLabels = selectedConcept ? formatConceptLabels(selectedConcept.narrower, conceptLabel) : [];
+  const relatedLabels = selectedConcept ? formatConceptLabels(selectedConcept.related, conceptLabel) : [];
   const selectedCollections = useMemo(
     () => (selectedId ? collections.filter((collection) => collection.members.includes(selectedId)) : []),
     [collections, selectedId]
@@ -233,6 +234,20 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
                       ) : (
                         <Typography variant="body2" color="text.secondary">
                           No narrower concepts.
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2">Related concepts</Typography>
+                      {relatedLabels.length ? (
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                          {relatedLabels.map((label) => (
+                            <Chip key={label} label={label} size="small" variant="outlined" />
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No related concepts.
                         </Typography>
                       )}
                     </Box>
