@@ -1,7 +1,9 @@
-import type { ProductInstance, ProductSchema } from "./domain";
+import type { Partner, PartnerProductMap, ProductInstance, ProductSchema } from "./domain";
 
 const SCHEMA_KEY = "apmwg:schemas";
 const INSTANCE_KEY = "apmwg:instances";
+const PARTNER_KEY = "apmwg:partners";
+const PARTNER_PRODUCT_KEY = "apmwg:partner-products";
 
 const hasStorage = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
@@ -31,3 +33,9 @@ export const persistSchemas = (schemas: ProductSchema[]) => write(SCHEMA_KEY, sc
 
 export const loadInstances = () => read<ProductInstance[]>(INSTANCE_KEY, []);
 export const persistInstances = (instances: ProductInstance[]) => write(INSTANCE_KEY, instances);
+
+export const loadPartners = () => read<Partner[]>(PARTNER_KEY, []);
+export const persistPartners = (partners: Partner[]) => write(PARTNER_KEY, partners);
+
+export const loadPartnerProducts = () => read<PartnerProductMap>(PARTNER_PRODUCT_KEY, {});
+export const persistPartnerProducts = (associations: PartnerProductMap) => write(PARTNER_PRODUCT_KEY, associations);

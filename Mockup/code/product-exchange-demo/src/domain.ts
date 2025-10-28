@@ -21,6 +21,19 @@ export type Product = {
   additionalInfo?: Record<string, string>;
 };
 
+export type PartnerRole = "supplier" | "retailer";
+
+export type Partner = {
+  id: string;
+  name: string;
+  externalId: string;
+  roles: PartnerRole[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PartnerProductMap = Record<string, string[]>;
+
 export type ReferenceSystem = {
   id: string;
   name: string;
