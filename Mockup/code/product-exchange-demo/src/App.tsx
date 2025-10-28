@@ -7,9 +7,12 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   Chip,
   Divider,
   FormControl,
+  FormControlLabel,
+  FormGroup,
   InputLabel,
   MenuItem,
   Select,
@@ -43,10 +46,30 @@ import {
   resolveCollectionMembers,
   schemaCategoryLabel,
   updateTimestamp,
+  uid,
 } from "./domain";
-import type { Product, ProductInstance, ProductSchema, Rule, SchemaCategory, TaxonomyCondition } from "./domain";
+import type {
+  Partner,
+  PartnerProductMap,
+  PartnerRole,
+  Product,
+  ProductInstance,
+  ProductSchema,
+  Rule,
+  SchemaCategory,
+  TaxonomyCondition,
+} from "./domain";
 import { useTaxonomy } from "./taxonomy";
-import { loadInstances, loadSchemas, persistInstances, persistSchemas } from "./storage";
+import {
+  loadInstances,
+  loadPartnerProducts,
+  loadPartners,
+  loadSchemas,
+  persistInstances,
+  persistPartnerProducts,
+  persistPartners,
+  persistSchemas,
+} from "./storage";
 
 type RetailerPayload = { receivedAt: string; product: Product };
 
@@ -141,6 +164,15 @@ const App: React.FC = () => {
     return [schema];
   });
   const [instances, setInstances] = useState<ProductInstance[]>(() => loadInstances());
+  const [partners, setPartners] = useState<Partner[]>(() => loadPartners());
+  const [partnerAssociations, setPartnerAssociations] = useState<PartnerProductMap>(() => loadPartnerProducts());
+  const [selectedRetailPartnerId, setSelectedRetailPartnerId] = useState<string | null>(null);
+  const [newPartnerName, setNewPartnerName] = useState("");
+  const [newPartnerExternalId, setNewPartnerExternalId] = useState("");
+  const [newPartnerRoles, setNewPartnerRoles] = useState<Record<PartnerRole, boolean>>({
+    supplier: false,
+    retailer: false,
+  });
 
   const [schemaSelection, setSchemaSelection] = useState<string | null>(schemas[0]?.id ?? null);
   const [productSchemaSelection, setProductSchemaSelection] = useState<string | null>(schemas[0]?.id ?? null);
@@ -150,6 +182,14 @@ const App: React.FC = () => {
 
   const taxonomy = useTaxonomy(DEFAULT_CONCEPTS, COLLECTIONS);
   const { concepts, collections, conceptLabel, orderedConcepts } = taxonomy;
+
+  const retailerPartners = useMemo(
+    () => partners.filter((partner) => partner.roles.includes("retailer")),
+    [partners]
+  );
+  const selectedPartnerProducts = selectedRetailPartnerId
+    ? partnerAssociations[selectedRetailPartnerId] ?? []
+    : [];
 
   const [rules, setRules] = useState<Rule[]>([
     {
@@ -177,6 +217,56 @@ const App: React.FC = () => {
 
   useEffect(() => {
     persistInstances(instances);
+  }, [instances]);
+
+  useEffect(() => {
+    persistPartners(partners);
+  }, [partners]);
+
+  useEffect(() => {
+    persistPartnerProducts(partnerAssociations);
+  }, [partnerAssociations]);
+
+  useEffect(() => {
+    setSelectedRetailPartnerId((current) => {
+      if (!retailerPartners.length) return null;
+      if (current && retailerPartners.some((partner) => partner.id === current)) {
+        return current;
+      }
+      return retailerPartners[0].id;
+    });
+  }, [retailerPartners]);
+
+  useEffect(() => {
+    setPartnerAssociations((previous) => {
+      const partnerIds = new Set(partners.map((partner) => partner.id));
+      let changed = false;
+      const next: PartnerProductMap = {};
+      for (const [partnerId, productIds] of Object.entries(previous)) {
+        if (partnerIds.has(partnerId)) {
+          next[partnerId] = productIds;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+  }, [partners]);
+
+  useEffect(() => {
+    setPartnerAssociations((previous) => {
+      const validProductIds = new Set(instances.map((instance) => instance.id));
+      let changed = false;
+      const next: PartnerProductMap = {};
+      for (const [partnerId, productIds] of Object.entries(previous)) {
+        const filtered = productIds.filter((productId) => validProductIds.has(productId));
+        if (filtered.length !== productIds.length) {
+          changed = true;
+        }
+        next[partnerId] = filtered;
+      }
+      return changed ? next : previous;
+    });
   }, [instances]);
 
   useEffect(() => {
@@ -389,6 +479,78 @@ const App: React.FC = () => {
     notify("Products saved", "success");
   };
 
+  const handleToggleNewPartnerRole = (role: PartnerRole) => {
+    setNewPartnerRoles((previous) => ({ ...previous, [role]: !previous[role] }));
+  };
+
+  const handleCreatePartner = () => {
+    const name = newPartnerName.trim();
+    const externalId = newPartnerExternalId.trim();
+    if (!name || !externalId) {
+      notify("Provide both partner name and ID", "error");
+      return;
+    }
+
+    const roles: PartnerRole[] = [];
+    if (newPartnerRoles.supplier) roles.push("supplier");
+    if (newPartnerRoles.retailer) roles.push("retailer");
+    if (!roles.length) {
+      notify("Select at least one partner role", "error");
+      return;
+    }
+
+    if (partners.some((partner) => partner.externalId.toLowerCase() === externalId.toLowerCase())) {
+      notify("A partner with that ID already exists", "error");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const partner: Partner = {
+      id: uid(),
+      name,
+      externalId,
+      roles,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    setPartners((previous) => [...previous, partner]);
+    setPartnerAssociations((previous) => {
+      if (previous[partner.id]) return previous;
+      return { ...previous, [partner.id]: [] };
+    });
+    setNewPartnerName("");
+    setNewPartnerExternalId("");
+    setNewPartnerRoles({ supplier: false, retailer: false });
+    notify(`Partner '${name}' created`, "success");
+  };
+
+  const handlePartnerProductToggle = (productId: string, allow: boolean) => {
+    if (!selectedRetailPartnerId) return;
+    let changed = false;
+    setPartnerAssociations((previous) => {
+      const current = previous[selectedRetailPartnerId] ?? [];
+      const alreadyIncluded = current.includes(productId);
+      if (allow && alreadyIncluded) return previous;
+      if (!allow && !alreadyIncluded) return previous;
+      const next = allow ? [...current, productId] : current.filter((id) => id !== productId);
+      changed = true;
+      return { ...previous, [selectedRetailPartnerId]: next };
+    });
+    if (changed) {
+      const timestamp = new Date().toISOString();
+      setPartners((previous) =>
+        previous.map((partner) =>
+          partner.id === selectedRetailPartnerId ? { ...partner, updatedAt: timestamp } : partner
+        )
+      );
+    }
+  };
+
+  const handlePersistPartnerAssociations = () => {
+    persistPartnerProducts(partnerAssociations);
+    notify("Partner permissions saved", "success");
+  };
+
   const handleTagProduct = (instanceId: string, conceptId: string) => {
     handleUpdateInstance(instanceId, (instance) =>
       instance.product.tags.includes(conceptId)
@@ -488,11 +650,12 @@ const App: React.FC = () => {
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>
           <Tab id="tab-0" label="Product Schemas" />
           <Tab id="tab-1" label="Taxonomy" />
-          <Tab id="tab-2" label="Specified Products" />
-          <Tab id="tab-3" label="Reference Systems" />
-          <Tab id="tab-4" label="Rules" />
-          <Tab id="tab-5" label="Exchange" />
-        </Tabs>
+        <Tab id="tab-2" label="Specified Products" />
+        <Tab id="tab-3" label="Reference Systems" />
+        <Tab id="tab-4" label="Rules" />
+        <Tab id="tab-5" label="Exchange" />
+        <Tab id="tab-6" label="Partners" />
+      </Tabs>
       </AppBar>
 
       {tab === 0 && (
@@ -958,6 +1121,148 @@ const App: React.FC = () => {
                 </CardContent>
               </Card>
             </Box>
+          </Stack>
+        </Box>
+      )}
+
+      {tab === 6 && (
+        <Box sx={{ p: 2 }}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+            <Card variant="outlined" sx={{ borderRadius: 3, flex: 1 }}>
+              <CardHeader title="Partner Management" subheader="Register airline partners and their roles." />
+              <CardContent>
+                <Stack spacing={2}>
+                  <TextField
+                    label="Partner name"
+                    value={newPartnerName}
+                    onChange={(event) => setNewPartnerName(event.target.value)}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Partner ID"
+                    value={newPartnerExternalId}
+                    onChange={(event) => setNewPartnerExternalId(event.target.value)}
+                    fullWidth
+                  />
+                  <FormGroup row>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={newPartnerRoles.supplier}
+                          onChange={() => handleToggleNewPartnerRole("supplier")}
+                        />
+                      }
+                      label="Supplier"
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={newPartnerRoles.retailer}
+                          onChange={() => handleToggleNewPartnerRole("retailer")}
+                        />
+                      }
+                      label="Retailer"
+                    />
+                  </FormGroup>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleCreatePartner}
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    Add partner
+                  </Button>
+                  <Divider />
+                  <Typography variant="subtitle1">Existing partners</Typography>
+                  {partners.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      No partners yet.
+                    </Typography>
+                  ) : (
+                    <Stack spacing={1}>
+                      {partners.map((partner) => (
+                        <Stack key={partner.id} direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                          <Typography variant="body2" sx={{ minWidth: 140, fontWeight: 500 }}>
+                            {partner.name}
+                          </Typography>
+                          <Chip label={`ID: ${partner.externalId}`} size="small" variant="outlined" />
+                          {partner.roles.map((role) => (
+                            <Chip
+                              key={`${partner.id}-${role}`}
+                              label={role === "supplier" ? "Supplier" : "Retailer"}
+                              size="small"
+                              color={role === "retailer" ? "primary" : "default"}
+                              variant={role === "retailer" ? "filled" : "outlined"}
+                              sx={{ mr: 0.5 }}
+                            />
+                          ))}
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+            <Card variant="outlined" sx={{ borderRadius: 3, flex: 1 }}>
+              <CardHeader
+                title="Retail Access Control"
+                subheader="Associate retail partners with products they can offer."
+              />
+              <CardContent>
+                <Stack spacing={2}>
+                  {retailerPartners.length === 0 ? (
+                    <Alert severity="info">Create a partner with the retailer role to manage associations.</Alert>
+                  ) : (
+                    <>
+                      <FormControl fullWidth>
+                        <InputLabel id="retail-partner-select-label">Retail partner</InputLabel>
+                        <Select
+                          labelId="retail-partner-select-label"
+                          label="Retail partner"
+                          value={selectedRetailPartnerId ?? ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setSelectedRetailPartnerId(value ? String(value) : null);
+                          }}
+                        >
+                          {retailerPartners.map((partner) => (
+                            <MenuItem key={partner.id} value={partner.id}>
+                              {partner.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      {instances.length === 0 ? (
+                        <Alert severity="info">Create products to make them available for partners.</Alert>
+                      ) : selectedRetailPartnerId ? (
+                        <Stack spacing={1}>
+                          {instances.map((instance) => (
+                            <FormControlLabel
+                              key={instance.id}
+                              control={
+                                <Checkbox
+                                  checked={selectedPartnerProducts.includes(instance.id)}
+                                  onChange={(event) => handlePartnerProductToggle(instance.id, event.target.checked)}
+                                />
+                              }
+                              label={instance.product.name}
+                            />
+                          ))}
+                        </Stack>
+                      ) : null}
+                      <Button
+                        variant="outlined"
+                        onClick={handlePersistPartnerAssociations}
+                        disabled={!selectedRetailPartnerId}
+                        sx={{ alignSelf: "flex-start" }}
+                      >
+                        Save associations
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
           </Stack>
         </Box>
       )}
