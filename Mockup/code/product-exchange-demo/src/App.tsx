@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState, lazy } from "react";
 import {
   Alert,
   AppBar,
@@ -31,9 +31,9 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import UploadIcon from "@mui/icons-material/Upload";
 import AddIcon from "@mui/icons-material/Add";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import SchemaWorkspace from "./components/SchemaWorkspace";
-import ProductWorkspace from "./components/ProductWorkspace";
-import TaxonomyWorkspace from "./components/TaxonomyWorkspace";
+const SchemaWorkspace = lazy(() => import("./components/SchemaWorkspace"));
+const ProductWorkspace = lazy(() => import("./components/ProductWorkspace"));
+const TaxonomyWorkspace = lazy(() => import("./components/TaxonomyWorkspace"));
 import {
   COLLECTIONS,
   DEFAULT_CONCEPTS,
@@ -77,6 +77,14 @@ const MAPPINGS = [
   { fromConceptId: "C-PriorityBoarding", toConceptId: "C-PriorityBoarding" },
   { fromConceptId: "C-Flight", toConceptId: "C-Flight" },
 ];
+
+const WorkspaceFallback: React.FC<{ label: string }> = ({ label }) => (
+  <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+    <Typography variant="body2" color="text.secondary">
+      {`Loading ${label}…`}
+    </Typography>
+  </Box>
+);
 
 const downloadJson = (fileName: string, data: unknown) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -660,61 +668,69 @@ const App: React.FC = () => {
 
       {tab === 0 && (
         <Box sx={{ p: 2 }}>
-          <SchemaWorkspace
-            categories={SCHEMA_CATEGORIES}
-            schemas={schemas}
-            selectedSchemaId={schemaSelection}
-            onSelectSchema={setSchemaSelection}
-            onCreateSchema={handleCreateSchema}
-            onUpdateSchema={handleUpdateSchema}
-            onDeleteSchema={handleDeleteSchema}
-            onExportSchema={handleExportSchema}
-            onPersistSchemas={handlePersistSchemas}
-            onTagSchema={handleTagSchema}
-            onRemoveSchemaTag={handleRemoveSchemaTag}
-            onAssignCollection={handleAssignCollection}
-            onRemoveCollection={handleRemoveCollection}
-            collections={collections}
-            conceptLabel={conceptLabel}
-            orderedConcepts={orderedConcepts}
-            referenceSystems={REF_SYSTEMS}
-          />
+          <Suspense fallback={<WorkspaceFallback label="product schemas" />}>
+            <SchemaWorkspace
+              categories={SCHEMA_CATEGORIES}
+              schemas={schemas}
+              selectedSchemaId={schemaSelection}
+              onSelectSchema={setSchemaSelection}
+              onCreateSchema={handleCreateSchema}
+              onUpdateSchema={handleUpdateSchema}
+              onDeleteSchema={handleDeleteSchema}
+              onExportSchema={handleExportSchema}
+              onPersistSchemas={handlePersistSchemas}
+              onTagSchema={handleTagSchema}
+              onRemoveSchemaTag={handleRemoveSchemaTag}
+              onAssignCollection={handleAssignCollection}
+              onRemoveCollection={handleRemoveCollection}
+              collections={collections}
+              conceptLabel={conceptLabel}
+              orderedConcepts={orderedConcepts}
+              referenceSystems={REF_SYSTEMS}
+            />
+          </Suspense>
         </Box>
       )}
 
       {tab === 1 && (
         <Box sx={{ p: 2 }}>
-          <TaxonomyWorkspace
-            concepts={concepts}
-            setConcepts={taxonomy.setConcepts}
-            collections={collections}
-            setCollections={taxonomy.setCollections}
-            conceptLabel={conceptLabel}
-            onNotify={notify}
-          />
+          <Suspense fallback={<WorkspaceFallback label="taxonomy" />}>
+            <TaxonomyWorkspace
+              concepts={concepts}
+              setConcepts={taxonomy.setConcepts}
+              collections={collections}
+              setCollections={taxonomy.setCollections}
+              conceptLabel={conceptLabel}
+              onNotify={notify}
+            />
+          </Suspense>
         </Box>
       )}
 
       {tab === 2 && (
         <Box sx={{ p: 2 }}>
-          <ProductWorkspace
-            schemas={schemas}
-            instances={instances}
-            selectedSchemaId={productSchemaSelection}
-            onSelectSchema={setProductSchemaSelection}
-            selectedInstanceId={selectedInstanceId}
-            onSelectInstance={setSelectedInstanceId}
-            onInstantiate={handleInstantiate}
-            onUpdateInstance={handleUpdateInstance}
-            onDeleteInstance={handleDeleteInstance}
-            onExportInstance={handleExportInstance}
-            onPersistInstances={handlePersistInstances}
-            onTagProduct={handleTagProduct}
-            onRemoveProductTag={handleRemoveProductTag}
-            conceptLabel={conceptLabel}
-            orderedConcepts={orderedConcepts}
-            referenceSystems={REF_SYSTEMS}
-          />
+          <Suspense fallback={<WorkspaceFallback label="specified products" />}>
+            <ProductWorkspace
+              schemas={schemas}
+              instances={instances}
+              selectedSchemaId={productSchemaSelection}
+              onSelectSchema={setProductSchemaSelection}
+              selectedInstanceId={selectedInstanceId}
+              onSelectInstance={setSelectedInstanceId}
+              onInstantiate={handleInstantiate}
+              onUpdateInstance={handleUpdateInstance}
+              onDeleteInstance={handleDeleteInstance}
+              onExportInstance={handleExportInstance}
+              onPersistInstances={handlePersistInstances}
+              onTagProduct={handleTagProduct}
+              onRemoveProductTag={handleRemoveProductTag}
+              retailerPartners={retailerPartners}
+              partnerAssociations={partnerAssociations}
+              conceptLabel={conceptLabel}
+              orderedConcepts={orderedConcepts}
+              referenceSystems={REF_SYSTEMS}
+            />
+          </Suspense>
         </Box>
       )}
 

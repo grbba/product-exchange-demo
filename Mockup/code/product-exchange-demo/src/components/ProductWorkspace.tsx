@@ -25,7 +25,14 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import SaveIcon from "@mui/icons-material/Save";
-import type { Concept, ProductInstance, ProductSchema, ReferenceSystem } from "../domain";
+import type {
+  Concept,
+  Partner,
+  PartnerProductMap,
+  ProductInstance,
+  ProductSchema,
+  ReferenceSystem,
+} from "../domain";
 import { updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
 import DiagramCard from "./DiagramCard";
@@ -44,6 +51,8 @@ type ProductWorkspaceProps = {
   onPersistInstances: () => void;
   onTagProduct: (instanceId: string, conceptId: string) => void;
   onRemoveProductTag: (instanceId: string, conceptId: string) => void;
+  retailerPartners: Partner[];
+  partnerAssociations: PartnerProductMap;
   conceptLabel: (id: string) => string;
   orderedConcepts: Concept[];
   referenceSystems: ReferenceSystem[];
@@ -63,6 +72,8 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
   onPersistInstances,
   onTagProduct,
   onRemoveProductTag,
+  retailerPartners,
+  partnerAssociations,
   conceptLabel,
   orderedConcepts,
   referenceSystems,
@@ -83,6 +94,13 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
     () => instances.find((instance) => instance.id === selectedInstanceId) ?? null,
     [instances, selectedInstanceId]
   );
+
+  const assignedRetailPartners = useMemo(() => {
+    if (!selectedInstance) return [];
+    return retailerPartners.filter((partner) =>
+      (partnerAssociations[partner.id] ?? []).includes(selectedInstance.id)
+    );
+  }, [partnerAssociations, retailerPartners, selectedInstance]);
 
   useEffect(() => {
     setSelectedFeatureId(selectedInstance?.product.features[0]?.id ?? null);
@@ -274,43 +292,81 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
                   </ToggleButtonGroup>
                 </Stack>
                 <Divider sx={{ my: 2 }} />
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 2 }}>
-                  {selectedInstance.product.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={conceptLabel(tag)}
-                      onDelete={() => onRemoveProductTag(selectedInstance.id, tag)}
-                      size="small"
-                    />
-                  ))}
-                  {!selectedInstance.product.tags.length && (
-                    <Typography variant="body2" color="text.secondary">
-                      No product-level tags.
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="stretch">
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Taxonomy tags
                     </Typography>
-                  )}
-                </Stack>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
-                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                    <InputLabel id="product-tag-select">Assign taxonomy concept</InputLabel>
-                    <Select
-                      labelId="product-tag-select"
-                      label="Assign taxonomy concept"
-                      value={conceptSelection}
-                      onChange={(event) => setConceptSelection(event.target.value)}
-                    >
-                      <MenuItem value="">
-                        <em>— choose —</em>
-                      </MenuItem>
-                      {orderedConcepts.map((concept) => (
-                        <MenuItem key={concept.id} value={concept.id}>
-                          {concept.label}
-                        </MenuItem>
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 2 }}>
+                      {selectedInstance.product.tags.map((tag) => (
+                        <Chip
+                          key={tag}
+                          label={conceptLabel(tag)}
+                          onDelete={() => onRemoveProductTag(selectedInstance.id, tag)}
+                          size="small"
+                        />
                       ))}
-                    </Select>
-                  </FormControl>
-                  <Button variant="outlined" onClick={handleAddTag} disabled={!conceptSelection}>
-                    Add tag
-                  </Button>
+                      {!selectedInstance.product.tags.length && (
+                        <Typography variant="body2" color="text.secondary">
+                          No product-level tags.
+                        </Typography>
+                      )}
+                    </Stack>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
+                      <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel id="product-tag-select">Assign taxonomy concept</InputLabel>
+                        <Select
+                          labelId="product-tag-select"
+                          label="Assign taxonomy concept"
+                          value={conceptSelection}
+                          onChange={(event) => setConceptSelection(event.target.value)}
+                        >
+                          <MenuItem value="">
+                            <em>— choose —</em>
+                          </MenuItem>
+                          {orderedConcepts.map((concept) => (
+                            <MenuItem key={concept.id} value={concept.id}>
+                              {concept.label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button variant="outlined" onClick={handleAddTag} disabled={!conceptSelection}>
+                        Add tag
+                      </Button>
+                    </Stack>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      flex: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      p: 2,
+                      bgcolor: "background.default",
+                    }}
+                  >
+                    <Typography variant="subtitle2" gutterBottom>
+                      Retail partners with access
+                    </Typography>
+                    {assignedRetailPartners.length ? (
+                      <List dense disablePadding>
+                        {assignedRetailPartners.map((partner) => (
+                          <ListItem key={partner.id} disablePadding sx={{ py: 0.5 }}>
+                            <ListItemText primary={partner.name} secondary={`ID: ${partner.externalId}`} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No retail partners associated with this product.
+                      </Typography>
+                    )}
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1.5 }}>
+                      Manage access under the Partners tab.
+                    </Typography>
+                  </Box>
                 </Stack>
               </CardContent>
             </Card>
