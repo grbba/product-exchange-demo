@@ -490,6 +490,7 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
               onAddTag={handleAddFeatureTag}
               onRemoveTag={handleRemoveFeatureTag}
               splitView
+              hideAddFeature
             />
           </Stack>
               ) : (

@@ -39,6 +39,7 @@ type FeatureEditorProps = {
   titleTooltip?: string;
   addButtonTooltip?: string;
   splitView?: boolean;
+  hideAddFeature?: boolean;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -61,6 +62,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   titleTooltip,
   addButtonTooltip,
   splitView = false,
+  hideAddFeature = false,
 }) => {
   const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
   const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
@@ -434,12 +436,14 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
         {title}
         {titleTooltip ? <InfoTooltipIcon title={titleTooltip} /> : null}
       </Typography>
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
-          Add feature
-        </Button>
-        {addButtonTooltip ? <InfoTooltipIcon title={addButtonTooltip} /> : null}
-      </Stack>
+      {!hideAddFeature && (
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
+            Add feature
+          </Button>
+          {addButtonTooltip ? <InfoTooltipIcon title={addButtonTooltip} /> : null}
+        </Stack>
+      )}
     </Stack>
   );
 
