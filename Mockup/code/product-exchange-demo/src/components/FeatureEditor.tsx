@@ -280,7 +280,10 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             <em>None</em>
                           </MenuItem>
                           {referenceSystems.map((ref) => (
-                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                            <MenuItem
+                              key={ref.id}
+                              value={ref.id}
+                            >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
@@ -333,7 +336,10 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             <em>None</em>
                           </MenuItem>
                           {referenceSystems.map((ref) => (
-                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                            <MenuItem
+                              key={ref.id}
+                              value={ref.id}
+                            >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>
@@ -378,7 +384,10 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             <em>None</em>
                           </MenuItem>
                           {referenceSystems.map((ref) => (
-                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                            <MenuItem
+                              key={ref.id}
+                              value={ref.id}
+                            >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
                           ))}
                         </Select>
                       </FormControl>

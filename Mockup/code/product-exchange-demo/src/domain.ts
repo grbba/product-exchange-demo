@@ -35,11 +35,48 @@ export type Partner = {
 
 export type PartnerProductMap = Record<string, string[]>;
 
+export type ReferenceSystemType =
+  | "Measurement"
+  | "Enumeration"
+  | "CodeSystem"
+  | "ColorSystem"
+  | "Schema"
+  | "Other";
+
+type ReferenceSourceBase = {
+  authority: string;
+  resourceName: string;
+  resourceType: string;
+};
+
+export type ExternalReferenceSource = ReferenceSourceBase & {
+  kind: "External";
+  url: string;
+};
+
+export type InternalReferenceSource = ReferenceSourceBase & {
+  kind: "Internal";
+  repositoryName: string;
+  version: string;
+};
+
+export type ReferenceSource = ExternalReferenceSource | InternalReferenceSource;
+
 export type ReferenceSystem = {
   id: string;
-  name: string;
-  type: "CodeList" | "Unit" | "Schema";
-  source?: string;
+  identifier: string;
+  description: string;
+  systemType: ReferenceSystemType;
+  source: ReferenceSource;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ReferenceSystemDraft = {
+  identifier: string;
+  description: string;
+  systemType: ReferenceSystemType;
+  source: ReferenceSource;
 };
 
 export type Concept = {
@@ -92,11 +129,50 @@ export type ProductInstance = {
   updatedAt: string;
 };
 
-export const REF_SYSTEMS: ReferenceSystem[] = [
-  { id: "RS-IATA", name: "IATA Airport Code", type: "CodeList", source: "IATA" },
-  { id: "RS-UNIT-KG", name: "Kilogram", type: "Unit", source: "SI" },
-  { id: "RS-UNIT-CM", name: "Centimeter", type: "Unit", source: "SI" },
+export const REFERENCE_SYSTEM_TYPES: ReferenceSystemType[] = [
+  "Measurement",
+  "Enumeration",
+  "CodeSystem",
+  "ColorSystem",
+  "Schema",
+  "Other",
 ];
+
+export const defaultReferenceSystems = (): ReferenceSystem[] => {
+  const timestamp = new Date().toISOString();
+  return [
+    {
+      identifier: "RS-IATA-AIRPORT-001",
+      id: "RS-IATA-AIRPORT-001",
+      description: "IATA 3-letter airport codes",
+      systemType: "Enumeration",
+      source: {
+        kind: "External",
+        authority: "IATA",
+        resourceName: "IATA Airline and Airport Code Directory",
+        resourceType: "CodeList",
+        url: "https://www.iata.org/en/publications/directories/code-search/?airport.search=",
+      },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    {
+      identifier: "RS-UNECE-REC20-001",
+      id: "RS-UNECE-REC20-001",
+      description: "UNECE Recommendation 20 – Measurement units",
+      systemType: "Measurement",
+      source: {
+        kind: "External",
+        authority: "UNECE",
+        resourceName: "Recommendation No. 20",
+        resourceType: "CodeList",
+        url: "https://unece.org/trade/cefact/recommendations/standard-units",
+      },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+  ];
+};
 
 export const DEFAULT_CONCEPTS: Concept[] = [
   { id: "C-Flight", label: "Flight" },

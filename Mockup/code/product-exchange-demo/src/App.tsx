@@ -34,13 +34,15 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 const SchemaWorkspace = lazy(() => import("./components/SchemaWorkspace"));
 const ProductWorkspace = lazy(() => import("./components/ProductWorkspace"));
 const TaxonomyWorkspace = lazy(() => import("./components/TaxonomyWorkspace"));
+const ReferenceSystemWorkspace = lazy(() => import("./components/ReferenceSystemWorkspace"));
 import {
   COLLECTIONS,
   DEFAULT_CONCEPTS,
   CONCEPT_SCHEMES,
-  REF_SYSTEMS,
+  REFERENCE_SYSTEM_TYPES,
   SCHEMA_CATEGORIES,
   createRule,
+  defaultReferenceSystems,
   defaultSchemaTemplate,
   instantiateProduct,
   resolveCollectionMembers,
@@ -55,6 +57,8 @@ import type {
   Product,
   ProductInstance,
   ProductSchema,
+  ReferenceSystem,
+  ReferenceSystemDraft,
   Rule,
   SchemaCategory,
   TaxonomyCondition,
@@ -64,10 +68,12 @@ import {
   loadInstances,
   loadPartnerProducts,
   loadPartners,
+  loadReferenceSystems,
   loadSchemas,
   persistInstances,
   persistPartnerProducts,
   persistPartners,
+  persistReferenceSystems,
   persistSchemas,
 } from "./storage";
 
@@ -172,6 +178,11 @@ const App: React.FC = () => {
     return [schema];
   });
   const [instances, setInstances] = useState<ProductInstance[]>(() => loadInstances());
+  const [referenceSystems, setReferenceSystems] = useState<ReferenceSystem[]>(() => {
+    const stored = loadReferenceSystems();
+    if (stored.length) return stored;
+    return defaultReferenceSystems();
+  });
   const [partners, setPartners] = useState<Partner[]>(() => loadPartners());
   const [partnerAssociations, setPartnerAssociations] = useState<PartnerProductMap>(() => loadPartnerProducts());
   const [selectedRetailPartnerId, setSelectedRetailPartnerId] = useState<string | null>(null);
@@ -226,6 +237,10 @@ const App: React.FC = () => {
   useEffect(() => {
     persistInstances(instances);
   }, [instances]);
+
+  useEffect(() => {
+    persistReferenceSystems(referenceSystems);
+  }, [referenceSystems]);
 
   useEffect(() => {
     persistPartners(partners);
@@ -487,6 +502,31 @@ const App: React.FC = () => {
     notify("Products saved", "success");
   };
 
+  const handleCreateReferenceSystem = (input: ReferenceSystemDraft) => {
+    const timestamp = new Date().toISOString();
+    const system: ReferenceSystem = {
+      id: uid(),
+      ...input,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    setReferenceSystems((previous) => [...previous, system]);
+    return system.id;
+  };
+
+  const handleUpdateReferenceSystem = (
+    referenceSystemId: string,
+    updater: (referenceSystem: ReferenceSystem) => ReferenceSystem
+  ) => {
+    setReferenceSystems((previous) =>
+      previous.map((system) => (system.id === referenceSystemId ? updateTimestamp(updater(system)) : system))
+    );
+  };
+
+  const handleDeleteReferenceSystem = (referenceSystemId: string) => {
+    setReferenceSystems((previous) => previous.filter((system) => system.id !== referenceSystemId));
+  };
+
   const handleToggleNewPartnerRole = (role: PartnerRole) => {
     setNewPartnerRoles((previous) => ({ ...previous, [role]: !previous[role] }));
   };
@@ -615,7 +655,7 @@ const App: React.FC = () => {
     const payload = {
       product: selectedInstance.product,
       schemaId: selectedInstance.schemaId,
-      refs: REF_SYSTEMS,
+      referenceSystems,
       conceptSchemes: CONCEPT_SCHEMES.map((scheme) => scheme.id),
       concepts,
       collections,
@@ -686,7 +726,7 @@ const App: React.FC = () => {
               collections={collections}
               conceptLabel={conceptLabel}
               orderedConcepts={orderedConcepts}
-              referenceSystems={REF_SYSTEMS}
+              referenceSystems={referenceSystems}
             />
           </Suspense>
         </Box>
@@ -728,7 +768,7 @@ const App: React.FC = () => {
               partnerAssociations={partnerAssociations}
               conceptLabel={conceptLabel}
               orderedConcepts={orderedConcepts}
-              referenceSystems={REF_SYSTEMS}
+              referenceSystems={referenceSystems}
             />
           </Suspense>
         </Box>
@@ -736,30 +776,15 @@ const App: React.FC = () => {
 
       {tab === 3 && (
         <Box sx={{ p: 2 }}>
-          <Card variant="outlined" sx={{ borderRadius: 3 }}>
-            <CardHeader title="Reference Systems Registry" subheader="Used to validate or qualify feature values." />
-            <CardContent>
-              <Box
-                sx={{
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" },
-                }}
-              >
-                {REF_SYSTEMS.map((reference) => (
-                  <Card key={reference.id} variant="outlined" sx={{ borderRadius: 2 }}>
-                    <CardHeader title={reference.name} subheader={`Type: ${reference.type}`} />
-                    <CardContent>
-                      <Typography variant="body2">Identifier: {reference.id}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Source: {reference.source ?? "—"}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
+          <Suspense fallback={<WorkspaceFallback label="reference systems" />}>
+            <ReferenceSystemWorkspace
+              referenceSystems={referenceSystems}
+              onCreate={handleCreateReferenceSystem}
+              onUpdate={handleUpdateReferenceSystem}
+              onDelete={handleDeleteReferenceSystem}
+              systemTypes={REFERENCE_SYSTEM_TYPES}
+            />
+          </Suspense>
         </Box>
       )}
 
@@ -1099,7 +1124,7 @@ const App: React.FC = () => {
                   </Typography>
                   <pre style={{ margin: 0, maxHeight: 320, overflow: "auto" }}>
                     {selectedInstance
-                      ? JSON.stringify({ product: selectedInstance.product, refs: REF_SYSTEMS }, null, 2)
+                      ? JSON.stringify({ product: selectedInstance.product, referenceSystems }, null, 2)
                       : "—"}
                   </pre>
                 </CardContent>
