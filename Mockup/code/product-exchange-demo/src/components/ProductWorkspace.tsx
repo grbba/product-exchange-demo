@@ -6,6 +6,10 @@ import {
   CardContent,
   CardHeader,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   FormControl,
   IconButton,
@@ -18,6 +22,7 @@ import {
   Select,
   Stack,
   TextField,
+  Tooltip,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -25,6 +30,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import SaveIcon from "@mui/icons-material/Save";
+import TranslateIcon from "@mui/icons-material/Translate";
 import type {
   Concept,
   Partner,
@@ -126,6 +132,12 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
     );
   };
 
+  const [translationDialogOpen, setTranslationDialogOpen] = useState(false);
+  const [translationDraft, setTranslationDraft] = useState<Record<string, string>>({});
+  const [newTranslationLang, setNewTranslationLang] = useState("");
+  const [newTranslationValue, setNewTranslationValue] = useState("");
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
   const handleFeaturesChange = (features: ProductInstance["product"]["features"]) => {
     if (!selectedInstance) return;
     onUpdateInstance(selectedInstance.id, (instance) =>
@@ -164,8 +176,72 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
     });
   };
 
+  const localizedNameEntries = useMemo(() => {
+    if (!selectedInstance?.product.localizedNames) return [];
+    return Object.entries(selectedInstance.product.localizedNames).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [selectedInstance]);
+
+  const openTranslationDialog = () => {
+    if (!selectedInstance) return;
+    setTranslationDraft(selectedInstance.product.localizedNames ?? {});
+    setNewTranslationLang("");
+    setNewTranslationValue("");
+    setTranslationError(null);
+    setTranslationDialogOpen(true);
+  };
+
+  const handleDraftValueChange = (lang: string, value: string) => {
+    setTranslationError(null);
+    setTranslationDraft((previous) => ({ ...previous, [lang]: value }));
+  };
+
+  const handleRemoveTranslation = (lang: string) => {
+    setTranslationDraft((previous) => {
+      const next = { ...previous };
+      delete next[lang];
+      return next;
+    });
+  };
+
+  const handleAddTranslation = () => {
+    const code = newTranslationLang.trim();
+    const label = newTranslationValue.trim();
+    if (!code || !label) {
+      setTranslationError("Provide both a language code and translated name.");
+      return;
+    }
+    if (translationDraft[code]) {
+      setTranslationError("Translation for this language already exists.");
+      return;
+    }
+    setTranslationDraft((previous) => ({ ...previous, [code]: label }));
+    setNewTranslationLang("");
+    setNewTranslationValue("");
+    setTranslationError(null);
+  };
+
+  const handleSaveTranslations = () => {
+    if (!selectedInstance) return;
+    const cleaned = Object.fromEntries(
+      Object.entries(translationDraft)
+        .map(([lang, value]) => [lang.trim(), value.trim()] as const)
+        .filter(([lang, value]) => lang.length && value.length)
+    );
+    onUpdateInstance(selectedInstance.id, (instance) =>
+      updateTimestamp({
+        ...instance,
+        product: {
+          ...instance.product,
+          localizedNames: Object.keys(cleaned).length ? cleaned : undefined,
+        },
+      })
+    );
+    setTranslationDialogOpen(false);
+  };
+
   return (
-    <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+    <>
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
       <Box sx={{ flexBasis: { md: "30%" }, flexShrink: 0 }}>
         <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
           <CardHeader title="Select schema" subheader="Choose a schema to instantiate products." />
@@ -290,6 +366,23 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
                     <ToggleButton value="Active">Active</ToggleButton>
                     <ToggleButton value="EndOfLife">End-of-life</ToggleButton>
                   </ToggleButtonGroup>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems="center">
+                    <Tooltip title="Manage localized product names">
+                      <Button
+                        variant="outlined"
+                        startIcon={<TranslateIcon />}
+                        onClick={openTranslationDialog}
+                        disabled={!selectedInstance}
+                      >
+                        Translations
+                      </Button>
+                    </Tooltip>
+                    <Typography variant="body2" color="text.secondary">
+                      {localizedNameEntries.length
+                        ? `Languages: ${localizedNameEntries.map(([lang]) => lang).join(", ")}`
+                        : "No translations yet."}
+                    </Typography>
+                  </Stack>
                 </Stack>
                 <Divider sx={{ my: 2 }} />
                 <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="stretch">
@@ -402,7 +495,85 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
           </Box>
         )}
       </Box>
-    </Stack>
+      </Stack>
+
+      <Dialog
+        open={translationDialogOpen}
+        onClose={() => setTranslationDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Localized product names</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1.5}>
+            {Object.keys(translationDraft).length ? (
+              Object.entries(translationDraft)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([lang, value]) => (
+                  <Stack key={lang} direction="row" spacing={1} alignItems="center">
+                    <TextField label="Language" size="small" value={lang} disabled sx={{ width: 120 }} />
+                    <TextField
+                      label="Name"
+                      size="small"
+                      value={value}
+                      fullWidth
+                      onChange={(event) => handleDraftValueChange(lang, event.target.value)}
+                    />
+                    <IconButton onClick={() => handleRemoveTranslation(lang)} aria-label="Remove translation">
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                ))
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No translations configured yet.
+              </Typography>
+            )}
+
+            <Divider />
+
+            <Typography variant="subtitle2">Add translation</Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <TextField
+                label="Language code"
+                size="small"
+                value={newTranslationLang}
+                onChange={(event) => {
+                  setNewTranslationLang(event.target.value);
+                  setTranslationError(null);
+                }}
+                placeholder="e.g. en, fr"
+                sx={{ width: { xs: "100%", sm: 160 } }}
+              />
+              <TextField
+                label="Localized name"
+                size="small"
+                value={newTranslationValue}
+                onChange={(event) => {
+                  setNewTranslationValue(event.target.value);
+                  setTranslationError(null);
+                }}
+                fullWidth
+              />
+              <Button variant="outlined" onClick={handleAddTranslation} sx={{ alignSelf: "center" }}>
+                Add
+              </Button>
+            </Stack>
+            {translationError && (
+              <Typography variant="body2" color="error">
+                {translationError}
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTranslationDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveTranslations}>
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
