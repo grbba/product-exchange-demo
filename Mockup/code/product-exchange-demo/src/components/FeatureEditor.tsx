@@ -6,9 +6,13 @@ import {
   CardContent,
   CardHeader,
   Chip,
+  Divider,
   FormControl,
   IconButton,
   InputLabel,
+  List,
+  ListItemButton,
+  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -34,6 +38,7 @@ type FeatureEditorProps = {
   onRemoveTag?: (featureId: string, conceptId: string) => void;
   titleTooltip?: string;
   addButtonTooltip?: string;
+  splitView?: boolean;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -55,11 +60,8 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   onRemoveTag,
   titleTooltip,
   addButtonTooltip,
+  splitView = false,
 }) => {
-  const setFeature = (featureId: string, updater: (feature: Feature) => Feature) => {
-    onChange(features.map((feature) => (feature.id === featureId ? updater(feature) : feature)));
-  };
-
   const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
   const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
 
@@ -89,10 +91,25 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
     });
   }, [features]);
 
+  useEffect(() => {
+    if (!splitView) return;
+    if (!features.length) {
+      if (selectedFeatureId) onSelectFeature(null);
+      return;
+    }
+    if (!selectedFeatureId || !features.some((feature) => feature.id === selectedFeatureId)) {
+      onSelectFeature(features[0].id);
+    }
+  }, [features, selectedFeatureId, onSelectFeature, splitView]);
+
   const addFeature = () => {
     const feature: Feature = { id: uid(), name: "New Feature", description: "", values: [], tags: [] };
     onChange([...features, feature]);
     onSelectFeature(feature.id);
+  };
+
+  const setFeature = (featureId: string, updater: (feature: Feature) => Feature) => {
+    onChange(features.map((feature) => (feature.id === featureId ? updater(feature) : feature)));
   };
 
   const removeFeature = (featureId: string) => {
@@ -118,293 +135,394 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
     });
   };
 
-  return (
-    <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
-          {title}
-          {titleTooltip ? <InfoTooltipIcon title={titleTooltip} /> : null}
-        </Typography>
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
-            Add feature
-          </Button>
-          {addButtonTooltip ? <InfoTooltipIcon title={addButtonTooltip} /> : null}
+  const renderFeatureCard = (feature: Feature, options: { highlight: boolean; onClick?: () => void }) => (
+    <Card
+      key={feature.id}
+      variant="outlined"
+      sx={{
+        borderRadius: 3,
+        borderColor: options.highlight ? "primary.main" : undefined,
+      }}
+      onClick={options.onClick}
+    >
+      <CardHeader
+        title={
+          <TextField
+            size="small"
+            label="Feature name"
+            value={feature.name}
+            onChange={(event) =>
+              setFeature(feature.id, (current) => ({ ...current, name: event.target.value }))
+            }
+          />
+        }
+        action={
+          <IconButton aria-label="delete feature" onClick={() => removeFeature(feature.id)}>
+            <DeleteIcon />
+          </IconButton>
+        }
+      />
+      <CardContent>
+        <Stack spacing={1.5} sx={{ mb: 2 }}>
+          <TextField
+            size="small"
+            label="Description"
+            multiline
+            minRows={2}
+            value={feature.description ?? ""}
+            onChange={(event) =>
+              setFeature(feature.id, (current) => ({ ...current, description: event.target.value }))
+            }
+          />
+          {feature.tags.length ? (
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+              {feature.tags.map((tag) => (
+                <Chip
+                  key={tag}
+                  label={conceptLabel(tag)}
+                  size="small"
+                  onDelete={onRemoveTag ? () => onRemoveTag(feature.id, tag) : undefined}
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              No taxonomy tags.
+            </Typography>
+          )}
+
+          {conceptOptions && onAddTag ? (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel id={`feature-tag-${feature.id}`}>Add taxonomy concept</InputLabel>
+                <Select
+                  labelId={`feature-tag-${feature.id}`}
+                  label="Add taxonomy concept"
+                  value={tagSelections[feature.id] ?? ""}
+                  onChange={(event) =>
+                    setTagSelections((previous) => ({ ...previous, [feature.id]: event.target.value }))
+                  }
+                >
+                  <MenuItem value="">
+                    <em>— choose —</em>
+                  </MenuItem>
+                  {conceptOptions.map((concept) => (
+                    <MenuItem key={concept.id} value={concept.id}>
+                      {concept.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  const selection = tagSelections[feature.id];
+                  if (!selection) return;
+                  onAddTag(feature.id, selection);
+                  setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
+                }}
+                disabled={!tagSelections[feature.id]}
+              >
+                Add tag
+              </Button>
+            </Stack>
+          ) : null}
         </Stack>
-      </Stack>
-      <Stack spacing={2}>
-        {features.map((feature) => (
-          <Card
-            key={feature.id}
-            variant="outlined"
-            sx={{
-              borderRadius: 3,
-              borderColor: feature.id === selectedFeatureId ? "primary.main" : undefined,
-            }}
-            onClick={() => onSelectFeature(feature.id)}
-          >
-            <CardHeader
-              title={
-                <TextField
-                  size="small"
-                  label="Feature name"
-                  value={feature.name}
-                  onChange={(event) =>
-                    setFeature(feature.id, (current) => ({ ...current, name: event.target.value }))
-                  }
-                />
-              }
-              action={
-                <IconButton aria-label="delete feature" onClick={() => removeFeature(feature.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Stack spacing={1.5} sx={{ mb: 2 }}>
-                <TextField
-                  size="small"
-                  label="Description"
-                  multiline
-                  minRows={2}
-                  value={feature.description ?? ""}
-                  onChange={(event) =>
-                    setFeature(feature.id, (current) => ({ ...current, description: event.target.value }))
-                  }
-                />
-                {feature.tags.length ? (
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                    {feature.tags.map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={conceptLabel(tag)}
+
+        <Box
+          sx={{
+            display: "grid",
+            gap: 2,
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+          }}
+        >
+          {feature.values.map((value, index) => {
+            const key = discreteKey(feature.id, index);
+            return (
+              <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Chip label={value.kind} size="small" />
+                  <IconButton onClick={() => removeValue(feature.id, index)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+                <Box sx={{ mt: 2 }}>
+                  {value.kind === "SingleValue" && (
+                    <Stack spacing={1.5}>
+                      <TextField
                         size="small"
-                        onDelete={onRemoveTag ? () => onRemoveTag(feature.id, tag) : undefined}
-                      />
-                    ))}
-                  </Stack>
-                ) : (
-                  <Typography variant="caption" color="text.secondary">
-                    No taxonomy tags.
-                  </Typography>
-                )}
-
-                {conceptOptions && onAddTag ? (
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems="flex-end">
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                      <InputLabel id={`feature-tag-${feature.id}`}>Add taxonomy concept</InputLabel>
-                      <Select
-                        labelId={`feature-tag-${feature.id}`}
-                        label="Add taxonomy concept"
-                        value={tagSelections[feature.id] ?? ""}
+                        label="Value"
+                        value={value.value}
                         onChange={(event) =>
-                          setTagSelections((previous) => ({ ...previous, [feature.id]: event.target.value }))
+                          setFeature(feature.id, (current) => {
+                            const next = [...current.values];
+                            (next[index] as SingleValue).value = event.target.value;
+                            return { ...current, values: next };
+                          })
                         }
-                      >
-                        <MenuItem value="">
-                          <em>— choose —</em>
-                        </MenuItem>
-                        {conceptOptions.map((concept) => (
-                          <MenuItem key={concept.id} value={concept.id}>
-                            {concept.label}
+                      />
+                      <FormControl size="small">
+                        <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
+                        <Select
+                          labelId={`single-ref-${feature.id}-${index}`}
+                          label="Reference"
+                          value={value.referenceSystemId ?? ""}
+                          onChange={(event) =>
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as SingleValue).referenceSystemId =
+                                event.target.value || undefined;
+                              return { ...current, values: next };
+                            })
+                          }
+                        >
+                          <MenuItem value="">
+                            <em>None</em>
                           </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        const selection = tagSelections[feature.id];
-                        if (!selection) return;
-                        onAddTag(feature.id, selection);
-                        setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
-                      }}
-                      disabled={!tagSelections[feature.id]}
-                    >
-                      Add tag
-                    </Button>
-                  </Stack>
-                ) : null}
-              </Stack>
+                          {referenceSystems.map((ref) => (
+                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  )}
+                  {value.kind === "ValueRange" && (
+                    <Stack spacing={1.5}>
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                        <TextField
+                          size="small"
+                          label="Min"
+                          value={value.min}
+                          onChange={(event) =>
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as ValueRange).min = event.target.value;
+                              return { ...current, values: next };
+                            })
+                          }
+                        />
+                        <TextField
+                          size="small"
+                          label="Max"
+                          value={value.max}
+                          onChange={(event) =>
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as ValueRange).max = event.target.value;
+                              return { ...current, values: next };
+                            })
+                          }
+                        />
+                      </Stack>
+                      <FormControl size="small">
+                        <InputLabel id={`range-ref-${feature.id}-${index}`}>Reference</InputLabel>
+                        <Select
+                          labelId={`range-ref-${feature.id}-${index}`}
+                          label="Reference"
+                          value={value.referenceSystemId ?? ""}
+                          onChange={(event) =>
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as ValueRange).referenceSystemId =
+                                event.target.value || undefined;
+                              return { ...current, values: next };
+                            })
+                          }
+                        >
+                          <MenuItem value="">
+                            <em>None</em>
+                          </MenuItem>
+                          {referenceSystems.map((ref) => (
+                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  )}
+                  {value.kind === "DiscreteSet" && (
+                    <Stack spacing={1.5}>
+                      <TextField
+                        size="small"
+                        label="Comma separated values"
+                        value={discreteInputs[key] ?? value.values.join(", ")}
+                        onChange={(event) => {
+                          const raw = event.target.value;
+                          setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
+                          const values = raw
+                            .split(",")
+                            .map((entry) => entry.trim())
+                            .filter(Boolean);
+                          setFeature(feature.id, (current) => {
+                            const next = [...current.values];
+                            (next[index] as DiscreteSet).values = values;
+                            return { ...current, values: next };
+                          });
+                        }}
+                      />
+                      <FormControl size="small">
+                        <InputLabel id={`set-ref-${feature.id}-${index}`}>Reference</InputLabel>
+                        <Select
+                          labelId={`set-ref-${feature.id}-${index}`}
+                          label="Reference"
+                          value={value.referenceSystemId ?? ""}
+                          onChange={(event) =>
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as DiscreteSet).referenceSystemId =
+                                event.target.value || undefined;
+                              return { ...current, values: next };
+                            })
+                          }
+                        >
+                          <MenuItem value="">
+                            <em>None</em>
+                          </MenuItem>
+                          {referenceSystems.map((ref) => (
+                            <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                  )}
+                </Box>
+              </Card>
+            );
+          })}
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => addValue(feature.id, "SingleValue")}
+          >
+            Add single value
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => addValue(feature.id, "ValueRange")}
+          >
+            Add range
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => addValue(feature.id, "DiscreteSet")}
+          >
+            Add discrete set
+          </Button>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 
+  const header = (
+    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+      <Typography variant="h6" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+        {title}
+        {titleTooltip ? <InfoTooltipIcon title={titleTooltip} /> : null}
+      </Typography>
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
+          Add feature
+        </Button>
+        {addButtonTooltip ? <InfoTooltipIcon title={addButtonTooltip} /> : null}
+      </Stack>
+    </Stack>
+  );
+
+  if (splitView) {
+    const activeFeature =
+      features.find((feature) => feature.id === selectedFeatureId) ?? features[0] ?? null;
+
+    return (
+      <Box>
+        {header}
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+          <Box
+            sx={{
+              flexBasis: { md: "30%" },
+              flexGrow: 0,
+              flexShrink: 0,
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 3,
+              p: 2,
+              maxHeight: { md: 420 },
+              overflowY: "auto",
+              bgcolor: "background.paper",
+              minWidth: { md: 240 },
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Schema features
+            </Typography>
+            <Divider sx={{ mb: 1 }} />
+            {features.length ? (
+              <List dense disablePadding>
+                {features.map((feature) => (
+                  <ListItemButton
+                    key={feature.id}
+                    selected={feature.id === activeFeature?.id}
+                    onClick={() => onSelectFeature(feature.id)}
+                    sx={{ borderRadius: 2, mb: 0.5 }}
+                  >
+                    <ListItemText
+                      primary={feature.name}
+                      secondary={feature.tags.length ? `${feature.tags.length} tags` : undefined}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No features yet. Use “Add feature” to start defining the schema.
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {activeFeature ? (
+              renderFeatureCard(activeFeature, { highlight: true })
+            ) : (
               <Box
                 sx={{
-                  display: "grid",
-                  gap: 2,
-                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+                  border: "1px dashed",
+                  borderColor: "divider",
+                  borderRadius: 3,
+                  p: 4,
+                  textAlign: "center",
                 }}
               >
-                {feature.values.map((value, index) => {
-                  const key = discreteKey(feature.id, index);
-                  return (
-                    <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Chip label={value.kind} size="small" />
-                        <IconButton onClick={() => removeValue(feature.id, index)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-                      <Box sx={{ mt: 2 }}>
-                        {value.kind === "SingleValue" && (
-                          <Stack spacing={1.5}>
-                            <TextField
-                              size="small"
-                              label="Value"
-                              value={value.value}
-                              onChange={(event) =>
-                                setFeature(feature.id, (current) => {
-                                  const next = [...current.values];
-                                  (next[index] as SingleValue).value = event.target.value;
-                                  return { ...current, values: next };
-                                })
-                              }
-                            />
-                            <FormControl size="small">
-                              <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                              <Select
-                                labelId={`single-ref-${feature.id}-${index}`}
-                                label="Reference"
-                                value={value.referenceSystemId ?? ""}
-                                onChange={(event) =>
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as SingleValue).referenceSystemId =
-                                      event.target.value || undefined;
-                                    return { ...current, values: next };
-                                  })
-                                }
-                              >
-                                <MenuItem value="">
-                                  <em>None</em>
-                                </MenuItem>
-                                {referenceSystems.map((ref) => (
-                                  <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </Stack>
-                        )}
-                        {value.kind === "ValueRange" && (
-                          <Stack spacing={1.5}>
-                            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                              <TextField
-                                size="small"
-                                label="Min"
-                                value={value.min}
-                                onChange={(event) =>
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as ValueRange).min = event.target.value;
-                                    return { ...current, values: next };
-                                  })
-                                }
-                              />
-                              <TextField
-                                size="small"
-                                label="Max"
-                                value={value.max}
-                                onChange={(event) =>
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as ValueRange).max = event.target.value;
-                                    return { ...current, values: next };
-                                  })
-                                }
-                              />
-                            </Stack>
-                            <FormControl size="small">
-                              <InputLabel id={`range-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                              <Select
-                                labelId={`range-ref-${feature.id}-${index}`}
-                                label="Reference"
-                                value={value.referenceSystemId ?? ""}
-                                onChange={(event) =>
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as ValueRange).referenceSystemId =
-                                      event.target.value || undefined;
-                                    return { ...current, values: next };
-                                  })
-                                }
-                              >
-                                <MenuItem value="">
-                                  <em>None</em>
-                                </MenuItem>
-                                {referenceSystems.map((ref) => (
-                                  <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </Stack>
-                        )}
-                        {value.kind === "DiscreteSet" && (
-                          <Stack spacing={1.5}>
-                            <TextField
-                              size="small"
-                              label="Comma separated values"
-                              value={discreteInputs[key] ?? value.values.join(", ")}
-                              onChange={(event) => {
-                                const raw = event.target.value;
-                                setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
-                                const values = raw
-                                  .split(",")
-                                  .map((entry) => entry.trim())
-                                  .filter(Boolean);
-                                setFeature(feature.id, (current) => {
-                                  const next = [...current.values];
-                                  (next[index] as DiscreteSet).values = values;
-                                  return { ...current, values: next };
-                                });
-                              }}
-                            />
-                            <FormControl size="small">
-                              <InputLabel id={`set-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                              <Select
-                                labelId={`set-ref-${feature.id}-${index}`}
-                                label="Reference"
-                                value={value.referenceSystemId ?? ""}
-                                onChange={(event) =>
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as DiscreteSet).referenceSystemId =
-                                      event.target.value || undefined;
-                                    return { ...current, values: next };
-                                  })
-                                }
-                              >
-                                <MenuItem value="">
-                                  <em>None</em>
-                                </MenuItem>
-                                {referenceSystems.map((ref) => (
-                                  <MenuItem key={ref.id} value={ref.id}>{`${ref.name} (${ref.type})`}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </Stack>
-                        )}
-                      </Box>
-                    </Card>
-                  );
-                })}
+                <Typography variant="body2" color="text.secondary">
+                  Select a feature to edit its properties.
+                </Typography>
               </Box>
-              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addValue(feature.id, "SingleValue")}>
-                  Add single value
-                </Button>
-                <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addValue(feature.id, "ValueRange")}>
-                  Add range
-                </Button>
-                <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => addValue(feature.id, "DiscreteSet")}>
-                  Add discrete set
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        ))}
+            )}
+          </Box>
+        </Stack>
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      {header}
+      <Stack spacing={2}>
+        {features.map((feature) =>
+          renderFeatureCard(feature, {
+            highlight: feature.id === selectedFeatureId,
+            onClick: () => onSelectFeature(feature.id),
+          })
+        )}
         {!features.length && (
-          <Box sx={{ p: 4, border: "1px dashed", borderColor: "divider", borderRadius: 3, textAlign: "center" }}>
+          <Box
+            sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 3, p: 4, textAlign: "center" }}
+          >
             <Typography variant="body2" color="text.secondary">
-              No features yet. Use “Add feature” to start modelling.
+              No features yet. Create one to start defining structure and allowed values.
             </Typography>
           </Box>
         )}

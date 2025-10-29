@@ -44,11 +44,11 @@ export const schemaTooltips = {
     text: "Choose a collection to link; its members will be added as tags to the schema and future products.",
   },
   featureTemplates: {
-    target: "Feature templates section",
+    target: "Schema features section",
     text: "Define the features that will pre-populate when you instantiate products from this schema.",
   },
   addFeatureButton: {
-    target: "Feature templates • Add feature button",
+    target: "Schema features • Add feature button",
     text: "Insert a new feature template, then configure its description and expected value structure.",
   },
 } as const;

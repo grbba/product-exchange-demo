@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -10,10 +10,6 @@ import {
   FormControl,
   IconButton,
   InputLabel,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   MenuItem,
   Select,
   Stack,
@@ -81,10 +77,21 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
   const [collectionSelection, setCollectionSelection] = useState("");
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
 
+  const lastSchemaId = useRef<string | null>(null);
+
   useEffect(() => {
-    setSelectedFeatureId(selectedSchema?.featureTemplates[0]?.id ?? null);
-    setCollectionSelection("");
-  }, [selectedSchema]);
+    const currentSchemaId = selectedSchema?.id ?? null;
+    if (currentSchemaId !== lastSchemaId.current) {
+      setSelectedFeatureId(selectedSchema?.featureTemplates[0]?.id ?? null);
+      setCollectionSelection("");
+    } else if (selectedFeatureId && selectedSchema) {
+      const stillExists = selectedSchema.featureTemplates.some((feature) => feature.id === selectedFeatureId);
+      if (!stillExists) {
+        setSelectedFeatureId(selectedSchema.featureTemplates[0]?.id ?? null);
+      }
+    }
+    lastSchemaId.current = currentSchemaId;
+  }, [selectedSchema, selectedFeatureId]);
 
   const handleCreate = () => {
     const name = newSchemaName.trim();
@@ -120,92 +127,109 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
     : collections;
 
   return (
-    <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-      <Box sx={{ flexBasis: { md: "32%" }, flexShrink: 0 }}>
-        <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-          <CardHeader title="Create schema" subheader="Select a product type and provide a name." />
-          <CardContent>
-            <Stack spacing={1.5}>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <InfoTooltipIcon title={schemaTooltips.createSchemaCategory.text} />
-                <FormControl size="small" sx={{ flex: 1 }}>
-                  <InputLabel id="schema-category-label">Product type</InputLabel>
+    <Stack spacing={3}>
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+        <Box sx={{ flexBasis: { md: "60%" }, flexGrow: 1 }}>
+          <Card variant="outlined" sx={{ borderRadius: 3 }}>
+            <CardHeader title="Create schema" subheader="Select a product type and provide a name." />
+            <CardContent>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <InfoTooltipIcon title={schemaTooltips.createSchemaCategory.text} />
+                  <FormControl size="small" sx={{ flex: 1 }}>
+                    <InputLabel id="schema-category-label">Product type</InputLabel>
+                    <Select
+                      labelId="schema-category-label"
+                      label="Product type"
+                      value={newSchemaCategory}
+                      onChange={(event) => setNewSchemaCategory(event.target.value as SchemaCategory)}
+                      renderValue={(value) => schemaCategoryLabel(value as SchemaCategory)}
+                    >
+                      {categories.map((category) => (
+                        <MenuItem key={category} value={category} sx={{ textTransform: "capitalize" }}>
+                          {schemaCategoryLabel(category)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <InfoTooltipIcon title={schemaTooltips.createSchemaName.text} />
+                  <TextField
+                    size="small"
+                    label="Schema name"
+                    value={newSchemaName}
+                    onChange={(event) => setNewSchemaName(event.target.value)}
+                    fullWidth
+                  />
+                </Stack>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <InfoTooltipIcon title={schemaTooltips.createSchemaDescription.text} />
+                  <TextField
+                    size="small"
+                    label="Description"
+                    value={newSchemaDescription}
+                    onChange={(event) => setNewSchemaDescription(event.target.value)}
+                    multiline
+                    minRows={2}
+                    fullWidth
+                  />
+                </Stack>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <InfoTooltipIcon title={schemaTooltips.createSchemaButton.text} />
+                  <Button variant="contained" onClick={handleCreate} disabled={!newSchemaName.trim()}>
+                    Create schema
+                  </Button>
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Box sx={{ flexBasis: { md: "40%" }, flexShrink: 0 }}>
+          <Card variant="outlined" sx={{ borderRadius: 3 }}>
+            <CardHeader title="Schemas" subheader={`${schemas.length} defined`} />
+            <CardContent>
+              {schemas.length ? (
+                <FormControl size="small" fullWidth>
+                  <InputLabel id="schema-select-label">Select schema</InputLabel>
                   <Select
-                    labelId="schema-category-label"
-                    label="Product type"
-                    value={newSchemaCategory}
-                    onChange={(event) => setNewSchemaCategory(event.target.value as SchemaCategory)}
-                    renderValue={(value) => schemaCategoryLabel(value as SchemaCategory)}
+                    labelId="schema-select-label"
+                    label="Select schema"
+                    value={selectedSchemaId ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onSelectSchema(value ? String(value) : "");
+                    }}
                   >
-                    {categories.map((category) => (
-                      <MenuItem key={category} value={category} sx={{ textTransform: "capitalize" }}>
-                        {schemaCategoryLabel(category)}
+                    <MenuItem value="">
+                      <em>— choose —</em>
+                    </MenuItem>
+                    {schemas.map((schema) => (
+                      <MenuItem key={schema.id} value={schema.id}>
+                        {schema.name}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
-              </Stack>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <InfoTooltipIcon title={schemaTooltips.createSchemaName.text} />
-                <TextField
-                  size="small"
-                  label="Schema name"
-                  value={newSchemaName}
-                  onChange={(event) => setNewSchemaName(event.target.value)}
-                  fullWidth
-                />
-              </Stack>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <InfoTooltipIcon title={schemaTooltips.createSchemaDescription.text} />
-                <TextField
-                  size="small"
-                  label="Description"
-                  value={newSchemaDescription}
-                  onChange={(event) => setNewSchemaDescription(event.target.value)}
-                  multiline
-                  minRows={2}
-                  fullWidth
-                />
-              </Stack>
-              <Stack direction="row" spacing={0.5} alignItems="center">
-                <InfoTooltipIcon title={schemaTooltips.createSchemaButton.text} />
-                <Button variant="contained" onClick={handleCreate} disabled={!newSchemaName.trim()}>
-                  Create schema
-                </Button>
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No schemas yet. Create one using the form above.
+                </Typography>
+              )}
+              {selectedSchema && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                  Type: {schemaCategoryLabel(selectedSchema.category)}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      </Stack>
 
-        <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardHeader title="Schemas" subheader={`${schemas.length} defined`} />
-          <CardContent>
-            <List dense disablePadding>
-              {schemas.map((schema) => (
-                <ListItem key={schema.id} disablePadding>
-                  <ListItemButton
-                    selected={schema.id === selectedSchemaId}
-                    onClick={() => onSelectSchema(schema.id)}
-                    sx={{ borderRadius: 2, mb: 0.5 }}
-                  >
-                    <ListItemText
-                      primary={schema.name}
-                      secondary={`Type: ${schemaCategoryLabel(schema.category)}`}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-            {!schemas.length && (
-              <Typography variant="body2" color="text.secondary">
-                No schemas yet. Create one using the form above.
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
+      <Divider />
 
-      <Box sx={{ flex: 1 }}>
+      <Box>
         {selectedSchema ? (
           <Stack spacing={3}>
             <Card variant="outlined" sx={{ borderRadius: 3 }}>
@@ -356,7 +380,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
             </Card>
 
             <FeatureEditor
-              title="Feature templates"
+              title="Schema features"
               addButtonTooltip={schemaTooltips.addFeatureButton.text}
               features={selectedSchema.featureTemplates}
               selectedFeatureId={selectedFeatureId}
@@ -364,6 +388,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
               onChange={handleFeaturesChange}
               conceptLabel={conceptLabel}
               referenceSystems={referenceSystems}
+              splitView
             />
 
             <DiagramCard
