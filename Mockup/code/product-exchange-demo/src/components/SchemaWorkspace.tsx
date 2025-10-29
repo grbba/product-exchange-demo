@@ -22,7 +22,6 @@ import DownloadIcon from "@mui/icons-material/Download";
 import type { Collection, Concept, ProductSchema, ReferenceSystem, SchemaCategory } from "../domain";
 import { schemaCategoryLabel, updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
-import DiagramCard from "./DiagramCard";
 import InfoTooltipIcon from "./InfoTooltipIcon";
 import { schemaTooltips } from "../tooltipText";
 
@@ -391,12 +390,6 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
               splitView
             />
 
-            <DiagramCard
-              title="Schema diagram"
-              subtitle={`${selectedSchema.name} • ${schemaCategoryLabel(selectedSchema.category)}`}
-              features={selectedSchema.featureTemplates}
-              conceptLabel={conceptLabel}
-            />
           </Stack>
         ) : (
           <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 3, p: 4 }}>
