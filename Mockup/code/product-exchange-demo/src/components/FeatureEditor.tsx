@@ -467,7 +467,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
             }}
           >
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Schema features
+              {title}
             </Typography>
             <Divider sx={{ mb: 1 }} />
             {features.length ? (

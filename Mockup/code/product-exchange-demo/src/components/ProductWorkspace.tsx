@@ -16,7 +16,6 @@ import {
   InputLabel,
   List,
   ListItem,
-  ListItemButton,
   ListItemText,
   MenuItem,
   Select,
@@ -41,7 +40,6 @@ import type {
 } from "../domain";
 import { updateTimestamp } from "../domain";
 import FeatureEditor from "./FeatureEditor";
-import DiagramCard from "./DiagramCard";
 
 type ProductWorkspaceProps = {
   schemas: ProductSchema[];
@@ -241,103 +239,119 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
 
   return (
     <>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-      <Box sx={{ flexBasis: { md: "30%" }, flexShrink: 0 }}>
-        <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-          <CardHeader title="Select schema" subheader="Choose a schema to instantiate products." />
-          <CardContent>
-            <List dense disablePadding>
-              {schemas.map((schema) => (
-                <ListItem key={schema.id} disablePadding>
-                  <ListItemButton
-                    selected={schema.id === selectedSchemaId}
-                    onClick={() => onSelectSchema(schema.id)}
-                    sx={{ borderRadius: 2, mb: 0.5 }}
+      <Stack spacing={3}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+          <Card variant="outlined" sx={{ borderRadius: 3, flex: "1 1 0" }}>
+            <CardHeader title="Select schema" subheader="Choose a schema to instantiate products." />
+            <CardContent>
+              <FormControl fullWidth size="small">
+                <InputLabel id="specified-schema-select">Schema</InputLabel>
+                <Select
+                  labelId="specified-schema-select"
+                  label="Schema"
+                  value={selectedSchemaId ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    onSelectSchema(value ? String(value) : "");
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>— choose —</em>
+                  </MenuItem>
+                  {schemas.map((schema) => (
+                    <MenuItem key={schema.id} value={schema.id}>
+                      {schema.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {!schemas.length && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Define a product schema before creating specified products.
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined" sx={{ borderRadius: 3, flex: "1 1 0" }}>
+            <CardHeader title="Instantiate product" />
+            <CardContent>
+              <Stack spacing={1.5}>
+                <Typography variant="body2" color="text.secondary">
+                  {selectedSchema
+                    ? `Create a product instance from '${selectedSchema.name}'.`
+                    : "Select a schema to instantiate products."}
+                </Typography>
+                <TextField
+                  size="small"
+                  label="Product name"
+                  value={newProductName}
+                  onChange={(event) => setNewProductName(event.target.value)}
+                  disabled={!selectedSchema}
+                />
+                <Button variant="contained" onClick={handleInstantiate} disabled={!selectedSchema}>
+                  Create product
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined" sx={{ borderRadius: 3, flex: "1 1 0" }}>
+            <CardHeader
+              title="Products"
+              subheader={selectedSchema ? `${filteredInstances.length} available` : undefined}
+            />
+            <CardContent>
+              {filteredInstances.length ? (
+                <FormControl fullWidth size="small">
+                  <InputLabel id="product-select">Product</InputLabel>
+                  <Select
+                    labelId="product-select"
+                    label="Product"
+                    value={selectedInstanceId ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onSelectInstance(value ? String(value) : "");
+                    }}
                   >
-                    <ListItemText primary={schema.name} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-            {!schemas.length && (
-              <Typography variant="body2" color="text.secondary">
-                Define a product schema before creating specified products.
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
+                    {filteredInstances.map((instance) => (
+                      <MenuItem key={instance.id} value={instance.id}>
+                        {instance.product.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No products instantiated for this schema yet.
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Stack>
 
-        <Card variant="outlined" sx={{ borderRadius: 3, mb: 3 }}>
-          <CardHeader title="Instantiate product" />
-          <CardContent>
-            <Stack spacing={1.5}>
-              <Typography variant="body2" color="text.secondary">
-                {selectedSchema
-                  ? `Create a product instance from '${selectedSchema.name}'.`
-                  : "Select a schema to instantiate products."}
-              </Typography>
-              <TextField
-                size="small"
-                label="Product name"
-                value={newProductName}
-                onChange={(event) => setNewProductName(event.target.value)}
-                disabled={!selectedSchema}
-              />
-              <Button variant="contained" onClick={handleInstantiate} disabled={!selectedSchema}>
-                Create product
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+        <Divider sx={{ my: 2 }} />
 
-        <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardHeader
-            title="Products"
-            subheader={selectedSchema ? `${filteredInstances.length} for schema` : undefined}
-          />
-          <CardContent>
-            <List dense disablePadding>
-              {filteredInstances.map((instance) => (
-                <ListItem key={instance.id} disablePadding>
-                  <ListItemButton
-                    selected={instance.id === selectedInstanceId}
-                    onClick={() => onSelectInstance(instance.id)}
-                    sx={{ borderRadius: 2, mb: 0.5 }}
-                  >
-                    <ListItemText primary={instance.product.name} secondary={instance.product.type} />
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-            {!filteredInstances.length && (
-              <Typography variant="body2" color="text.secondary">
-                No products instantiated for this schema yet.
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      </Box>
-
-      <Box sx={{ flex: 1 }}>
-        {selectedInstance && selectedSchema ? (
-          <Stack spacing={3}>
-            <Card variant="outlined" sx={{ borderRadius: 3 }}>
-              <CardHeader
-                title={selectedInstance.product.name}
-                action={
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => onExportInstance(selectedInstance)}>
-                      Export
-                    </Button>
-                    <Button variant="outlined" startIcon={<SaveIcon />} onClick={onPersistInstances}>
-                      Save
-                    </Button>
-                    <IconButton color="error" onClick={() => onDeleteInstance(selectedInstance.id)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </Stack>
-                }
-              />
+        <Box sx={{ flex: 1 }}>
+          {selectedInstance && selectedSchema ? (
+            <Stack spacing={3}>
+              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                <CardHeader
+                  title={selectedInstance.product.name}
+                  action={
+                    <Stack direction="row" spacing={1}>
+                      <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => onExportInstance(selectedInstance)}>
+                        Export
+                      </Button>
+                      <Button variant="outlined" startIcon={<SaveIcon />} onClick={onPersistInstances}>
+                        Save
+                      </Button>
+                      <IconButton color="error" onClick={() => onDeleteInstance(selectedInstance.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Stack>
+                  }
+                />
               <CardContent>
                 <Stack spacing={2}>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -475,26 +489,20 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
               conceptOptions={orderedConcepts}
               onAddTag={handleAddFeatureTag}
               onRemoveTag={handleRemoveFeatureTag}
-            />
-
-            <DiagramCard
-              title="Product diagram"
-              subtitle={`${selectedInstance.product.name} • based on ${selectedSchema.name}`}
-              features={selectedInstance.product.features}
-              conceptLabel={conceptLabel}
+              splitView
             />
           </Stack>
-        ) : (
-          <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 3, p: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Select a product to configure
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Choose a schema and instantiate a product. You can then edit its features, tags, and lifecycle status before exporting it.
-            </Typography>
-          </Box>
-        )}
-      </Box>
+              ) : (
+                <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 3, p: 4 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Select a product to configure
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Choose a schema and instantiate a product. You can then edit its features, tags, and lifecycle status before exporting it.
+                  </Typography>
+                </Box>
+              )}
+        </Box>
       </Stack>
 
       <Dialog
