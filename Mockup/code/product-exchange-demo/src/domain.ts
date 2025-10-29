@@ -14,6 +14,7 @@ export type Feature = {
 export type Product = {
   id: string;
   name: string;
+  localizedNames?: Record<string, string>;
   type?: string;
   lifecycleStatus: "Draft" | "Active" | "EndOfLife";
   features: Feature[];
