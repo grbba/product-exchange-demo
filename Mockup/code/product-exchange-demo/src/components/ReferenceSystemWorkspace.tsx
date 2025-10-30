@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -23,16 +24,24 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import type {
-  ExternalReferenceSource,
-  InternalReferenceSource,
+  Concept,
+  ReferenceSource,
   ReferenceSystem,
+  ReferenceSystemCardinality,
   ReferenceSystemDraft,
   ReferenceSystemType,
+  TaxonomyConceptSetReference,
 } from "../domain";
+import { createExternalReferenceSource, createTaxonomyReferenceSource } from "../domain";
+
+const isTaxonomySource = (source: ReferenceSource): source is TaxonomyConceptSetReference =>
+  source.kind === "Internal" && source.repositoryType === "TaxonomyConceptSet";
 
 type ReferenceSystemWorkspaceProps = {
   referenceSystems: ReferenceSystem[];
   systemTypes: ReferenceSystemType[];
+  concepts: Concept[];
+  conceptLabel: (id: string) => string;
   onCreate: (input: ReferenceSystemDraft) => string;
   onUpdate: (referenceSystemId: string, updater: (referenceSystem: ReferenceSystem) => ReferenceSystem) => void;
   onDelete: (referenceSystemId: string) => void;
@@ -42,18 +51,15 @@ const createDraft = (): ReferenceSystemDraft => ({
   identifier: "",
   description: "",
   systemType: "Other",
-  source: {
-    kind: "External",
-    authority: "",
-    resourceName: "",
-    resourceType: "",
-    url: "",
-  },
+  cardinality: "single",
+  source: createExternalReferenceSource(),
 });
 
 const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
   referenceSystems,
   systemTypes,
+  concepts,
+  conceptLabel,
   onCreate,
   onUpdate,
   onDelete,
@@ -76,16 +82,59 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
     [referenceSystems, selectedId]
   );
 
+  const conceptById = useMemo(() => new Map(concepts.map((concept) => [concept.id, concept])), [concepts]);
+
+  const taxonomySource = selectedSystem && isTaxonomySource(selectedSystem.source) ? selectedSystem.source : null;
+  const previewConcepts = useMemo(() => {
+    if (!taxonomySource || !taxonomySource.anchorConceptIds.length) return [] as Concept[];
+    const anchors = taxonomySource.anchorConceptIds
+      .map((id) => conceptById.get(id))
+      .filter((item): item is Concept => Boolean(item));
+    if (!anchors.length) return [] as Concept[];
+
+    const sortConcepts = (concepts: Concept[]) =>
+      concepts.sort((a, b) => conceptLabel(a.id).localeCompare(conceptLabel(b.id)));
+
+    if (taxonomySource.closurePolicy === "individual") {
+      return sortConcepts([...anchors]);
+    }
+
+    if (taxonomySource.closurePolicy === "direct") {
+      const children = new Map<string, Concept>();
+      for (const anchor of anchors) {
+        for (const childId of anchor.narrower ?? []) {
+          const child = conceptById.get(childId);
+          if (child) children.set(child.id, child);
+        }
+      }
+      return sortConcepts(Array.from(children.values()));
+    }
+
+    const collected = new Map<string, Concept>();
+    const visited = new Set<string>();
+    const queue: Concept[] = [...anchors];
+
+    while (queue.length) {
+      const current = queue.shift()!;
+      if (visited.has(current.id)) continue;
+      visited.add(current.id);
+      collected.set(current.id, current);
+
+      for (const childId of current.narrower ?? []) {
+        const child = conceptById.get(childId);
+        if (child && !visited.has(child.id)) queue.push(child);
+      }
+    }
+
+    return sortConcepts(Array.from(collected.values()));
+  }, [taxonomySource, conceptById, conceptLabel]);
+
   const updateSelected = (updater: (referenceSystem: ReferenceSystem) => ReferenceSystem) => {
     if (!selectedSystem) return;
     onUpdate(selectedSystem.id, updater);
   };
 
-  const updateSource = (
-    updater: (
-      source: ReferenceSystem["source"]
-    ) => ExternalReferenceSource | InternalReferenceSource
-  ) => {
+  const updateSource = (updater: (source: ReferenceSource) => ReferenceSource) => {
     updateSelected((current) => ({
       ...current,
       source: updater(current.source),
@@ -197,6 +246,23 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
                       ))}
                     </Select>
                   </FormControl>
+                  <FormControl fullWidth>
+                    <InputLabel id="reference-system-cardinality-select">Cardinality</InputLabel>
+                    <Select
+                      labelId="reference-system-cardinality-select"
+                      label="Cardinality"
+                      value={selectedSystem.cardinality}
+                      onChange={(event) =>
+                        updateSelected((current) => ({
+                          ...current,
+                          cardinality: event.target.value as ReferenceSystemCardinality,
+                        }))
+                      }
+                    >
+                      <MenuItem value="single">Single value</MenuItem>
+                      <MenuItem value="multiple">Multiple values</MenuItem>
+                    </Select>
+                  </FormControl>
                 </Stack>
 
                 <Divider />
@@ -210,25 +276,33 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
                       value={selectedSystem.source.kind}
                       onChange={(_, value) => {
                         if (!value) return;
+                        if (value === "External") {
+                          updateSource((current) => {
+                            const base = {
+                              authority: current.authority,
+                              resourceName: current.resourceName,
+                              resourceType: current.resourceType,
+                            };
+                            const next = createExternalReferenceSource();
+                            return {
+                              ...next,
+                              ...base,
+                              url: current.kind === "External" ? current.url : "",
+                            };
+                          });
+                          return;
+                        }
                         updateSource((current) => {
                           const base = {
                             authority: current.authority,
                             resourceName: current.resourceName,
-                            resourceType: current.resourceType,
+                            resourceType: current.resourceType || "Taxonomy",
                           };
-                          if (value === "External") {
-                            return {
-                              kind: "External",
-                              ...base,
-                              url: current.kind === "External" ? current.url : "",
-                            };
+                          if (isTaxonomySource(current)) {
+                            return { ...current, ...base };
                           }
-                          return {
-                            kind: "Internal",
-                            ...base,
-                            repositoryName: current.kind === "Internal" ? current.repositoryName : "",
-                            version: current.kind === "Internal" ? current.version : "",
-                          };
+                          const next = createTaxonomyReferenceSource();
+                          return { ...next, ...base };
                         });
                       }}
                     >
@@ -275,28 +349,71 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
                     />
                   ) : (
                     <Stack spacing={1.5}>
-                      <TextField
-                        label="Repository name"
-                        value={selectedSystem.source.repositoryName}
-                        onChange={(event) =>
-                          updateSource((current) =>
-                            current.kind === "Internal"
-                              ? { ...current, repositoryName: event.target.value }
-                              : current
-                          )
-                        }
-                        fullWidth
-                      />
-                      <TextField
-                        label="Version"
-                        value={selectedSystem.source.version}
-                        onChange={(event) =>
-                          updateSource((current) =>
-                            current.kind === "Internal" ? { ...current, version: event.target.value } : current
-                          )
-                        }
-                        fullWidth
-                      />
+                      {taxonomySource ? (
+                        <Stack spacing={1.5}>
+                          <Autocomplete
+                            multiple
+                            options={concepts}
+                            value={taxonomySource.anchorConceptIds
+                              .map((id) => conceptById.get(id))
+                              .filter((concept): concept is Concept => Boolean(concept))}
+                            onChange={(_, values) =>
+                              updateSource((current) =>
+                                isTaxonomySource(current)
+                                  ? { ...current, anchorConceptIds: values.map((concept) => concept.id) }
+                                  : current
+                              )
+                            }
+                            getOptionLabel={(option) => conceptLabel(option.id)}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Selected concepts" placeholder="Choose one or more concepts" />
+                            )}
+                          />
+                          <FormControl fullWidth>
+                            <InputLabel id="closure-policy-select">Closure policy</InputLabel>
+                            <Select
+                              labelId="closure-policy-select"
+                              label="Closure policy"
+                              value={taxonomySource.closurePolicy}
+                              onChange={(event) =>
+                                updateSource((current) =>
+                                  isTaxonomySource(current)
+                                    ? { ...current, closurePolicy: event.target.value as TaxonomyConceptSetReference["closurePolicy"] }
+                                    : current
+                                )
+                              }
+                            >
+                              <MenuItem value="individual">Selected concepts only</MenuItem>
+                              <MenuItem value="direct">Direct children of selected concepts</MenuItem>
+                              <MenuItem value="with_descendants">Selected concepts and descendants</MenuItem>
+                              <MenuItem value="transitive_closure">Transitive closure</MenuItem>
+                            </Select>
+                          </FormControl>
+                          {previewConcepts.length ? (
+                            <Box>
+                              <Typography variant="subtitle2">Previewed reference values ({previewConcepts.length})</Typography>
+                              <List
+                                dense
+                                sx={{ maxHeight: 160, overflow: "auto", border: 1, borderColor: "divider", borderRadius: 1, mt: 1 }}
+                              >
+                                {previewConcepts.map((concept) => (
+                                  <ListItemButton key={concept.id} disableRipple>
+                                    <ListItemText primary={conceptLabel(concept.id)} />
+                                  </ListItemButton>
+                                ))}
+                              </List>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              Select concepts to preview available values.
+                            </Typography>
+                          )}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Unsupported internal reference type.
+                        </Typography>
+                      )}
                     </Stack>
                   )}
                 </Stack>

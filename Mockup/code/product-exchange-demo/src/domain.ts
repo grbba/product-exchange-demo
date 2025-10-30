@@ -43,6 +43,8 @@ export type ReferenceSystemType =
   | "Schema"
   | "Other";
 
+export type ReferenceSystemCardinality = "single" | "multiple";
+
 type ReferenceSourceBase = {
   authority: string;
   resourceName: string;
@@ -52,21 +54,80 @@ type ReferenceSourceBase = {
 export type ExternalReferenceSource = ReferenceSourceBase & {
   kind: "External";
   url: string;
+  format?: string;
+  accessProtocol?: string;
 };
 
-export type InternalReferenceSource = ReferenceSourceBase & {
+export type InternalLifecycleState = "draft" | "active" | "retired";
+export type InternalSelectionPolicy = "fixed_set" | "controlled_extension";
+
+type InternalReferenceBase = ReferenceSourceBase & {
   kind: "Internal";
   repositoryName: string;
-  version: string;
+  repositoryVersion: string;
+  lifecycleState: InternalLifecycleState;
+  selectionPolicy: InternalSelectionPolicy;
 };
 
+export type ClosurePolicy = "individual" | "direct" | "with_descendants" | "transitive_closure";
+export type RepresentationMode = "id" | "uri" | "code";
+export type LabelPolicy = "resolve_at_read" | "freeze_on_bind";
+export type VersionBinding = "record_taxonomy_version" | "none";
+
+export type TaxonomyConceptSetReference = InternalReferenceBase & {
+  repositoryType: "TaxonomyConceptSet";
+  conceptSchemeUri: string;
+  anchorConceptIds: string[];
+  closurePolicy: ClosurePolicy;
+  representation: RepresentationMode;
+  labelPolicy: LabelPolicy;
+  versionBinding: VersionBinding;
+};
+
+export type CodeSetValue = { code: string; label?: string };
+
+export type CodeSetReference = InternalReferenceBase & {
+  repositoryType: "CodeSet";
+  values: CodeSetValue[];
+  defaultCode?: string;
+};
+
+export type InternalReferenceSource = TaxonomyConceptSetReference | CodeSetReference;
+
 export type ReferenceSource = ExternalReferenceSource | InternalReferenceSource;
+
+export const createExternalReferenceSource = (): ExternalReferenceSource => ({
+  kind: "External",
+  authority: "",
+  resourceName: "",
+  resourceType: "",
+  url: "",
+});
+
+export const createTaxonomyReferenceSource = (): TaxonomyConceptSetReference => ({
+  kind: "Internal",
+  authority: "",
+  resourceName: "",
+  resourceType: "",
+  repositoryName: "",
+  repositoryVersion: "",
+  lifecycleState: "draft",
+  selectionPolicy: "fixed_set",
+  repositoryType: "TaxonomyConceptSet",
+  conceptSchemeUri: "",
+  anchorConceptIds: [],
+  closurePolicy: "individual",
+  representation: "id",
+  labelPolicy: "resolve_at_read",
+  versionBinding: "record_taxonomy_version",
+});
 
 export type ReferenceSystem = {
   id: string;
   identifier: string;
   description: string;
   systemType: ReferenceSystemType;
+  cardinality: ReferenceSystemCardinality;
   source: ReferenceSource;
   createdAt: string;
   updatedAt: string;
@@ -76,6 +137,7 @@ export type ReferenceSystemDraft = {
   identifier: string;
   description: string;
   systemType: ReferenceSystemType;
+  cardinality: ReferenceSystemCardinality;
   source: ReferenceSource;
 };
 
@@ -146,6 +208,7 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
       id: "RS-IATA-AIRPORT-001",
       description: "IATA 3-letter airport codes",
       systemType: "Enumeration",
+      cardinality: "single",
       source: {
         kind: "External",
         authority: "IATA",
@@ -161,6 +224,7 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
       id: "RS-UNECE-REC20-001",
       description: "UNECE Recommendation 20 – Measurement units",
       systemType: "Measurement",
+      cardinality: "single",
       source: {
         kind: "External",
         authority: "UNECE",

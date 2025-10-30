@@ -195,6 +195,7 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
               {selectedConcept ? (
                 <Stack spacing={1.5}>
                   <Typography variant="h6">{selectedConcept.label}</Typography>
+                  <Typography variant="body2" color="text.secondary">ID: {selectedConcept.id}</Typography>
                   {selectedConcept.definition && (
                     <Typography variant="body2" color="text.secondary">
                       {selectedConcept.definition}

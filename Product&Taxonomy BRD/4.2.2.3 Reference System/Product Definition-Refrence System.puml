@@ -8,66 +8,25 @@ skinparam PackageTitleAlignment center
 skinparam nodesep 150
 hide empty members
 
-/' 
-Reference systems are not part of the assets transported but shall be part of the agreement negatiations; the concrete 
-implementation is then up to the indivdual parties. The feature values and extended product information assets only reference 
-a common id to a well defined reference system which is implemented on both ends. The reuirements is 
-that the data receieve can be validated for syntactic and semantic(where possible) correctness.
-'/
+/'
+Reference systems are not part of the assets transported but shall be part of the agreement negotiations; the concrete
+implementation is then up to the individual parties. The feature values and extended product information assets only reference
+a common id to a well defined reference system which is implemented on both ends. The requirement is
+that the data receiver can validate the data for syntactic and semantic (where possible) correctness.
+'/ 
 
-package "Layer 1: Product Definition - Referenece System" { 
-' === Reference System Core Class ===
+package "Layer 1: Product Definition - Reference System" {
+
+' === Reference System Core ===
 class ReferenceSystem {
-  +identifier: Any
+  +identifier: Identifier
   +description: Text
   +system_type: ReferenceSystemType
+  +cardinality: {single|multiple}
+  +value_source_kind: ReferenceSourceKind
+  +default_source_id: Identifier?
 }
 
-' Generic validator contract (mechanism)
-
-abstract class Validator {
-    +identifier
-    +name : Text
-    +version : Text          
-    -description : Text
-  }
-
-
-'    +schemaUri : Text         ' URL/URN to the payload schema
-'    -schemaVersion : Text     ' e.g., "1.0.0"
-'    -contentType : Text       ' e.g., "application/schema+json"
-'    -notes : Text             ' optional human-readable usage
-  ' Specialization: schema-driven validation (JSON Schema, SHACL, XSD, …)
-enum ShapeLanguage { 
-    JSONSchema
-    SHACL
-    XSD
-    Protobuf
-    Other 
-}
-
-class SchemaValidator extends Validator {
-    +shapeLanguage: ShapeLanguage
-    +schemaUri : Text         
-    -schemaVersion : Text        
-    -contentType : Text       
-    -notes : Text             
-  }
-  /' we also would need a sort of binding between the reference source and the 
-     validators as a reference source may use several different vaildators
-     which may have to be executed in an certain order
-     For our purpose this has been omitted as we say any 
-     feature or product extension can only have one way of representing 
-     values to said ref system.
-  '/
-
-  note bottom of SchemaValidator
-  example of a validator other validators are possible
-  e.g. just a check in the IATA database for Airport
-  codes that the code exists and is valid etc. 
-  end note
-
-' === Reference System Type Enum ===
 enum ReferenceSystemType {
   Measurement
   Enumeration
@@ -77,29 +36,117 @@ enum ReferenceSystemType {
   Other
 }
 
-' === Abstract Reference Source ===
+enum ReferenceSourceKind {
+  External
+  Internal
+}
+
+ReferenceSystem "1" o-- "1..*" ReferenceSource : configuredWith
+
+' === Reference Source Base & Validation ===
 abstract class ReferenceSource {
+  +source_id: Identifier
+  +kind: ReferenceSourceKind
   +authority: Text
   +resource_name: Text
   +resource_type: Text
+  +version: Text
 }
 
-' === Subtypes for Reference Sources ===
+abstract class Validator {
+  +validator_id: Identifier
+  +name: Text
+  +version: Text
+  -description: Text
+}
+
+enum ShapeLanguage {
+  JSONSchema
+  SHACL
+  XSD
+  Protobuf
+  Other
+}
+
+class SchemaValidator extends Validator {
+  +shapeLanguage: ShapeLanguage
+  +schemaUri: Text
+  -schemaVersion: Text
+  -contentType: Text
+  -notes: Text
+}
+
+note bottom of SchemaValidator
+Example validator; other contracts possible (e.g. database lookups for code sets).
+end note
+
+ReferenceSource "0..*" --> "0..*" Validator : validatedBy
+
+' === Reference Source Specialisations ===
 class ExternalReference {
-  +link: Any // Any can be e.g. an url
+  +link: uri
+  +format: Text
+  +access_protocol: Text?
 }
 
-class InternalReference {
+abstract class InternalReference {
   +repository_name: Text
-  +version: Any
+  +repository_version: Text
+  +lifecycle_state: {draft|active|retired}
+  +selection_policy: {fixed_set|controlled_extension}
 }
 
-' === Relationships ===
-ReferenceSystem --> ReferenceSystemType : type
-ReferenceSystem --> ReferenceSource : definedBy
-ReferenceSource "1" -l-> "1" Validator : uses >
 ReferenceSource <|-- ExternalReference
 ReferenceSource <|-- InternalReference
+
+' === Internal Enumeration Repositories ===
+class TaxonomyConceptSet {
+  +concept_scheme_uri: IRI
+  +anchor_concepts: ConceptId[1..*]
+  +closure_policy: {direct|with_descendants|transitive_closure}
+  +allowed_concepts: ConceptId[*]
+  +representation: {id|uri|code}
+  +label_policy: {resolve_at_read|freeze_on_bind}
+  +version_binding: {record_taxonomy_version|none}
+}
+
+class ConceptScheme {
+  +scheme_id: ConceptSchemeId
+  +title: Text
+}
+
+class Concept {
+  +concept_id: ConceptId
+  +preferred_label: Text
+  +definition: Text
+  +isTopConcept: Boolean
+}
+
+ConceptScheme "1" o-- "0..*" Concept : contains
+Concept "0..*" -right- "0..*" Concept : broader/narrower/relatedTo
+TaxonomyConceptSet --> ConceptScheme : scopedTo
+TaxonomyConceptSet "0..*" --> "0..*" Concept : enumerates
+
+note right of TaxonomyConceptSet
+Mode of Transport (top concept) narrows to Road, Sea, Air, Rail, etc.
+end note
+
+class CodeSet {
+  +values: (code: string, label?: string)[*]
+  +mappings: (code: string, scheme: string, external_code: string)[*]
+  +default_code: string?
+}
+
+class CodeValue {
+  +code: string
+  +label: string?
+}
+
+InternalReference <|-- TaxonomyConceptSet
+InternalReference <|-- CodeSet
+CodeSet ..> CodeValue : realises
+
+ReferenceSystem --> ReferenceSystemType : typedAs
 
 }
 

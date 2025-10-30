@@ -41,7 +41,9 @@ import {
   CONCEPT_SCHEMES,
   REFERENCE_SYSTEM_TYPES,
   SCHEMA_CATEGORIES,
+  createExternalReferenceSource,
   createRule,
+  createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
   instantiateProduct,
@@ -57,10 +59,14 @@ import type {
   Product,
   ProductInstance,
   ProductSchema,
+  InternalReferenceSource,
+  ReferenceSource,
   ReferenceSystem,
+  ReferenceSystemType,
   ReferenceSystemDraft,
   Rule,
   SchemaCategory,
+  TaxonomyConceptSetReference,
   TaxonomyCondition,
 } from "./domain";
 import { useTaxonomy } from "./taxonomy";
@@ -100,6 +106,84 @@ const downloadJson = (fileName: string, data: unknown) => {
   anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
+};
+
+const ensureReferenceSystemType = (value: unknown): ReferenceSystemType =>
+  (REFERENCE_SYSTEM_TYPES.includes(value as ReferenceSystemType) ? (value as ReferenceSystemType) : "Other");
+
+const normalizeReferenceSource = (source: unknown): ReferenceSource => {
+  if (!source || typeof source !== "object") {
+    return createExternalReferenceSource();
+  }
+  const candidate = source as Record<string, unknown>;
+  if (candidate.kind === "Internal") {
+    const base = {
+      kind: "Internal" as const,
+      authority: (candidate.authority as string) ?? "",
+      resourceName: (candidate.resourceName as string) ?? "",
+      resourceType: (candidate.resourceType as string) ?? "",
+      repositoryName: (candidate.repositoryName as string) ?? "",
+      repositoryVersion: ((candidate.repositoryVersion ?? candidate.version) as string) ?? "",
+      lifecycleState: (candidate.lifecycleState as InternalReferenceSource["lifecycleState"]) ?? "draft",
+      selectionPolicy: (candidate.selectionPolicy as InternalReferenceSource["selectionPolicy"]) ?? "fixed_set",
+    };
+
+    if (candidate.repositoryType === "CodeSet") {
+      const values = Array.isArray(candidate.values) ? (candidate.values as unknown[]) : [];
+      return {
+        ...base,
+        repositoryType: "CodeSet",
+        values: values.filter((item): item is { code: string; label?: string } =>
+          typeof item === "object" && !!item && typeof (item as { code?: unknown }).code === "string"
+        ) as { code: string; label?: string }[],
+        defaultCode: typeof candidate.defaultCode === "string" ? (candidate.defaultCode as string) : undefined,
+      };
+    }
+
+    const taxonomy = createTaxonomyReferenceSource();
+    return {
+      ...taxonomy,
+      ...base,
+      conceptSchemeUri: (candidate.conceptSchemeUri as string) ?? "",
+      anchorConceptIds: Array.isArray(candidate.anchorConceptIds)
+        ? (candidate.anchorConceptIds as string[])
+        : [],
+      closurePolicy: (candidate.closurePolicy as TaxonomyConceptSetReference["closurePolicy"]) ?? "individual",
+      representation: (candidate.representation as TaxonomyConceptSetReference["representation"]) ?? "id",
+      labelPolicy: (candidate.labelPolicy as TaxonomyConceptSetReference["labelPolicy"]) ?? "resolve_at_read",
+      versionBinding: (candidate.versionBinding as TaxonomyConceptSetReference["versionBinding"]) ?? "record_taxonomy_version",
+    };
+  }
+
+  const external = createExternalReferenceSource();
+  return {
+    ...external,
+    authority: (candidate.authority as string) ?? "",
+    resourceName: (candidate.resourceName as string) ?? "",
+    resourceType: (candidate.resourceType as string) ?? "",
+    url: (candidate.url as string) ?? "",
+    format: typeof candidate.format === "string" ? (candidate.format as string) : undefined,
+    accessProtocol: typeof candidate.accessProtocol === "string" ? (candidate.accessProtocol as string) : undefined,
+  };
+};
+
+const normalizeReferenceSystem = (system: unknown): ReferenceSystem => {
+  const candidate = (system && typeof system === "object" ? (system as Record<string, unknown>) : {}) as Record<
+    string,
+    unknown
+  >;
+  const createdAt = (candidate.createdAt as string) ?? new Date().toISOString();
+  const updatedAt = (candidate.updatedAt as string) ?? createdAt;
+  return {
+    id: (candidate.id as string) ?? uid(),
+    identifier: (candidate.identifier as string) ?? "",
+    description: (candidate.description as string) ?? "",
+    systemType: ensureReferenceSystemType(candidate.systemType),
+    cardinality: candidate.cardinality === "multiple" ? "multiple" : "single",
+    source: normalizeReferenceSource(candidate.source),
+    createdAt,
+    updatedAt,
+  };
 };
 
 const evaluateRules = (product: Product, rules: Rule[]) =>
@@ -180,8 +264,8 @@ const App: React.FC = () => {
   const [instances, setInstances] = useState<ProductInstance[]>(() => loadInstances());
   const [referenceSystems, setReferenceSystems] = useState<ReferenceSystem[]>(() => {
     const stored = loadReferenceSystems();
-    if (stored.length) return stored;
-    return defaultReferenceSystems();
+    if (stored.length) return stored.map((item) => normalizeReferenceSystem(item));
+    return defaultReferenceSystems().map((item) => normalizeReferenceSystem(item));
   });
   const [partners, setPartners] = useState<Partner[]>(() => loadPartners());
   const [partnerAssociations, setPartnerAssociations] = useState<PartnerProductMap>(() => loadPartnerProducts());
@@ -504,12 +588,12 @@ const App: React.FC = () => {
 
   const handleCreateReferenceSystem = (input: ReferenceSystemDraft) => {
     const timestamp = new Date().toISOString();
-    const system: ReferenceSystem = {
+    const system = normalizeReferenceSystem({
       id: uid(),
       ...input,
       createdAt: timestamp,
       updatedAt: timestamp,
-    };
+    });
     setReferenceSystems((previous) => [...previous, system]);
     return system.id;
   };
@@ -783,6 +867,8 @@ const App: React.FC = () => {
               onUpdate={handleUpdateReferenceSystem}
               onDelete={handleDeleteReferenceSystem}
               systemTypes={REFERENCE_SYSTEM_TYPES}
+              concepts={concepts}
+              conceptLabel={conceptLabel}
             />
           </Suspense>
         </Box>
