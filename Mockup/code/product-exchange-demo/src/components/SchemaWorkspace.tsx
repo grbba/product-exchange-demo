@@ -387,6 +387,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
               onChange={handleFeaturesChange}
               conceptLabel={conceptLabel}
               referenceSystems={referenceSystems}
+              conceptOptions={orderedConcepts}
               splitView
             />
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -21,9 +21,76 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
-import type { Concept, Feature, FeatureValue, ReferenceSystem, SingleValue, ValueRange, DiscreteSet } from "../domain";
+import type {
+  Concept,
+  Feature,
+  FeatureValue,
+  ReferenceSystem,
+  SingleValue,
+  ValueRange,
+  DiscreteSet,
+  InternalReferenceSource,
+  TaxonomyConceptSetReference,
+} from "../domain";
 import { uid } from "../domain";
 import InfoTooltipIcon from "./InfoTooltipIcon";
+
+type ConceptOption = { id: string; label: string };
+
+const asTaxonomyConceptSet = (system: ReferenceSystem): TaxonomyConceptSetReference | null => {
+  if (system.source.kind !== "Internal") return null;
+  const internal = system.source as InternalReferenceSource;
+  return internal.repositoryType === "TaxonomyConceptSet"
+    ? (internal as TaxonomyConceptSetReference)
+    : null;
+};
+
+const collectTaxonomyConcepts = (
+  source: TaxonomyConceptSetReference,
+  conceptById: Map<string, Concept>
+): Concept[] => {
+  const anchors = source.anchorConceptIds
+    .map((id) => conceptById.get(id))
+    .filter((concept): concept is Concept => Boolean(concept));
+  if (!anchors.length) return [];
+
+  if (source.closurePolicy === "individual") {
+    return anchors;
+  }
+
+  if (source.closurePolicy === "direct") {
+    const children = new Map<string, Concept>();
+    for (const anchor of anchors) {
+      for (const childId of anchor.narrower ?? []) {
+        const child = conceptById.get(childId);
+        if (child) {
+          children.set(child.id, child);
+        }
+      }
+    }
+    return Array.from(children.values());
+  }
+
+  const collected = new Map<string, Concept>();
+  const visited = new Set<string>();
+  const queue: Concept[] = [...anchors];
+
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (visited.has(current.id)) continue;
+    visited.add(current.id);
+    collected.set(current.id, current);
+
+    for (const childId of current.narrower ?? []) {
+      const child = conceptById.get(childId);
+      if (child && !visited.has(child.id)) {
+        queue.push(child);
+      }
+    }
+  }
+
+  return Array.from(collected.values());
+};
 
 type FeatureEditorProps = {
   title: string;
@@ -40,6 +107,7 @@ type FeatureEditorProps = {
   addButtonTooltip?: string;
   splitView?: boolean;
   hideAddFeature?: boolean;
+  lockStructure?: boolean;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -63,11 +131,38 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   addButtonTooltip,
   splitView = false,
   hideAddFeature = false,
+  lockStructure = false,
 }) => {
   const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
   const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
 
   const discreteKey = (featureId: string, index: number) => `${featureId}:${index}`;
+
+  const conceptById = useMemo(() => {
+    if (!conceptOptions?.length) return new Map<string, Concept>();
+    return new Map(conceptOptions.map((concept) => [concept.id, concept] as const));
+  }, [conceptOptions]);
+
+  const taxonomyConceptChoices = useMemo(() => {
+    const map = new Map<string, ConceptOption[]>();
+    if (!conceptOptions?.length) return map;
+
+    for (const system of referenceSystems) {
+      const taxonomySource = asTaxonomyConceptSet(system);
+      if (!taxonomySource) continue;
+      const concepts = collectTaxonomyConcepts(taxonomySource, conceptById);
+      if (!concepts.length) {
+        map.set(system.id, []);
+        continue;
+      }
+      const sorted = concepts
+        .map((concept) => ({ id: concept.id, label: concept.label }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      map.set(system.id, sorted);
+    }
+
+    return map;
+  }, [conceptOptions, referenceSystems, conceptById]);
 
   useEffect(() => {
     setTagSelections((previous) => {
@@ -86,12 +181,18 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
         feature.values.forEach((value, index) => {
           if (value.kind !== "DiscreteSet") return;
           const key = discreteKey(feature.id, index);
+          const taxonomyChoices = value.referenceSystemId
+            ? taxonomyConceptChoices.get(value.referenceSystemId)
+            : undefined;
+          if (taxonomyChoices && taxonomyChoices.length) {
+            return;
+          }
           next[key] = previous[key] ?? value.values.join(", ");
         });
       }
       return next;
     });
-  }, [features]);
+  }, [features, taxonomyConceptChoices]);
 
   useEffect(() => {
     if (!splitView) return;
@@ -153,13 +254,19 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
             size="small"
             label="Feature name"
             value={feature.name}
-            onChange={(event) =>
-              setFeature(feature.id, (current) => ({ ...current, name: event.target.value }))
-            }
+            onChange={(event) => {
+              if (lockStructure) return;
+              setFeature(feature.id, (current) => ({ ...current, name: event.target.value }));
+            }}
+            disabled={lockStructure}
           />
         }
         action={
-          <IconButton aria-label="delete feature" onClick={() => removeFeature(feature.id)}>
+          <IconButton
+            aria-label="delete feature"
+            onClick={() => !lockStructure && removeFeature(feature.id)}
+            disabled={lockStructure}
+          >
             <DeleteIcon />
           </IconButton>
         }
@@ -204,6 +311,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   onChange={(event) =>
                     setTagSelections((previous) => ({ ...previous, [feature.id]: event.target.value }))
                   }
+                  disabled={lockStructure}
                 >
                   <MenuItem value="">
                     <em>— choose —</em>
@@ -215,18 +323,18 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   ))}
                 </Select>
               </FormControl>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  const selection = tagSelections[feature.id];
-                  if (!selection) return;
-                  onAddTag(feature.id, selection);
-                  setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
-                }}
-                disabled={!tagSelections[feature.id]}
-              >
-                Add tag
-              </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    const selection = tagSelections[feature.id];
+                    if (!selection) return;
+                    onAddTag(feature.id, selection);
+                    setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
+                  }}
+                  disabled={lockStructure || !tagSelections[feature.id]}
+                >
+                  Add tag
+                </Button>
             </Stack>
           ) : null}
         </Stack>
@@ -251,32 +359,85 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                 <Box sx={{ mt: 2 }}>
                   {value.kind === "SingleValue" && (
                     <Stack spacing={1.5}>
-                      <TextField
-                        size="small"
-                        label="Value"
-                        value={value.value}
-                        onChange={(event) =>
-                          setFeature(feature.id, (current) => {
-                            const next = [...current.values];
-                            (next[index] as SingleValue).value = event.target.value;
-                            return { ...current, values: next };
-                          })
+                      {(() => {
+                        const taxonomyChoices = value.referenceSystemId
+                          ? taxonomyConceptChoices.get(value.referenceSystemId)
+                          : undefined;
+                        const hasTaxonomyChoices = Boolean(taxonomyChoices && taxonomyChoices.length);
+                        if (hasTaxonomyChoices) {
+                          return (
+                            <FormControl size="small">
+                              <InputLabel id={`single-value-${feature.id}-${index}`}>Value</InputLabel>
+                              <Select
+                                labelId={`single-value-${feature.id}-${index}`}
+                                label="Value"
+                                value={value.value ?? ""}
+                                onChange={(event) =>
+                                  setFeature(feature.id, (current) => {
+                                    const next = [...current.values];
+                                    (next[index] as SingleValue).value = event.target.value;
+                                    return { ...current, values: next };
+                                  })
+                                }
+                              >
+                                <MenuItem value="">
+                                  <em>— choose —</em>
+                                </MenuItem>
+                                {taxonomyChoices!.map((option) => (
+                                  <MenuItem key={option.id} value={option.id}>
+                                    {option.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          );
                         }
-                      />
+                        if (value.referenceSystemId && taxonomyChoices && !taxonomyChoices.length) {
+                          return (
+                            <Typography variant="body2" color="text.secondary">
+                              No taxonomy concepts available for the selected reference system.
+                            </Typography>
+                          );
+                        }
+                        return (
+                          <TextField
+                            size="small"
+                            label="Value"
+                            value={value.value}
+                            onChange={(event) =>
+                              setFeature(feature.id, (current) => {
+                                const next = [...current.values];
+                                (next[index] as SingleValue).value = event.target.value;
+                                return { ...current, values: next };
+                              })
+                            }
+                          />
+                        );
+                      })()}
                       <FormControl size="small">
                         <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                        <Select
+                       <Select
                           labelId={`single-ref-${feature.id}-${index}`}
                           label="Reference"
                           value={value.referenceSystemId ?? ""}
                           onChange={(event) =>
                             setFeature(feature.id, (current) => {
                               const next = [...current.values];
-                              (next[index] as SingleValue).referenceSystemId =
-                                event.target.value || undefined;
+                              const selectedRef = event.target.value || undefined;
+                              const single = next[index] as SingleValue;
+                              single.referenceSystemId = selectedRef;
+                              if (selectedRef) {
+                                const taxonomyChoices = taxonomyConceptChoices.get(selectedRef);
+                                if (taxonomyChoices && taxonomyChoices.length) {
+                                  if (!taxonomyChoices.some((option) => option.id === single.value)) {
+                                    single.value = taxonomyChoices[0]?.id ?? "";
+                                  }
+                                }
+                              }
                               return { ...current, values: next };
                             })
                           }
+                          disabled={lockStructure}
                         >
                           <MenuItem value="">
                             <em>None</em>
@@ -333,6 +494,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               return { ...current, values: next };
                             })
                           }
+                          disabled={lockStructure}
                         >
                           <MenuItem value="">
                             <em>None</em>
@@ -349,24 +511,75 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   )}
                   {value.kind === "DiscreteSet" && (
                     <Stack spacing={1.5}>
-                      <TextField
-                        size="small"
-                        label="Comma separated values"
-                        value={discreteInputs[key] ?? value.values.join(", ")}
-                        onChange={(event) => {
-                          const raw = event.target.value;
-                          setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
-                          const values = raw
-                            .split(",")
-                            .map((entry) => entry.trim())
-                            .filter(Boolean);
-                          setFeature(feature.id, (current) => {
-                            const next = [...current.values];
-                            (next[index] as DiscreteSet).values = values;
-                            return { ...current, values: next };
-                          });
-                        }}
-                      />
+                      {(() => {
+                        const taxonomyChoices = value.referenceSystemId
+                          ? taxonomyConceptChoices.get(value.referenceSystemId)
+                          : undefined;
+                        const hasTaxonomyChoices = Boolean(taxonomyChoices && taxonomyChoices.length);
+                        if (hasTaxonomyChoices) {
+                          return (
+                            <FormControl size="small">
+                              <InputLabel id={`set-values-${feature.id}-${index}`}>Values</InputLabel>
+                              <Select
+                                labelId={`set-values-${feature.id}-${index}`}
+                                label="Values"
+                                multiple
+                                value={value.values}
+                                onChange={(event) => {
+                                  const selections = Array.isArray(event.target.value)
+                                    ? (event.target.value as string[])
+                                    : [event.target.value as string];
+                                  setFeature(feature.id, (current) => {
+                                    const next = [...current.values];
+                                    (next[index] as DiscreteSet).values = selections;
+                                    return { ...current, values: next };
+                                  });
+                                }}
+                                renderValue={(selected) => (
+                                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                                    {(selected as string[]).map((item) => (
+                                      <Chip key={item} label={conceptLabel(item)} size="small" />
+                                    ))}
+                                  </Box>
+                                )}
+                              >
+                                {taxonomyChoices!.map((option) => (
+                                  <MenuItem key={option.id} value={option.id}>
+                                    {option.label}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          );
+                        }
+                        if (value.referenceSystemId && taxonomyChoices && !taxonomyChoices.length) {
+                          return (
+                            <Typography variant="body2" color="text.secondary">
+                              No taxonomy concepts available for the selected reference system.
+                            </Typography>
+                          );
+                        }
+                        return (
+                          <TextField
+                            size="small"
+                            label="Comma separated values"
+                            value={discreteInputs[key] ?? value.values.join(", ")}
+                            onChange={(event) => {
+                              const raw = event.target.value;
+                              setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
+                              const values = raw
+                                .split(",")
+                                .map((entry) => entry.trim())
+                                .filter(Boolean);
+                              setFeature(feature.id, (current) => {
+                                const next = [...current.values];
+                                (next[index] as DiscreteSet).values = values;
+                                return { ...current, values: next };
+                              });
+                            }}
+                          />
+                        );
+                      })()}
                       <FormControl size="small">
                         <InputLabel id={`set-ref-${feature.id}-${index}`}>Reference</InputLabel>
                         <Select
@@ -376,11 +589,21 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                           onChange={(event) =>
                             setFeature(feature.id, (current) => {
                               const next = [...current.values];
-                              (next[index] as DiscreteSet).referenceSystemId =
-                                event.target.value || undefined;
+                              const selectedRef = event.target.value || undefined;
+                              const setValue = next[index] as DiscreteSet;
+                              setValue.referenceSystemId = selectedRef;
+                              if (selectedRef) {
+                                const taxonomyChoices = taxonomyConceptChoices.get(selectedRef);
+                                if (taxonomyChoices && taxonomyChoices.length) {
+                                  setValue.values = setValue.values.filter((item) =>
+                                    taxonomyChoices.some((option) => option.id === item)
+                                  );
+                                }
+                              }
                               return { ...current, values: next };
                             })
                           }
+                          disabled={lockStructure}
                         >
                           <MenuItem value="">
                             <em>None</em>
@@ -436,7 +659,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
         {title}
         {titleTooltip ? <InfoTooltipIcon title={titleTooltip} /> : null}
       </Typography>
-      {!hideAddFeature && (
+      {!hideAddFeature && !lockStructure && (
         <Stack direction="row" spacing={0.5} alignItems="center">
           <Button variant="contained" startIcon={<AddIcon />} onClick={addFeature}>
             Add feature

@@ -73,7 +73,7 @@ const buildTree = (concepts: Concept[], conceptById: Map<string, Concept>): Tree
   return {
     roots: filteredRoots,
     children,
-    defaultExpanded: filteredRoots.slice(0, 3),
+    defaultExpanded: [],
   };
 };
 
@@ -169,6 +169,7 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
           <CardContent sx={{ maxHeight: 520, overflow: "auto" }}>
             {concepts.length ? (
               <SimpleTreeView
+                key={tree.roots.join("|")}
                 aria-label="taxonomy tree"
                 selectedItems={selectedId ?? null}
                 defaultExpandedItems={tree.defaultExpanded}

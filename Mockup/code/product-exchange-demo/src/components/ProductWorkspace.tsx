@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -106,9 +106,20 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
     );
   }, [partnerAssociations, retailerPartners, selectedInstance]);
 
+  const lastInstanceId = useRef<string | null>(null);
+
   useEffect(() => {
-    setSelectedFeatureId(selectedInstance?.product.features[0]?.id ?? null);
-  }, [selectedInstance]);
+    const currentInstanceId = selectedInstance?.id ?? null;
+    if (currentInstanceId !== lastInstanceId.current) {
+      setSelectedFeatureId(selectedInstance?.product.features[0]?.id ?? null);
+    } else if (selectedFeatureId && selectedInstance) {
+      const stillExists = selectedInstance.product.features.some((feature) => feature.id === selectedFeatureId);
+      if (!stillExists) {
+        setSelectedFeatureId(selectedInstance.product.features[0]?.id ?? null);
+      }
+    }
+    lastInstanceId.current = currentInstanceId;
+  }, [selectedInstance, selectedFeatureId]);
 
   const handleInstantiate = () => {
     if (!selectedSchema) return;
@@ -489,8 +500,9 @@ const ProductWorkspace: React.FC<ProductWorkspaceProps> = ({
               conceptOptions={orderedConcepts}
               onAddTag={handleAddFeatureTag}
               onRemoveTag={handleRemoveFeatureTag}
-              splitView
               hideAddFeature
+              lockStructure
+              splitView
             />
           </Stack>
               ) : (
