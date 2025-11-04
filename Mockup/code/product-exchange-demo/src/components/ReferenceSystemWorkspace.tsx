@@ -30,6 +30,7 @@ import type {
   ReferenceSystemCardinality,
   ReferenceSystemDraft,
   ReferenceSystemType,
+  ReferenceValidationProvider,
   TaxonomyConceptSetReference,
 } from "../domain";
 import { createExternalReferenceSource, createTaxonomyReferenceSource } from "../domain";
@@ -53,6 +54,7 @@ const createDraft = (): ReferenceSystemDraft => ({
   systemType: "Other",
   cardinality: "single",
   source: createExternalReferenceSource(),
+  validationProvider: undefined,
 });
 
 const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
@@ -65,6 +67,13 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
   onDelete,
 }) => {
   const [selectedId, setSelectedId] = useState<string | null>(referenceSystems[0]?.id ?? null);
+  const validationOptions = useMemo(
+    () => [
+      { value: "" as const, label: "None" },
+      { value: "amadeus-airport" as ReferenceValidationProvider, label: "Amadeus airport lookup" },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!referenceSystems.length) {
@@ -261,6 +270,28 @@ const ReferenceSystemWorkspace: React.FC<ReferenceSystemWorkspaceProps> = ({
                     >
                       <MenuItem value="single">Single value</MenuItem>
                       <MenuItem value="multiple">Multiple values</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <InputLabel id="reference-system-validation-select">Validation</InputLabel>
+                    <Select
+                      labelId="reference-system-validation-select"
+                      label="Validation"
+                      value={selectedSystem.validationProvider ?? ""}
+                      onChange={(event) =>
+                        updateSelected((current) => ({
+                          ...current,
+                          validationProvider: (event.target.value || undefined) as
+                            | ReferenceValidationProvider
+                            | undefined,
+                        }))
+                      }
+                    >
+                      {validationOptions.map((option) => (
+                        <MenuItem key={option.value || "none"} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Stack>

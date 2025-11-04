@@ -96,6 +96,8 @@ export type InternalReferenceSource = TaxonomyConceptSetReference | CodeSetRefer
 
 export type ReferenceSource = ExternalReferenceSource | InternalReferenceSource;
 
+export type ReferenceValidationProvider = "amadeus-airport";
+
 export const createExternalReferenceSource = (): ExternalReferenceSource => ({
   kind: "External",
   authority: "",
@@ -131,6 +133,7 @@ export type ReferenceSystem = {
   source: ReferenceSource;
   createdAt: string;
   updatedAt: string;
+  validationProvider?: ReferenceValidationProvider;
 };
 
 export type ReferenceSystemDraft = {
@@ -139,6 +142,7 @@ export type ReferenceSystemDraft = {
   systemType: ReferenceSystemType;
   cardinality: ReferenceSystemCardinality;
   source: ReferenceSource;
+  validationProvider?: ReferenceValidationProvider;
 };
 
 export type Concept = {
@@ -218,6 +222,7 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
       },
       createdAt: timestamp,
       updatedAt: timestamp,
+      validationProvider: "amadeus-airport",
     },
     {
       identifier: "RS-UNECE-REC20-001",

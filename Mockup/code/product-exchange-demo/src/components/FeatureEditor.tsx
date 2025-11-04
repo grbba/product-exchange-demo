@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -26,6 +26,7 @@ import type {
   Feature,
   FeatureValue,
   ReferenceSystem,
+  ReferenceValidationProvider,
   SingleValue,
   ValueRange,
   DiscreteSet,
@@ -34,6 +35,7 @@ import type {
 } from "../domain";
 import { uid } from "../domain";
 import InfoTooltipIcon from "./InfoTooltipIcon";
+import { validateIataAirport } from "../validateIataAirport";
 
 type ConceptOption = { id: string; label: string };
 
@@ -135,8 +137,18 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
 }) => {
   const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
   const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
+  const [valueErrors, setValueErrors] = useState<Record<string, string | null>>({});
+  const validationRequests = useRef<Record<string, number>>({});
 
   const discreteKey = (featureId: string, index: number) => `${featureId}:${index}`;
+
+  const validationProviderByReference = useMemo(() => {
+    const map = new Map<string, ReferenceValidationProvider | undefined>();
+    for (const system of referenceSystems) {
+      map.set(system.id, system.validationProvider);
+    }
+    return map;
+  }, [referenceSystems]);
 
   const conceptById = useMemo(() => {
     if (!conceptOptions?.length) return new Map<string, Concept>();
@@ -193,6 +205,68 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
       return next;
     });
   }, [features, taxonomyConceptChoices]);
+
+  const singleValueKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const feature of features) {
+      feature.values.forEach((value, index) => {
+        if (value.kind === "SingleValue") {
+          keys.add(`${feature.id}:${index}`);
+        }
+      });
+    }
+    return keys;
+  }, [features]);
+
+  useEffect(() => {
+    setValueErrors((previous) => {
+      const next: Record<string, string | null> = {};
+      let changed = false;
+      for (const key of Object.keys(previous)) {
+        if (singleValueKeys.has(key)) {
+          next[key] = previous[key];
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : previous;
+    });
+  }, [singleValueKeys]);
+
+  const clearError = useCallback((key: string) => {
+    setValueErrors((previous) => {
+      if (!previous[key]) return previous;
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const runValidation = useCallback(async (
+    key: string,
+    provider: ReferenceValidationProvider | undefined,
+    rawValue: string
+  ) => {
+    if (!lockStructure || !provider) return;
+    if (provider !== "amadeus-airport") return;
+
+    const value = rawValue.trim().toUpperCase();
+    if (!value) {
+      setValueErrors((previous) => ({ ...previous, [key]: "Code is required." }));
+      return;
+    }
+
+    const requestId = (validationRequests.current[key] ?? 0) + 1;
+    validationRequests.current[key] = requestId;
+
+    const result = await validateIataAirport(value);
+    if (validationRequests.current[key] !== requestId) return;
+
+    setValueErrors((previous) => ({
+      ...previous,
+      [key]: result.valid ? null : result.reason ?? "Invalid airport code.",
+    }));
+  }, [lockStructure]);
 
   useEffect(() => {
     if (!splitView) return;
@@ -348,6 +422,11 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
         >
           {feature.values.map((value, index) => {
             const key = discreteKey(feature.id, index);
+            const validationProvider =
+              value.kind === "SingleValue" && value.referenceSystemId
+                ? validationProviderByReference.get(value.referenceSystemId)
+                : undefined;
+            const errorMessage = valueErrors[key] ?? null;
             return (
               <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -404,23 +483,36 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             size="small"
                             label="Value"
                             value={value.value}
-                            onChange={(event) =>
+                            onChange={(event) => {
+                              const input = event.target.value;
+                              const normalized =
+                                lockStructure && validationProvider === "amadeus-airport"
+                                  ? input.toUpperCase()
+                                  : input;
                               setFeature(feature.id, (current) => {
                                 const next = [...current.values];
-                                (next[index] as SingleValue).value = event.target.value;
+                                (next[index] as SingleValue).value = normalized;
                                 return { ...current, values: next };
-                              })
-                            }
+                              });
+                              clearError(key);
+                            }}
+                            onBlur={(event) => {
+                              if (validationProvider === "amadeus-airport") {
+                                runValidation(key, validationProvider, event.target.value);
+                              }
+                            }}
+                            error={Boolean(errorMessage)}
+                            helperText={errorMessage ?? undefined}
                           />
                         );
                       })()}
                       <FormControl size="small">
                         <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                       <Select
+                        <Select
                           labelId={`single-ref-${feature.id}-${index}`}
                           label="Reference"
                           value={value.referenceSystemId ?? ""}
-                          onChange={(event) =>
+                          onChange={(event) => {
                             setFeature(feature.id, (current) => {
                               const next = [...current.values];
                               const selectedRef = event.target.value || undefined;
@@ -435,8 +527,14 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                                 }
                               }
                               return { ...current, values: next };
-                            })
-                          }
+                            });
+                            clearError(key);
+                          }}
+                          onBlur={() => {
+                            if (validationProvider === "amadeus-airport") {
+                              runValidation(key, validationProvider, value.value ?? "");
+                            }
+                          }}
                           disabled={lockStructure}
                         >
                           <MenuItem value="">
