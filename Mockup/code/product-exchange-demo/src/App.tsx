@@ -825,6 +825,8 @@ const App: React.FC = () => {
               setConcepts={taxonomy.setConcepts}
               collections={collections}
               setCollections={taxonomy.setCollections}
+              metadata={taxonomy.metadata}
+              setMetadata={taxonomy.setMetadata}
               conceptLabel={conceptLabel}
               onNotify={notify}
             />

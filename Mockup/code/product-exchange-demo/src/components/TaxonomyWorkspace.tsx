@@ -19,13 +19,15 @@ import UploadIcon from "@mui/icons-material/Upload";
 import { SimpleTreeView } from "@mui/x-tree-view/SimpleTreeView";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
 import type { Collection, Concept } from "../domain";
-import { parseTtl } from "../taxonomy";
+import { parseTtl, type TaxonomyMetadata } from "../taxonomy";
 
 type TaxonomyWorkspaceProps = {
   concepts: Concept[];
   setConcepts: (concepts: Concept[]) => void;
   collections: Collection[];
   setCollections: (collections: Collection[]) => void;
+  metadata: TaxonomyMetadata | null;
+  setMetadata: (metadata: TaxonomyMetadata | null) => void;
   conceptLabel: (id: string) => string;
   onNotify: (message: string, severity?: AlertColor) => void;
 };
@@ -85,6 +87,8 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
   setConcepts,
   collections,
   setCollections,
+  metadata,
+  setMetadata,
   conceptLabel,
   onNotify,
 }) => {
@@ -129,6 +133,7 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
       if (parsed.collections.length) {
         setCollections(parsed.collections);
       }
+      setMetadata(parsed.metadata ?? null);
       setSelectedId(parsed.concepts[0]?.id ?? null);
       onNotify(`Imported ${parsed.concepts.length} concepts`, "success");
     } catch (error) {
@@ -148,24 +153,75 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
     [collections, selectedId]
   );
 
+  const ontologyDetails = useMemo(() => {
+    if (!metadata) return null;
+    const details: { label: string; value: string }[] = [];
+    const taxonomyName = metadata.title ?? metadata.label;
+    if (taxonomyName) {
+      details.push({ label: "Taxonomy", value: taxonomyName });
+    }
+    if (metadata.versionInfo) {
+      details.push({ label: "Version", value: metadata.versionInfo });
+    }
+    const contributors = metadata.contributors?.filter(Boolean) ?? [];
+    if (contributors.length) {
+      details.push({
+        label: contributors.length > 1 ? "Contributors" : "Contributor",
+        value: contributors.join(", "),
+      });
+    }
+    if (metadata.namespace) {
+      details.push({ label: "Namespace", value: metadata.namespace });
+    }
+    return details.length ? details : null;
+  }, [metadata]);
+
+  const renderOntologySummary = () =>
+    ontologyDetails ? (
+      <Stack spacing={0.25}>
+        {ontologyDetails.map((item) => (
+          <Typography key={item.label} variant="body2" color="text.secondary">
+            {item.label}: {item.value}
+          </Typography>
+        ))}
+      </Stack>
+    ) : (
+      <Typography variant="body2" color="text.secondary">
+        No ontology metadata found in the current taxonomy.
+      </Typography>
+    );
+
   return (
     <Stack spacing={3} sx={{ height: "100%" }}>
-      <Box>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".ttl"
-          style={{ display: "none" }}
-          onChange={handleImport}
-        />
-        <Button variant="outlined" startIcon={<UploadIcon />} onClick={handleTriggerImport}>
-          Import SKOS TTL
-        </Button>
-      </Box>
+      <Card variant="outlined">
+        <CardHeader title="Taxonomy details" />
+        <CardContent>
+          <Stack spacing={2}>
+            <Stack spacing={0.5}>
+              {renderOntologySummary()}
+              <Typography variant="body2" color="text.secondary">
+                {concepts.length ? `${concepts.length} concepts available` : "No concepts loaded."}
+              </Typography>
+            </Stack>
+            <Box>
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".ttl"
+                style={{ display: "none" }}
+                onChange={handleImport}
+              />
+              <Button variant="outlined" startIcon={<UploadIcon />} onClick={handleTriggerImport}>
+                Import SKOS TTL
+              </Button>
+            </Box>
+          </Stack>
+        </CardContent>
+      </Card>
 
       <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="stretch">
         <Card variant="outlined" sx={{ flex: 1 }}>
-          <CardHeader title="Concept hierarchy" subheader={`${concepts.length} concepts`} />
+          <CardHeader title="Concept hierarchy" subheader={concepts.length ? `${concepts.length} concepts` : undefined} />
           <CardContent sx={{ maxHeight: 520, overflow: "auto" }}>
             {concepts.length ? (
               <SimpleTreeView

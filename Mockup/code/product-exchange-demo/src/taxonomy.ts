@@ -5,6 +5,20 @@ const TAXONOMY_URL = "../../../../Taxonomy/export12.ttl";
 
 type Literal = { value: string; lang?: string };
 
+export type TaxonomyMetadata = {
+  title?: string;
+  label?: string;
+  versionInfo?: string;
+  contributors?: string[];
+  namespace?: string;
+};
+
+export type TaxonomyParseResult = {
+  concepts: Concept[];
+  collections: Collection[];
+  metadata?: TaxonomyMetadata;
+};
+
 const pickLiteralValue = (entries: Literal[], preferredLang = "en") => {
   if (!entries.length) return undefined;
   const normalized = preferredLang.toLowerCase();
@@ -138,6 +152,43 @@ const normalizeToken = (token: string) => {
   return cleaned;
 };
 
+const extractNamespaceFromToken = (token: string, prefixes: Map<string, string>): string | undefined => {
+  const cleaned = token.trim();
+  if (!cleaned) return undefined;
+  if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
+    const iri = cleaned.slice(1, -1);
+    const hashIndex = iri.lastIndexOf("#");
+    if (hashIndex !== -1) return iri.slice(0, hashIndex + 1);
+    const schemeMatch = iri.match(/^[a-z][a-z0-9+\-.]*:\/\//i);
+    const schemeLength = schemeMatch ? schemeMatch[0].length : 0;
+    const slashIndex = iri.lastIndexOf("/");
+    if (slashIndex !== -1 && slashIndex >= schemeLength) {
+      return iri.slice(0, slashIndex + 1);
+    }
+    return iri;
+  }
+  if (cleaned.includes(":")) {
+    const prefix = cleaned.split(":")[0];
+    const namespace = prefixes.get(prefix);
+    if (namespace) return namespace;
+  }
+  return undefined;
+};
+
+const resolveIriFromToken = (token: string, prefixes: Map<string, string>): string | undefined => {
+  const cleaned = token.trim();
+  if (!cleaned) return undefined;
+  if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
+    return cleaned.slice(1, -1);
+  }
+  if (cleaned.includes(":")) {
+    const [prefix, ...rest] = cleaned.split(":");
+    const namespace = prefixes.get(prefix);
+    if (namespace) return namespace + rest.join(":");
+  }
+  return undefined;
+};
+
 const parseLiteral = (value: string): Literal | undefined => {
   const trimmed = value.trim();
   const match = trimmed.match(/^("""[\s\S]*?"""|"[^"]*")(?:@([a-zA-Z-]+))?$/);
@@ -164,9 +215,28 @@ const parsePredicateSegment = (segment: string): { predicate: string; objects: s
 
 const toConceptId = (subject: string) => normalizeToken(subject) ?? subject;
 
-export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Collection[] } => {
+export const parseTtl = (ttl: string): TaxonomyParseResult => {
   const concepts = new Map<string, Concept>();
   const collections: Collection[] = [];
+  const metadata: TaxonomyMetadata = {};
+
+  const prefixes = new Map<string, string>();
+  const prefixPattern = /@prefix\s+([^\s:]+):\s*<([^>]+)>\s*\./gi;
+  for (const match of ttl.matchAll(prefixPattern)) {
+    const prefix = match[1];
+    const iri = match[2];
+    if (prefix && iri) {
+      prefixes.set(prefix, iri);
+    }
+  }
+
+  const namespaceOccurrences = new Map<string, number>();
+  const recordNamespace = (token: string) => {
+    const namespace = extractNamespaceFromToken(token, prefixes);
+    if (!namespace) return undefined;
+    namespaceOccurrences.set(namespace, (namespaceOccurrences.get(namespace) ?? 0) + 1);
+    return namespace;
+  };
 
   for (const statement of splitStatements(ttl)) {
     if (!statement || statement.startsWith("@")) continue;
@@ -189,8 +259,83 @@ export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Colle
     const typeLower = typeSegment.toLowerCase();
     const isConcept = /\ba\s+skos:concept\b/.test(typeLower);
     const isCollection = /\ba\s+skos:collection\b/.test(typeLower);
+    const isOntology = /\ba\s+owl:ontology\b/.test(typeLower);
+
+    if (isOntology) {
+      const recordedNamespace = recordNamespace(subjectToken);
+      const titles: Literal[] = [];
+      const labels: Literal[] = [];
+      const versions: Literal[] = [];
+      const contributors: Literal[] = [];
+
+      for (const segment of propertySegments) {
+        const parsed = parsePredicateSegment(segment);
+        if (!parsed) continue;
+        const { predicate, objects } = parsed;
+        if (!objects.length) continue;
+
+        const predicateLower = predicate.toLowerCase();
+        switch (predicateLower) {
+          case "dc:title":
+          case "dct:title":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) titles.push(literal);
+            }
+            break;
+          case "rdfs:label":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) labels.push(literal);
+            }
+            break;
+          case "owl:versioninfo":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) versions.push(literal);
+            }
+            break;
+          case "dc:contributor":
+          case "dct:contributor":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) contributors.push(literal);
+            }
+            break;
+          default:
+            break;
+        }
+      }
+
+      const title = pickLiteralValue(titles);
+      const label = pickLiteralValue(labels);
+      const versionInfo = pickLiteralValue(versions) ?? versions[0]?.value;
+      const contributorValues = contributors.map((literal) => literal.value).filter(Boolean);
+
+      if (title && !metadata.title) metadata.title = title;
+      if (label && !metadata.label) metadata.label = label;
+      if (versionInfo && !metadata.versionInfo) metadata.versionInfo = versionInfo;
+      if (contributorValues.length) {
+        const existing = metadata.contributors ?? [];
+        const combined = new Set([...existing, ...contributorValues]);
+        metadata.contributors = Array.from(combined);
+      }
+      if (!metadata.namespace) {
+        if (recordedNamespace) {
+          metadata.namespace = recordedNamespace;
+        } else {
+          const iri = resolveIriFromToken(subjectToken, prefixes);
+          if (iri) metadata.namespace = iri;
+        }
+      }
+      continue;
+    }
 
     if (!isConcept && !isCollection) continue;
+
+    if (isConcept) {
+      recordNamespace(subjectToken);
+    }
 
     const prefLabels: Literal[] = [];
     const rdfsLabels: Literal[] = [];
@@ -209,20 +354,22 @@ export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Colle
       const { predicate, objects } = parsed;
       if (!objects.length) continue;
 
-      switch (predicate) {
+      const predicateLower = predicate.toLowerCase();
+
+      switch (predicateLower) {
         case "rdfs:label":
           for (const obj of objects) {
             const literal = parseLiteral(obj);
             if (literal) rdfsLabels.push(literal);
           }
           break;
-        case "skos:prefLabel":
+        case "skos:preflabel":
           for (const obj of objects) {
             const literal = parseLiteral(obj);
             if (literal) prefLabels.push(literal);
           }
           break;
-        case "skos:altLabel":
+        case "skos:altlabel":
           for (const obj of objects) {
             const literal = parseLiteral(obj);
             if (literal) altLabels.push(literal.value);
@@ -252,13 +399,13 @@ export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Colle
             if (value) related.push(value);
           }
           break;
-        case "skos:topConceptOf":
+        case "skos:topconceptof":
           for (const obj of objects) {
             const value = normalizeToken(obj);
             if (value) topConceptOf.push(value);
           }
           break;
-        case "skos:inScheme":
+        case "skos:inscheme":
           for (const obj of objects) {
             const value = normalizeToken(obj);
             if (value) inSchemes.push(value);
@@ -299,12 +446,38 @@ export const parseTtl = (ttl: string): { concepts: Concept[]; collections: Colle
     }
   }
 
-  return { concepts: Array.from(concepts.values()), collections };
+  if (!metadata.namespace) {
+    let bestNamespace: string | undefined;
+    let highestScore = 0;
+    for (const [namespace, score] of namespaceOccurrences) {
+      if (score > highestScore) {
+        highestScore = score;
+        bestNamespace = namespace;
+      }
+    }
+    if (bestNamespace) {
+      metadata.namespace = bestNamespace;
+    }
+  }
+
+  const hasMetadata =
+    Boolean(metadata.title) ||
+    Boolean(metadata.label) ||
+    Boolean(metadata.versionInfo) ||
+    Boolean(metadata.contributors && metadata.contributors.length) ||
+    Boolean(metadata.namespace);
+
+  return {
+    concepts: Array.from(concepts.values()),
+    collections,
+    metadata: hasMetadata ? metadata : undefined,
+  };
 };
 
 export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Collection[]) => {
   const [concepts, setConcepts] = useState<Concept[]>(initialConcepts);
   const [collections, setCollections] = useState<Collection[]>(initialCollections);
+  const [metadata, setMetadata] = useState<TaxonomyMetadata | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -320,6 +493,7 @@ export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Coll
           if (parsed.collections.length) {
             setCollections(parsed.collections);
           }
+          setMetadata(parsed.metadata ?? null);
         }
       } catch (error) {
         console.warn("Failed to load taxonomy export.", error);
@@ -340,5 +514,5 @@ export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Coll
     [concepts]
   );
 
-  return { concepts, setConcepts, collections, setCollections, conceptLabel, orderedConcepts };
+  return { concepts, setConcepts, collections, setCollections, metadata, setMetadata, conceptLabel, orderedConcepts };
 };
