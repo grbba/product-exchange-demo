@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Collection, Concept } from "./domain";
+import type { Collection, Concept, LinkedSsr } from "./domain";
 
 const TAXONOMY_URL = "../../../../Taxonomy/export12.ttl";
 
@@ -225,6 +225,8 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
   const concepts = new Map<string, Concept>();
   const collections: Collection[] = [];
   const metadata: TaxonomyMetadata = {};
+  const ssrLabels = new Map<string, string>();
+  const pendingLinkedSsrs = new Map<string, string[]>();
 
   const prefixes = new Map<string, string>();
   const prefixPattern = /@prefix\s+([^\s:]+):\s*<([^>]+)>\s*\./gi;
@@ -266,6 +268,7 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
     const isConcept = /\ba\s+skos:concept\b/.test(typeLower);
     const isCollection = /\ba\s+skos:collection\b/.test(typeLower);
     const isOntology = /\ba\s+owl:ontology\b/.test(typeLower);
+    const isSsr = /\ba\s+[^;]*ssr\b/.test(typeLower);
 
     if (isOntology) {
       const recordedNamespace = recordNamespace(subjectToken);
@@ -340,6 +343,40 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
       continue;
     }
 
+    if (isSsr) {
+      const rdfsLabels: Literal[] = [];
+      const prefLabels: Literal[] = [];
+
+      for (const segment of propertySegments) {
+        const parsed = parsePredicateSegment(segment);
+        if (!parsed) continue;
+        const { predicate, objects } = parsed;
+        if (!objects.length) continue;
+
+        const predicateLower = predicate.toLowerCase();
+        switch (predicateLower) {
+          case "rdfs:label":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) rdfsLabels.push(literal);
+            }
+            break;
+          case "skos:preflabel":
+            for (const obj of objects) {
+              const literal = parseLiteral(obj);
+              if (literal) prefLabels.push(literal);
+            }
+            break;
+          default:
+            break;
+        }
+      }
+
+      const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
+      ssrLabels.set(id, label);
+      continue;
+    }
+
     if (!isConcept && !isCollection) continue;
 
     if (isConcept) {
@@ -356,6 +393,7 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
     const topConceptOf: string[] = [];
     const inSchemes: string[] = [];
     const members: string[] = [];
+    const linkedSsrs: string[] = [];
 
     for (const segment of propertySegments) {
       const parsed = parsePredicateSegment(segment);
@@ -364,6 +402,14 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
       if (!objects.length) continue;
 
       const predicateLower = predicate.toLowerCase();
+
+      if (predicateLower.endsWith("linkedssr")) {
+        for (const obj of objects) {
+          const value = normalizeToken(obj);
+          if (value) linkedSsrs.push(value);
+        }
+        continue;
+      }
 
       switch (predicateLower) {
         case "rdfs:label":
@@ -434,7 +480,7 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
     if (isConcept) {
       const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
       const definition = pickLiteralValue(definitions);
-      concepts.set(id, {
+      const concept: Concept = {
         id,
         label,
         altLabels: altLabels.length ? Array.from(new Set(altLabels)) : undefined,
@@ -444,7 +490,14 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
         related: related.length ? Array.from(new Set(related)) : undefined,
         topConceptOf: topConceptOf.length ? Array.from(new Set(topConceptOf)) : undefined,
         inSchemes: inSchemes.length ? Array.from(new Set(inSchemes)) : undefined,
-      });
+      };
+      concepts.set(id, concept);
+      if (linkedSsrs.length) {
+        const uniqueLinked = Array.from(new Set(linkedSsrs));
+        if (uniqueLinked.length) {
+          pendingLinkedSsrs.set(id, uniqueLinked);
+        }
+      }
     } else if (isCollection) {
       const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
       collections.push({
@@ -452,6 +505,19 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
         label,
         members: members.length ? Array.from(new Set(members)) : [],
       });
+    }
+  }
+
+  if (pendingLinkedSsrs.size) {
+    for (const [conceptId, concept] of concepts) {
+      const linkedIds = pendingLinkedSsrs.get(conceptId);
+      if (linkedIds?.length) {
+        const ssrs: LinkedSsr[] = linkedIds.map((ssrId) => ({
+          id: ssrId,
+          label: ssrLabels.get(ssrId) ?? ssrId,
+        }));
+        concept.linkedSsrs = ssrs;
+      }
     }
   }
 

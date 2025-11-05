@@ -156,6 +156,8 @@ export type ReferenceSystemDraft = {
   validationProvider?: ReferenceValidationProvider;
 };
 
+export type LinkedSsr = { id: string; label: string };
+
 export type Concept = {
   id: string;
   label: string;
@@ -166,6 +168,7 @@ export type Concept = {
   related?: string[];
   topConceptOf?: string[];
   inSchemes?: string[];
+  linkedSsrs?: LinkedSsr[];
 };
 export type ConceptScheme = { id: string; label: string; topConcepts: string[] };
 export type Collection = { id: string; label: string; members: string[] };
