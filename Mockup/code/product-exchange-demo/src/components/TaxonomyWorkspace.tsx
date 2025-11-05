@@ -153,73 +153,48 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
     [collections, selectedId]
   );
 
-  const ontologyDetails = useMemo(() => {
-    if (!metadata) return null;
+  const { ontologyDetailItems, hasOntologyMetadata } = useMemo(() => {
     const details: { label: string; value: string }[] = [];
-    const taxonomyName = metadata.title ?? metadata.label;
-    if (taxonomyName) {
-      details.push({ label: "Taxonomy", value: taxonomyName });
+    let hasMetadata = false;
+    if (metadata) {
+      const taxonomyName = metadata.title ?? metadata.label;
+      if (taxonomyName) {
+        details.push({ label: "Taxonomy", value: taxonomyName });
+        hasMetadata = true;
+      }
+      if (metadata.versionInfo) {
+        details.push({ label: "Version", value: metadata.versionInfo });
+        hasMetadata = true;
+      }
+      const contributors = metadata.contributors?.filter(Boolean) ?? [];
+      if (contributors.length) {
+        details.push({
+          label: contributors.length > 1 ? "Contributors" : "Contributor",
+          value: contributors.join(", "),
+        });
+        hasMetadata = true;
+      }
+      if (metadata.namespace) {
+        details.push({ label: "Namespace", value: metadata.namespace });
+        hasMetadata = true;
+      }
+      if (metadata.namespacePrefix) {
+        details.push({ label: "Prefix", value: `${metadata.namespacePrefix}:` });
+        hasMetadata = true;
+      }
     }
-    if (metadata.versionInfo) {
-      details.push({ label: "Version", value: metadata.versionInfo });
-    }
-    const contributors = metadata.contributors?.filter(Boolean) ?? [];
-    if (contributors.length) {
-      details.push({
-        label: contributors.length > 1 ? "Contributors" : "Contributor",
-        value: contributors.join(", "),
-      });
-    }
-    if (metadata.namespace) {
-      details.push({ label: "Namespace", value: metadata.namespace });
-    }
-    return details.length ? details : null;
+    return { ontologyDetailItems: details, hasOntologyMetadata: hasMetadata };
   }, [metadata]);
 
-  const renderOntologySummary = () =>
-    ontologyDetails ? (
-      <Stack spacing={0.25}>
-        {ontologyDetails.map((item) => (
-          <Typography key={item.label} variant="body2" color="text.secondary">
-            {item.label}: {item.value}
-          </Typography>
-        ))}
-      </Stack>
-    ) : (
-      <Typography variant="body2" color="text.secondary">
-        No ontology metadata found in the current taxonomy.
-      </Typography>
-    );
+  const detailItems = useMemo(() => {
+    const items = [...ontologyDetailItems];
+    items.push({ label: "Concepts", value: String(concepts.length) });
+    return items;
+  }, [ontologyDetailItems, concepts.length]);
 
   return (
     <Stack spacing={3} sx={{ height: "100%" }}>
-      <Card variant="outlined">
-        <CardHeader title="Taxonomy details" />
-        <CardContent>
-          <Stack spacing={2}>
-            <Stack spacing={0.5}>
-              {renderOntologySummary()}
-              <Typography variant="body2" color="text.secondary">
-                {concepts.length ? `${concepts.length} concepts available` : "No concepts loaded."}
-              </Typography>
-            </Stack>
-            <Box>
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".ttl"
-                style={{ display: "none" }}
-                onChange={handleImport}
-              />
-              <Button variant="outlined" startIcon={<UploadIcon />} onClick={handleTriggerImport}>
-                Import SKOS TTL
-              </Button>
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
-
-      <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="stretch">
+      <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="stretch" sx={{ flex: 1 }}>
         <Card variant="outlined" sx={{ flex: 1 }}>
           <CardHeader title="Concept hierarchy" subheader={concepts.length ? `${concepts.length} concepts` : undefined} />
           <CardContent sx={{ maxHeight: 520, overflow: "auto" }}>
@@ -246,6 +221,52 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
         </Card>
 
         <Stack spacing={3} sx={{ flex: { xs: 1, lg: 0.9 } }}>
+          <Card variant="outlined">
+            <CardHeader title="Taxonomy details" />
+            <CardContent>
+              <Stack spacing={2}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gap: 1,
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" },
+                  }}
+                >
+                  {detailItems.map((item) => (
+                    <Box key={item.label}>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase" }}>
+                        {item.label}
+                      </Typography>
+                      <Typography variant="body2">{item.value}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+                {!hasOntologyMetadata && (
+                  <Typography variant="body2" color="text.secondary">
+                    No ontology metadata found in the current taxonomy.
+                  </Typography>
+                )}
+                <Box>
+                  <input
+                    ref={inputRef}
+                    type="file"
+                    accept=".ttl"
+                    style={{ display: "none" }}
+                    onChange={handleImport}
+                  />
+                  <Button
+                    variant="outlined"
+                    startIcon={<UploadIcon />}
+                    onClick={handleTriggerImport}
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    Import SKOS TTL
+                  </Button>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+
           <Card variant="outlined">
             <CardHeader title="Concept details" />
             <CardContent>

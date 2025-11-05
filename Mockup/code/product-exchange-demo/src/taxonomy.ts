@@ -11,6 +11,7 @@ export type TaxonomyMetadata = {
   versionInfo?: string;
   contributors?: string[];
   namespace?: string;
+  namespacePrefix?: string;
 };
 
 export type TaxonomyParseResult = {
@@ -152,25 +153,30 @@ const normalizeToken = (token: string) => {
   return cleaned;
 };
 
-const extractNamespaceFromToken = (token: string, prefixes: Map<string, string>): string | undefined => {
+const extractNamespaceFromToken = (
+  token: string,
+  prefixes: Map<string, string>
+): { namespace: string; prefix?: string } | undefined => {
   const cleaned = token.trim();
   if (!cleaned) return undefined;
   if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
     const iri = cleaned.slice(1, -1);
     const hashIndex = iri.lastIndexOf("#");
-    if (hashIndex !== -1) return iri.slice(0, hashIndex + 1);
+    if (hashIndex !== -1) {
+      return { namespace: iri.slice(0, hashIndex + 1) };
+    }
     const schemeMatch = iri.match(/^[a-z][a-z0-9+\-.]*:\/\//i);
     const schemeLength = schemeMatch ? schemeMatch[0].length : 0;
     const slashIndex = iri.lastIndexOf("/");
     if (slashIndex !== -1 && slashIndex >= schemeLength) {
-      return iri.slice(0, slashIndex + 1);
+      return { namespace: iri.slice(0, slashIndex + 1) };
     }
-    return iri;
+    return { namespace: iri };
   }
   if (cleaned.includes(":")) {
     const prefix = cleaned.split(":")[0];
     const namespace = prefixes.get(prefix);
-    if (namespace) return namespace;
+    if (namespace) return { namespace, prefix };
   }
   return undefined;
 };
@@ -232,10 +238,10 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
 
   const namespaceOccurrences = new Map<string, number>();
   const recordNamespace = (token: string) => {
-    const namespace = extractNamespaceFromToken(token, prefixes);
-    if (!namespace) return undefined;
-    namespaceOccurrences.set(namespace, (namespaceOccurrences.get(namespace) ?? 0) + 1);
-    return namespace;
+    const info = extractNamespaceFromToken(token, prefixes);
+    if (!info) return undefined;
+    namespaceOccurrences.set(info.namespace, (namespaceOccurrences.get(info.namespace) ?? 0) + 1);
+    return info;
   };
 
   for (const statement of splitStatements(ttl)) {
@@ -322,11 +328,14 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
       }
       if (!metadata.namespace) {
         if (recordedNamespace) {
-          metadata.namespace = recordedNamespace;
+          metadata.namespace = recordedNamespace.namespace;
+          if (recordedNamespace.prefix) metadata.namespacePrefix = recordedNamespace.prefix;
         } else {
           const iri = resolveIriFromToken(subjectToken, prefixes);
           if (iri) metadata.namespace = iri;
         }
+      } else if (!metadata.namespacePrefix && recordedNamespace?.prefix) {
+        metadata.namespacePrefix = recordedNamespace.prefix;
       }
       continue;
     }
@@ -460,12 +469,25 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
     }
   }
 
+  if (metadata.namespace && !metadata.namespacePrefix) {
+    const trimTrailing = (value: string) =>
+      value.endsWith("#") || value.endsWith("/") ? value.slice(0, -1) : value;
+    const targetTrimmed = trimTrailing(metadata.namespace);
+    for (const [prefix, value] of prefixes) {
+      if (value === metadata.namespace || trimTrailing(value) === targetTrimmed) {
+        metadata.namespacePrefix = prefix;
+        break;
+      }
+    }
+  }
+
   const hasMetadata =
     Boolean(metadata.title) ||
     Boolean(metadata.label) ||
     Boolean(metadata.versionInfo) ||
     Boolean(metadata.contributors && metadata.contributors.length) ||
-    Boolean(metadata.namespace);
+    Boolean(metadata.namespace) ||
+    Boolean(metadata.namespacePrefix);
 
   return {
     concepts: Array.from(concepts.values()),
