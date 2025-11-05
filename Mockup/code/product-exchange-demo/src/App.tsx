@@ -183,6 +183,7 @@ const normalizeReferenceSystem = (system: unknown): ReferenceSystem => {
     source: normalizeReferenceSource(candidate.source),
     createdAt,
     updatedAt,
+    validationProvider: candidate.validationProvider === "amadeus-airport" ? "amadeus-airport" : undefined,
   };
 };
 

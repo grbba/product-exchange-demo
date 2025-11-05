@@ -8,6 +8,7 @@ import {
   Chip,
   Divider,
   FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   List,
@@ -493,7 +494,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             </Typography>
                           )}
                           {taxonomyOptions ? (
-                            <FormControl size="small">
+                            <FormControl size="small" error={Boolean(errorMessage)}>
                               <InputLabel id={`single-value-${feature.id}-${index}`}>Value</InputLabel>
                               <Select
                                 labelId={`single-value-${feature.id}-${index}`}
@@ -511,16 +512,17 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                                 <MenuItem value="">
                                   <em>— choose —</em>
                                 </MenuItem>
-                                {taxonomyOptions.map((option) => (
-                                  <MenuItem key={option.id} value={option.id}>
-                                    {option.label}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          ) : (
-                            renderFreeInput()
-                          )}
+                          {taxonomyOptions.map((option) => (
+                            <MenuItem key={option.id} value={option.id}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                          </Select>
+                          {errorMessage ? <FormHelperText>{errorMessage}</FormHelperText> : null}
+                        </FormControl>
+                      ) : (
+                        renderFreeInput()
+                      )}
                           {isMeasurement && (
                             <TextField
                               size="small"
