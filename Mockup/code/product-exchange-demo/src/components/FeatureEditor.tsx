@@ -113,8 +113,8 @@ type FeatureEditorProps = {
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
-  if (kind === "SingleValue") return { kind, value: "" };
-  if (kind === "ValueRange") return { kind, min: "", max: "" };
+  if (kind === "SingleValue") return { kind, value: "", unit: "" };
+  if (kind === "ValueRange") return { kind, min: "", max: "", unit: "" };
   return { kind, values: [] };
 };
 
@@ -149,6 +149,11 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
     }
     return map;
   }, [referenceSystems]);
+
+  const referenceSystemMap = useMemo(
+    () => new Map(referenceSystems.map((system) => [system.id, system] as const)),
+    [referenceSystems]
+  );
 
   const conceptById = useMemo(() => {
     if (!conceptOptions?.length) return new Map<string, Concept>();
@@ -436,177 +441,247 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   </IconButton>
                 </Stack>
                 <Box sx={{ mt: 2 }}>
-                  {value.kind === "SingleValue" && (
-                    <Stack spacing={1.5}>
-                      {(() => {
-                        const taxonomyChoices = value.referenceSystemId
-                          ? taxonomyConceptChoices.get(value.referenceSystemId)
-                          : undefined;
-                        const hasTaxonomyChoices = Boolean(taxonomyChoices && taxonomyChoices.length);
-                        if (hasTaxonomyChoices) {
-                          return (
+                  {value.kind === "SingleValue" &&
+                    (() => {
+                      const selectedReference = value.referenceSystemId
+                        ? referenceSystemMap.get(value.referenceSystemId)
+                        : undefined;
+                      const taxonomyChoices = value.referenceSystemId
+                        ? taxonomyConceptChoices.get(value.referenceSystemId)
+                        : undefined;
+                      const taxonomyOptions = taxonomyChoices && taxonomyChoices.length ? taxonomyChoices : undefined;
+                      const showEmptyTaxonomyHint = Boolean(
+                        value.referenceSystemId && taxonomyChoices && taxonomyChoices.length === 0
+                      );
+                      const isMeasurement = selectedReference?.systemType === "Measurement";
+
+                      const renderFreeInput = () => (
+                        <TextField
+                          size="small"
+                          label="Value"
+                          type={isMeasurement ? "number" : "text"}
+                          inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
+                          value={value.value}
+                          onChange={(event) => {
+                            const input = event.target.value;
+                            const normalized =
+                              lockStructure && validationProvider === "amadeus-airport"
+                                ? input.toUpperCase()
+                                : input;
+                            setFeature(feature.id, (current) => {
+                              const next = [...current.values];
+                              (next[index] as SingleValue).value = normalized;
+                              return { ...current, values: next };
+                            });
+                            clearError(key);
+                          }}
+                          onBlur={(event) => {
+                            if (validationProvider === "amadeus-airport") {
+                              runValidation(key, validationProvider, event.target.value);
+                            }
+                          }}
+                          error={Boolean(errorMessage)}
+                          helperText={errorMessage ?? undefined}
+                        />
+                      );
+
+                      return (
+                        <Stack spacing={1.5}>
+                          {showEmptyTaxonomyHint && !taxonomyOptions && (
+                            <Typography variant="body2" color="text.secondary">
+                              No taxonomy concepts are available for the selected reference system.
+                            </Typography>
+                          )}
+                          {taxonomyOptions ? (
                             <FormControl size="small">
                               <InputLabel id={`single-value-${feature.id}-${index}`}>Value</InputLabel>
                               <Select
                                 labelId={`single-value-${feature.id}-${index}`}
                                 label="Value"
                                 value={value.value ?? ""}
-                                onChange={(event) =>
+                                onChange={(event) => {
+                                  clearError(key);
                                   setFeature(feature.id, (current) => {
                                     const next = [...current.values];
                                     (next[index] as SingleValue).value = event.target.value;
                                     return { ...current, values: next };
-                                  })
-                                }
+                                  });
+                                }}
                               >
                                 <MenuItem value="">
                                   <em>— choose —</em>
                                 </MenuItem>
-                                {taxonomyChoices!.map((option) => (
+                                {taxonomyOptions.map((option) => (
                                   <MenuItem key={option.id} value={option.id}>
                                     {option.label}
                                   </MenuItem>
                                 ))}
                               </Select>
                             </FormControl>
-                          );
-                        }
-                        if (value.referenceSystemId && taxonomyChoices && !taxonomyChoices.length) {
-                          return (
-                            <Typography variant="body2" color="text.secondary">
-                              No taxonomy concepts available for the selected reference system.
-                            </Typography>
-                          );
-                        }
-                        return (
-                          <TextField
-                            size="small"
-                            label="Value"
-                            value={value.value}
-                            onChange={(event) => {
-                              const input = event.target.value;
-                              const normalized =
-                                lockStructure && validationProvider === "amadeus-airport"
-                                  ? input.toUpperCase()
-                                  : input;
-                              setFeature(feature.id, (current) => {
-                                const next = [...current.values];
-                                (next[index] as SingleValue).value = normalized;
-                                return { ...current, values: next };
-                              });
-                              clearError(key);
-                            }}
-                            onBlur={(event) => {
-                              if (validationProvider === "amadeus-airport") {
-                                runValidation(key, validationProvider, event.target.value);
+                          ) : (
+                            renderFreeInput()
+                          )}
+                          {isMeasurement && (
+                            <TextField
+                              size="small"
+                              label="Unit"
+                              value={value.unit ?? ""}
+                              onChange={(event) =>
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  (next[index] as SingleValue).unit = event.target.value;
+                                  return { ...current, values: next };
+                                })
                               }
-                            }}
-                            error={Boolean(errorMessage)}
-                            helperText={errorMessage ?? undefined}
-                          />
-                        );
-                      })()}
-                      <FormControl size="small">
-                        <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                        <Select
-                          labelId={`single-ref-${feature.id}-${index}`}
-                          label="Reference"
-                          value={value.referenceSystemId ?? ""}
-                          onChange={(event) => {
-                            setFeature(feature.id, (current) => {
-                              const next = [...current.values];
-                              const selectedRef = event.target.value || undefined;
-                              const single = next[index] as SingleValue;
-                              single.referenceSystemId = selectedRef;
-                              if (selectedRef) {
-                                const taxonomyChoices = taxonomyConceptChoices.get(selectedRef);
-                                if (taxonomyChoices && taxonomyChoices.length) {
-                                  if (!taxonomyChoices.some((option) => option.id === single.value)) {
-                                    single.value = taxonomyChoices[0]?.id ?? "";
+                            />
+                          )}
+                          <FormControl size="small">
+                            <InputLabel id={`single-ref-${feature.id}-${index}`}>Reference</InputLabel>
+                            <Select
+                              labelId={`single-ref-${feature.id}-${index}`}
+                              label="Reference"
+                              value={value.referenceSystemId ?? ""}
+                              onChange={(event) => {
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  const single = next[index] as SingleValue;
+                                  const selectedRefId = event.target.value || undefined;
+                                  single.referenceSystemId = selectedRefId;
+                                  if (selectedRefId) {
+                                    const taxonomyOptionsForRef = taxonomyConceptChoices.get(selectedRefId);
+                                    if (taxonomyOptionsForRef && taxonomyOptionsForRef.length) {
+                                      if (!taxonomyOptionsForRef.some((option) => option.id === single.value)) {
+                                        single.value = taxonomyOptionsForRef[0]?.id ?? "";
+                                      }
+                                    }
+                                    const measurementCandidate = referenceSystemMap.get(selectedRefId);
+                                    if (measurementCandidate?.systemType === "Measurement") {
+                                      single.unit = single.unit ?? "";
+                                    } else {
+                                      delete single.unit;
+                                    }
+                                  } else {
+                                    delete single.unit;
                                   }
+                                  return { ...current, values: next };
+                                });
+                                clearError(key);
+                              }}
+                              onBlur={() => {
+                                if (validationProvider === "amadeus-airport") {
+                                  runValidation(key, validationProvider, value.value ?? "");
                                 }
+                              }}
+                              disabled={lockStructure}
+                            >
+                              <MenuItem value="">
+                                <em>None</em>
+                              </MenuItem>
+                              {referenceSystems.map((ref) => (
+                                <MenuItem
+                                  key={ref.id}
+                                  value={ref.id}
+                                >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Stack>
+                      );
+                    })()}
+                  {value.kind === "ValueRange" &&
+                    (() => {
+                      const selectedReference = value.referenceSystemId
+                        ? referenceSystemMap.get(value.referenceSystemId)
+                        : undefined;
+                      const isMeasurement = selectedReference?.systemType === "Measurement";
+
+                      return (
+                        <Stack spacing={1.5}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                            <TextField
+                              size="small"
+                              label="Min"
+                              type={isMeasurement ? "number" : "text"}
+                              inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
+                              value={value.min}
+                              onChange={(event) =>
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  (next[index] as ValueRange).min = event.target.value;
+                                  return { ...current, values: next };
+                                })
                               }
-                              return { ...current, values: next };
-                            });
-                            clearError(key);
-                          }}
-                          onBlur={() => {
-                            if (validationProvider === "amadeus-airport") {
-                              runValidation(key, validationProvider, value.value ?? "");
-                            }
-                          }}
-                          disabled={lockStructure}
-                        >
-                          <MenuItem value="">
-                            <em>None</em>
-                          </MenuItem>
-                          {referenceSystems.map((ref) => (
-                            <MenuItem
-                              key={ref.id}
-                              value={ref.id}
-                            >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Stack>
-                  )}
-                  {value.kind === "ValueRange" && (
-                    <Stack spacing={1.5}>
-                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                        <TextField
-                          size="small"
-                          label="Min"
-                          value={value.min}
-                          onChange={(event) =>
-                            setFeature(feature.id, (current) => {
-                              const next = [...current.values];
-                              (next[index] as ValueRange).min = event.target.value;
-                              return { ...current, values: next };
-                            })
-                          }
-                        />
-                        <TextField
-                          size="small"
-                          label="Max"
-                          value={value.max}
-                          onChange={(event) =>
-                            setFeature(feature.id, (current) => {
-                              const next = [...current.values];
-                              (next[index] as ValueRange).max = event.target.value;
-                              return { ...current, values: next };
-                            })
-                          }
-                        />
-                      </Stack>
-                      <FormControl size="small">
-                        <InputLabel id={`range-ref-${feature.id}-${index}`}>Reference</InputLabel>
-                        <Select
-                          labelId={`range-ref-${feature.id}-${index}`}
-                          label="Reference"
-                          value={value.referenceSystemId ?? ""}
-                          onChange={(event) =>
-                            setFeature(feature.id, (current) => {
-                              const next = [...current.values];
-                              (next[index] as ValueRange).referenceSystemId =
-                                event.target.value || undefined;
-                              return { ...current, values: next };
-                            })
-                          }
-                          disabled={lockStructure}
-                        >
-                          <MenuItem value="">
-                            <em>None</em>
-                          </MenuItem>
-                          {referenceSystems.map((ref) => (
-                            <MenuItem
-                              key={ref.id}
-                              value={ref.id}
-                            >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Stack>
-                  )}
+                            />
+                            <TextField
+                              size="small"
+                              label="Max"
+                              type={isMeasurement ? "number" : "text"}
+                              inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
+                              value={value.max}
+                              onChange={(event) =>
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  (next[index] as ValueRange).max = event.target.value;
+                                  return { ...current, values: next };
+                                })
+                              }
+                            />
+                          </Stack>
+                          {isMeasurement && (
+                            <TextField
+                              size="small"
+                              label="Unit"
+                              value={value.unit ?? ""}
+                              onChange={(event) =>
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  (next[index] as ValueRange).unit = event.target.value;
+                                  return { ...current, values: next };
+                                })
+                              }
+                            />
+                          )}
+                          <FormControl size="small">
+                            <InputLabel id={`range-ref-${feature.id}-${index}`}>Reference</InputLabel>
+                            <Select
+                              labelId={`range-ref-${feature.id}-${index}`}
+                              label="Reference"
+                              value={value.referenceSystemId ?? ""}
+                              onChange={(event) =>
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  const range = next[index] as ValueRange;
+                                  const selectedRefId = event.target.value || undefined;
+                                  range.referenceSystemId = selectedRefId;
+                                  if (selectedRefId) {
+                                    const measurementCandidate = referenceSystemMap.get(selectedRefId);
+                                    if (measurementCandidate?.systemType === "Measurement") {
+                                      range.unit = range.unit ?? "";
+                                    } else {
+                                      delete range.unit;
+                                    }
+                                  } else {
+                                    delete range.unit;
+                                  }
+                                  return { ...current, values: next };
+                                })
+                              }
+                              disabled={lockStructure}
+                            >
+                              <MenuItem value="">
+                                <em>None</em>
+                              </MenuItem>
+                              {referenceSystems.map((ref) => (
+                                <MenuItem
+                                  key={ref.id}
+                                  value={ref.id}
+                                >{`${ref.identifier || ref.description || ref.id} (${ref.systemType})`}</MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                        </Stack>
+                      );
+                    })()}
                   {value.kind === "DiscreteSet" && (
                     <Stack spacing={1.5}>
                       {(() => {
