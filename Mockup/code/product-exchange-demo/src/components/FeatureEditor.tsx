@@ -391,7 +391,6 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   onChange={(event) =>
                     setTagSelections((previous) => ({ ...previous, [feature.id]: event.target.value }))
                   }
-                  disabled={lockStructure}
                 >
                   <MenuItem value="">
                     <em>— choose —</em>
@@ -403,18 +402,18 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   ))}
                 </Select>
               </FormControl>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    const selection = tagSelections[feature.id];
-                    if (!selection) return;
-                    onAddTag(feature.id, selection);
-                    setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
-                  }}
-                  disabled={lockStructure || !tagSelections[feature.id]}
-                >
-                  Add tag
-                </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  const selection = tagSelections[feature.id];
+                  if (!selection) return;
+                  onAddTag(feature.id, selection);
+                  setTagSelections((previous) => ({ ...previous, [feature.id]: "" }));
+                }}
+                disabled={!tagSelections[feature.id]}
+              >
+                Add tag
+              </Button>
             </Stack>
           ) : null}
         </Stack>
