@@ -35,6 +35,7 @@ const SchemaWorkspace = lazy(() => import("./components/SchemaWorkspace"));
 const ProductWorkspace = lazy(() => import("./components/ProductWorkspace"));
 const TaxonomyWorkspace = lazy(() => import("./components/TaxonomyWorkspace"));
 const ReferenceSystemWorkspace = lazy(() => import("./components/ReferenceSystemWorkspace"));
+const RulesWorkspace = lazy(() => import("./components/RulesWorkspace"));
 import {
   COLLECTIONS,
   DEFAULT_CONCEPTS,
@@ -42,7 +43,7 @@ import {
   REFERENCE_SYSTEM_TYPES,
   SCHEMA_CATEGORIES,
   createExternalReferenceSource,
-  createRule,
+  createIndianMealRule,
   createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
@@ -60,14 +61,17 @@ import type {
   ProductInstance,
   ProductSchema,
   InternalReferenceSource,
+  LogicalExpression,
+  LogicalOperator,
   ReferenceSource,
   ReferenceSystem,
   ReferenceSystemType,
   ReferenceSystemDraft,
   Rule,
+  RuleScope,
+  RuleTarget,
   SchemaCategory,
   TaxonomyConceptSetReference,
-  TaxonomyCondition,
 } from "./domain";
 import { useTaxonomy } from "./taxonomy";
 import {
@@ -187,55 +191,183 @@ const normalizeReferenceSystem = (system: unknown): ReferenceSystem => {
   };
 };
 
-const evaluateRules = (product: Product, rules: Rule[]) =>
+type RuleEvaluationStatus = "pass" | "fail" | "unknown";
+type RuleEvaluationResult = { ruleId: string; name: string; status: RuleEvaluationStatus; details: string[] };
+
+const addDetail = (details: string[], depth: number, message: string) => {
+  details.push(`${"  ".repeat(depth)}${message}`);
+};
+
+const combineStatuses = (operator: LogicalOperator, statuses: RuleEvaluationStatus[]): RuleEvaluationStatus => {
+  const summary = statuses.reduce(
+    (acc, status) => {
+      acc[status] += 1;
+      return acc;
+    },
+    { pass: 0, fail: 0, unknown: 0 } as Record<RuleEvaluationStatus, number>
+  );
+  switch (operator) {
+    case "AND":
+      if (summary.fail > 0) return "fail";
+      if (summary.unknown > 0) return "unknown";
+      return "pass";
+    case "OR":
+      if (summary.pass > 0) return "pass";
+      if (summary.unknown > 0) return "unknown";
+      return "fail";
+    case "NOT": {
+      const [first] = statuses;
+      if (!first || first === "unknown") return "unknown";
+      return first === "pass" ? "fail" : "pass";
+    }
+    case "XOR":
+      if (summary.unknown > 0) return "unknown";
+      return summary.pass === 1 ? "pass" : "fail";
+    case "NAND":
+      if (summary.fail > 0) return "pass";
+      if (summary.unknown > 0) return "unknown";
+      return "fail";
+    case "NOR":
+      if (summary.pass > 0) return "fail";
+      if (summary.unknown > 0) return "unknown";
+      return "pass";
+    default:
+      return "unknown";
+  }
+};
+
+const evaluateLogicalExpression = (
+  expression: LogicalExpression,
+  product: Product,
+  details: string[],
+  depth = 0
+): RuleEvaluationStatus => {
+  if (expression.kind === "Compound") {
+    addDetail(
+      details,
+      depth,
+      `Compound (${expression.operator})${expression.description ? ` – ${expression.description}` : ""}`
+    );
+    if (!expression.children.length) {
+      addDetail(details, depth + 1, "⚠ No child expressions defined");
+      return "unknown";
+    }
+    const childStatuses = expression.children.map((child) =>
+      evaluateLogicalExpression(child, product, details, depth + 1)
+    );
+    const result = combineStatuses(expression.operator, childStatuses);
+    addDetail(details, depth, `Result: ${result.toUpperCase()}`);
+    return result;
+  }
+
+  if (expression.kind === "Taxonomy") {
+    const descriptor = expression.description ?? `Taxonomy concept ${expression.taxonomyConceptId}`;
+    if (expression.subjectRef === "currentProduct") {
+      const hasConcept = product.tags.includes(expression.taxonomyConceptId);
+      addDetail(
+        details,
+        depth,
+        `${hasConcept ? "✓" : "✗"} ${descriptor} (${expression.taxonomyConceptId}) on current product`
+      );
+      return hasConcept ? "pass" : "fail";
+    }
+    addDetail(
+      details,
+      depth,
+      `? ${descriptor} (${expression.taxonomyConceptId}) requires '${expression.subjectRef}' context (not available in demo)`
+    );
+    return "unknown";
+  }
+
+  if (expression.kind === "DateTime") {
+    const label = expression.description ?? "Date/time condition";
+    addDetail(
+      details,
+      depth,
+      `? ${label} (${expression.value || "no value"}) requires temporal context that is not modelled in the demo`
+    );
+    return "unknown";
+  }
+
+  if (expression.kind === "Feature") {
+    addDetail(details, depth, "? Feature condition evaluation not implemented in the demo");
+    return "unknown";
+  }
+
+  if (expression.kind === "Product") {
+    addDetail(details, depth, "? Product condition evaluation not implemented in the demo");
+    return "unknown";
+  }
+
+  if (expression.kind === "Quantity") {
+    addDetail(details, depth, "? Quantity condition evaluation not implemented in the demo");
+    return "unknown";
+  }
+
+  addDetail(details, depth, `? Unsupported expression kind '${(expression as LogicalExpression).kind}'`);
+  return "unknown";
+};
+
+const describeTarget = (target: RuleTarget) => {
+  if (target.kind === "Taxonomy") {
+    const suffix = target.description ? ` – ${target.description}` : "";
+    return `Target ${target.targetId}: ${target.action} taxonomy concept ${target.conceptId}${suffix}`;
+  }
+  const suffix = target.description ? ` – ${target.description}` : "";
+  return `Target ${target.targetId}: ${target.action} product ${target.productId}${suffix}`;
+};
+
+const describeScope = (scope?: RuleScope): string[] => {
+  if (!scope) return [];
+  const lines: string[] = [
+    `Scope ${scope.scopeId}${scope.description ? ` – ${scope.description}` : ""}`,
+  ];
+  const parts: string[] = [];
+  if (scope.definition.channels.length) parts.push(`Channels: ${scope.definition.channels.join(", ")}`);
+  if (scope.definition.markets.length) parts.push(`Markets: ${scope.definition.markets.join(", ")}`);
+  if (scope.definition.customerSegments.length) {
+    parts.push(`Segments: ${scope.definition.customerSegments.join(", ")}`);
+  }
+  const window = [scope.definition.effectiveFrom, scope.definition.effectiveTo].filter(Boolean);
+  if (window.length) parts.push(`Effective: ${window.join(" → ")}`);
+  if (parts.length) {
+    lines.push(`  ${parts.join(" | ")}`);
+  }
+  return lines;
+};
+
+const evaluateRules = (product: Product, rules: Rule[]): RuleEvaluationResult[] =>
   rules.map((rule) => {
     const details: string[] = [];
-    let passed = true;
-    const hasConcept = (conceptId: string, target: "Product" | "Feature" | "FeatureValue") => {
-      if (target === "Product") return product.tags.includes(conceptId);
-      if (target === "Feature") return product.features.some((feature) => feature.tags.includes(conceptId));
-      return product.features.some((feature) =>
-        feature.values.some((value) => value.referenceSystemId === conceptId)
-      );
-    };
-    for (const condition of rule.conditions) {
-      if (condition.kind === "HasConcept") {
-        const ok = hasConcept(condition.conceptId, condition.target);
-        details.push(ok ? `✓ Concept ${condition.conceptId} present on ${condition.target}` : `✗ Missing concept ${condition.conceptId} on ${condition.target}`);
-        passed &&= ok;
-      } else if (condition.kind === "FeatureExists") {
-        const ok = product.features.some((feature) => feature.name === condition.featureName);
-        details.push(ok ? `✓ Feature '${condition.featureName}' exists` : `✗ Feature '${condition.featureName}' not found`);
-        passed &&= ok;
-      } else if (condition.kind === "ValueInRange") {
-        const feature = product.features.find((f) => f.name === condition.featureName);
-        let ok = false;
-        if (feature) {
-          for (const value of feature.values) {
-            if (value.kind === "SingleValue") {
-              const numeric = Number(value.value);
-              if (!Number.isNaN(numeric)) {
-                ok =
-                  (condition.min === undefined || numeric >= condition.min) &&
-                  (condition.max === undefined || numeric <= condition.max);
-              }
-            } else if (value.kind === "ValueRange") {
-              const min = Number(value.min);
-              const max = Number(value.max);
-              if (!Number.isNaN(min) && !Number.isNaN(max)) {
-                const lowerOk = condition.min === undefined || max >= condition.min;
-                const upperOk = condition.max === undefined || min <= condition.max;
-                ok = lowerOk && upperOk;
-              }
-            }
-            if (ok) break;
-          }
-        }
-        details.push(ok ? `✓ ${condition.featureName} within range` : `✗ ${condition.featureName} not within range`);
-        passed &&= ok;
-      }
+    details.push(`Type ${rule.type} · Priority ${rule.priority}`);
+    if (rule.description) {
+      details.push(rule.description);
     }
-    return { ruleId: rule.id, name: rule.name, passed, details };
+    const bindings = Object.entries(rule.context.bindings);
+    details.push(
+      bindings.length
+        ? `Context bindings: ${bindings.map(([ref, value]) => `${ref} → ${value || "n/a"}`).join("; ")}`
+        : "Context bindings: none"
+    );
+
+    const status = evaluateLogicalExpression(rule.expression, product, details, 0);
+
+    if (rule.targets.length) {
+      for (const target of rule.targets) {
+        details.push(describeTarget(target));
+      }
+    } else {
+      details.push("⚠ No targets defined");
+    }
+
+    details.push(...describeScope(rule.scope));
+
+    return {
+      ruleId: rule.ruleId,
+      name: rule.name,
+      status,
+      details,
+    };
   });
 
 const App: React.FC = () => {
@@ -295,15 +427,7 @@ const App: React.FC = () => {
     ? partnerAssociations[selectedRetailPartnerId] ?? []
     : [];
 
-  const [rules, setRules] = useState<Rule[]>([
-    {
-      ...createRule("Priority boarding requires Flight tag"),
-      conditions: [
-        { kind: "HasConcept", conceptId: "C-Flight", target: "Product" } satisfies TaxonomyCondition,
-        { kind: "FeatureExists", featureName: "Origin" },
-      ],
-    },
-  ]);
+  const [rules, setRules] = useState<Rule[]>(() => [createIndianMealRule()]);
 
   const [retailerPayload, setRetailerPayload] = useState<RetailerPayload | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -704,33 +828,6 @@ const App: React.FC = () => {
     );
   };
 
-  const replaceRuleCondition = (ruleId: string, index: number, condition: Rule["conditions"][number]) => {
-    setRules((previous) =>
-      previous.map((rule) =>
-        rule.id === ruleId
-          ? { ...rule, conditions: rule.conditions.map((existing, idx) => (idx === index ? condition : existing)) }
-          : rule
-      )
-    );
-  };
-
-  const updateRuleCondition = (
-    ruleId: string,
-    index: number,
-    updater: (condition: Rule["conditions"][number]) => Rule["conditions"][number]
-  ) => {
-    setRules((previous) =>
-      previous.map((rule) =>
-        rule.id === ruleId
-          ? {
-              ...rule,
-              conditions: rule.conditions.map((condition, idx) => (idx === index ? updater(condition) : condition)),
-            }
-          : rule
-      )
-    );
-  };
-
   const activeProduct =
     selectedInstance?.product ?? instantiateProduct(schemas[0] ?? defaultSchemaTemplate(), collections).product;
   const ruleResults = useMemo(() => evaluateRules(activeProduct, rules), [activeProduct, rules]);
@@ -879,306 +976,59 @@ const App: React.FC = () => {
 
       {tab === 4 && (
         <Box sx={{ p: 2 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <Box sx={{ flex: 1 }}>
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                <CardHeader
-                  title="Rules"
-                  action={
-                    <Button
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={() => setRules((previous) => [...previous, createRule("New rule")])}
-                    >
-                      Add
-                    </Button>
-                  }
-                />
-                <CardContent>
-                  <Stack spacing={2}>
-                    {rules.map((rule) => (
-                      <Card key={rule.id} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
-                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                          <TextField
-                            label="Rule name"
-                            size="small"
-                            value={rule.name}
-                            onChange={(event) =>
-                              setRules((previous) =>
-                                previous.map((current) =>
-                                  current.id === rule.id ? { ...current, name: event.target.value } : current
-                                )
-                              )
-                            }
+          <Suspense fallback={<WorkspaceFallback label="rules" />}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+              <Box sx={{ flex: 1 }}>
+                <RulesWorkspace rules={rules} onChange={setRules} conceptLabel={conceptLabel} />
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                  <CardHeader
+                    title="Run Rules"
+                    action={
+                      <Button startIcon={<PlayArrowIcon />} onClick={() => notify("Rules evaluated")}>
+                        Run
+                      </Button>
+                    }
+                  />
+                  <CardContent>
+                    {ruleResults.map((result) => (
+                      <Card key={result.ruleId} variant="outlined" sx={{ borderRadius: 2, p: 2, mb: 2 }}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <Typography variant="subtitle1">{result.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {result.ruleId}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={result.status.toUpperCase()}
+                            color={result.status === "pass" ? "success" : result.status === "fail" ? "error" : "default"}
+                            variant={result.status === "unknown" ? "outlined" : "filled"}
                           />
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => setRules((previous) => previous.filter((current) => current.id !== rule.id))}
-                          >
-                            Delete
-                          </Button>
                         </Stack>
                         <Divider sx={{ my: 1 }} />
-                        <Stack spacing={1}>
-                          {rule.conditions.map((condition, index) => (
-                            <Stack key={`${rule.id}-${index}`} direction={{ xs: "column", sm: "row" }} spacing={1}>
-                              <FormControl size="small" sx={{ minWidth: 160 }}>
-                                <InputLabel id={`rule-kind-${rule.id}-${index}`}>Condition</InputLabel>
-                                <Select
-                                  labelId={`rule-kind-${rule.id}-${index}`}
-                                  label="Condition"
-                                  value={condition.kind}
-                                  onChange={(event) => {
-                                    const kind = event.target.value as Rule["conditions"][number]["kind"];
-                                    if (kind === "HasConcept") {
-                                      replaceRuleCondition(rule.id, index, {
-                                        kind: "HasConcept",
-                                        conceptId: "C-Flight",
-                                        target: "Product",
-                                      });
-                                    } else if (kind === "FeatureExists") {
-                                      replaceRuleCondition(rule.id, index, {
-                                        kind: "FeatureExists",
-                                        featureName: "Origin",
-                                      });
-                                    } else {
-                                      replaceRuleCondition(rule.id, index, {
-                                        kind: "ValueInRange",
-                                        featureName: "Checked Baggage (kg)",
-                                        min: 0,
-                                        max: 23,
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <MenuItem value="HasConcept">HasConcept</MenuItem>
-                                  <MenuItem value="FeatureExists">FeatureExists</MenuItem>
-                                  <MenuItem value="ValueInRange">ValueInRange</MenuItem>
-                                </Select>
-                              </FormControl>
-                              {condition.kind === "HasConcept" && (
-                                <>
-                                  <FormControl size="small" sx={{ minWidth: 160 }}>
-                                    <InputLabel id={`rule-target-${rule.id}-${index}`}>Target</InputLabel>
-                                    <Select
-                                      labelId={`rule-target-${rule.id}-${index}`}
-                                      label="Target"
-                                      value={condition.target}
-                                      onChange={(event) =>
-                                        updateRuleCondition(rule.id, index, (current) =>
-                                          current.kind === "HasConcept"
-                                            ? { ...current, target: event.target.value as TaxonomyCondition["target"] }
-                                            : current
-                                        )
-                                      }
-                                    >
-                                      <MenuItem value="Product">Product</MenuItem>
-                                      <MenuItem value="Feature">Feature</MenuItem>
-                                      <MenuItem value="FeatureValue">FeatureValue</MenuItem>
-                                    </Select>
-                                  </FormControl>
-                                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                                    <InputLabel id={`rule-concept-${rule.id}-${index}`}>Concept</InputLabel>
-                                    <Select
-                                      labelId={`rule-concept-${rule.id}-${index}`}
-                                      label="Concept"
-                                      value={condition.conceptId}
-                                      onChange={(event) =>
-                                        updateRuleCondition(rule.id, index, (current) =>
-                                          current.kind === "HasConcept"
-                                            ? { ...current, conceptId: event.target.value }
-                                            : current
-                                        )
-                                      }
-                                    >
-                                      {orderedConcepts.map((concept) => (
-                                        <MenuItem key={concept.id} value={concept.id}>
-                                          {concept.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                </>
-                              )}
-                              {condition.kind !== "HasConcept" && (
-                                <>
-                                  <TextField
-                                    size="small"
-                                    label="Feature name"
-                                    value={condition.featureName}
-                                    onChange={(event) =>
-                                      updateRuleCondition(rule.id, index, (current) =>
-                                        current.kind === "HasConcept"
-                                          ? current
-                                          : { ...current, featureName: event.target.value }
-                                      )
-                                    }
-                                  />
-                                  {condition.kind === "ValueInRange" && (
-                                    <>
-                                      <TextField
-                                        size="small"
-                                        label="Min"
-                                        type="number"
-                                        value={condition.min ?? ""}
-                                        onChange={(event) =>
-                                          updateRuleCondition(rule.id, index, (current) =>
-                                            current.kind === "ValueInRange"
-                                              ? {
-                                                  ...current,
-                                                  min: event.target.value === "" ? undefined : Number(event.target.value),
-                                                }
-                                              : current
-                                          )
-                                        }
-                                      />
-                                      <TextField
-                                        size="small"
-                                        label="Max"
-                                        type="number"
-                                        value={condition.max ?? ""}
-                                        onChange={(event) =>
-                                          updateRuleCondition(rule.id, index, (current) =>
-                                            current.kind === "ValueInRange"
-                                              ? {
-                                                  ...current,
-                                                  max: event.target.value === "" ? undefined : Number(event.target.value),
-                                                }
-                                              : current
-                                          )
-                                        }
-                                      />
-                                    </>
-                                  )}
-                                </>
-                              )}
-                              <Button
-                                size="small"
-                                color="error"
-                                onClick={() =>
-                                  setRules((previous) =>
-                                    previous.map((current) =>
-                                      current.id === rule.id
-                                        ? {
-                                            ...current,
-                                            conditions: current.conditions.filter((_, idx) => idx !== index),
-                                          }
-                                        : current
-                                    )
-                                  )
-                                }
-                              >
-                                Remove
-                              </Button>
-                            </Stack>
+                        <Stack spacing={0.5}>
+                          {result.details.map((detail, index) => (
+                            <Typography key={index} variant="body2">
+                              {detail}
+                            </Typography>
                           ))}
-                          <Stack direction="row" spacing={1}>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() =>
-                                setRules((previous) =>
-                                  previous.map((current) =>
-                                    current.id === rule.id
-                                      ? {
-                                          ...current,
-                                          conditions: [
-                                            ...current.conditions,
-                                            { kind: "HasConcept", conceptId: "C-Flight", target: "Product" } satisfies TaxonomyCondition,
-                                          ],
-                                        }
-                                      : current
-                                  )
-                                )
-                              }
-                            >
-                              Add HasConcept
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() =>
-                                setRules((previous) =>
-                                  previous.map((current) =>
-                                    current.id === rule.id
-                                      ? {
-                                          ...current,
-                                          conditions: [
-                                            ...current.conditions,
-                                            { kind: "FeatureExists", featureName: "Origin" },
-                                          ],
-                                        }
-                                      : current
-                                  )
-                                )
-                              }
-                            >
-                              Add FeatureExists
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() =>
-                                setRules((previous) =>
-                                  previous.map((current) =>
-                                    current.id === rule.id
-                                      ? {
-                                          ...current,
-                                          conditions: [
-                                            ...current.conditions,
-                                            { kind: "ValueInRange", featureName: "Checked Baggage (kg)", min: 0, max: 23 },
-                                          ],
-                                        }
-                                      : current
-                                  )
-                                )
-                              }
-                            >
-                              Add ValueInRange
-                            </Button>
-                          </Stack>
                         </Stack>
                       </Card>
                     ))}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                <CardHeader
-                  title="Run Rules"
-                  action={
-                    <Button
-                      startIcon={<PlayArrowIcon />}
-                      onClick={() => notify("Rules evaluated")}
-                    >
-                      Run
-                    </Button>
-                  }
-                />
-                <CardContent>
-                  {ruleResults.map((result) => (
-                    <Card key={result.ruleId} variant="outlined" sx={{ borderRadius: 2, p: 2, mb: 2 }}>
-                      <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Typography variant="subtitle1">{result.name}</Typography>
-                        <Chip label={result.passed ? "PASS" : "FAIL"} color={result.passed ? "success" : "error"} variant="outlined" />
-                      </Stack>
-                      <Divider sx={{ my: 1 }} />
-                      <Stack spacing={0.5}>
-                        {result.details.map((detail, index) => (
-                          <Typography key={index} variant="body2">
-                            {detail}
-                          </Typography>
-                        ))}
-                      </Stack>
-                    </Card>
-                  ))}
-                </CardContent>
-              </Card>
-            </Box>
-          </Stack>
+                    {ruleResults.length === 0 && (
+                      <Box sx={{ textAlign: "center", py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          No rules to evaluate.
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Box>
+            </Stack>
+          </Suspense>
         </Box>
       )}
 

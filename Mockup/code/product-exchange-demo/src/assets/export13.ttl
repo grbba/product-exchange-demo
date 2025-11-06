@@ -1,0 +1,1340 @@
+@prefix grddl: <http://www.w3.org/2003/g/data-view#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix apmwg: <https://taxonomy.apmwg.ovh#> .
+
+<https://taxonomy.apmwg.ovh> a owl:Ontology;
+  dc:title "IATA Product Taxonomy"@en;
+  rdfs:label "IATA APMWG Product Taxonomy"@en;
+  rdfs:comment "This taxonomy is built to describe products further and what is not part of the promise to the customer to the contrary of the features as advertised of a product. If the product is e.g. an entrance to an amusement park you can add taxonomy nodes like 'fun' 'adventure' etc to that product but those are not part of the promise. The promise is the access to the amusement park."@en;
+  owl:imports <http://purl.org/dc/elements/1.1/>, <http://purl.org/iso25964/skos-thes>;
+  owl:versionInfo "1.0"@en;
+  skos:prefLabel "IATA APMWG Product Taxonomy"@en;
+  dc:contributor "IATA Airline Product Management Working Group"@en;
+  dc:creator "Gregor Baues"@en .
+
+apmwg:AVML a apmwg:SSR;
+  rdfs:label "AVML"@en;
+  skos:definition "Asian Vegetarian Meal"@en;
+  skos:prefLabel "AVML"@en .
+
+apmwg:SSR a owl:Class;
+  rdfs:subClassOf owl:Thing;
+  skos:definition """IATA SSR stands for Special Service Request in the context of air travel. It's a standard code set defined by IATA (International Air Transport Association) used by airlines, travel agents, and reservation systems to communicate special passenger needs or services.
+Class for represneting SRR codes usable to further qualifiy the Taxonomy. They are provided here but could well be in their own Vocabulary in which case we would use the exact / broader match semantic to align the vocabularies"""@en;
+  skos:prefLabel "SSR"@en .
+
+apmwg:E7Y63352 a skos:Concept;
+  skos:definition " A vegetarian meal often inspired by South Asian flavors, with spices and no meat, fish, or eggs."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Asian Vegetarian"@en, "Végétarien Asiatique"@fr, "Asiatisch Vegetarisch"@de,
+    "Vegetariano Asiático"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:AVML .
+
+apmwg:product_taxonomy_scheme a skos:ConceptScheme;
+  rdfs:label """
+IATA-APMWG"""@en, "IATA-APMWG"@en;
+  rdfs:comment "https://standards.atlassian.net/wiki/spaces/APMWG/pages/922025985/Taxonomy+Sub-group"^^xsd:anyURI;
+  skos:definition "This Schema is defining the APMWG product taxonomy. It does not describe the features  of the products i.e. the parts which form the promise towards the customer but elements which describe products in a more intangible fashion allowing to search faster and better for products"@en;
+  skos:hasTopConcept apmwg:O2IMBGNL, apmwg:8QTRPWZL, apmwg:ZXQHWRQS, apmwg:W6SO89HD,
+    apmwg:PE5IAOAI, apmwg:NYBKU16D, apmwg:VEW3D584, apmwg:PI0ZMZJY, apmwg:GXT1H3T9, apmwg:0PNOV4FA,
+    apmwg:4QN4PC8S, apmwg:12AZYHGL;
+  skos:prefLabel "IATA-APMWG "@en .
+
+apmwg:G5K95028 a skos:Concept;
+  skos:definition "A taste profile characterized by the presence of sugar or sweeteners, often found in desserts, candies, and certain beverages, appealing to the palate with a sugary flavor."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Sweet"@en, "Sucré"@fr, "Süß"@de, "Dulce"@es;
+  skos:broader apmwg:Z9H87109 .
+
+apmwg:Z9H87109 a skos:Concept;
+  skos:definition "Taste refers to the sensory experience of flavor perceived when consuming food or beverages, influenced by factors like sweetness, sourness, bitterness, saltiness, and umami, which helps classify and describe the culinary appeal of a product."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Taste"@en, "Goût"@fr, "Geschmack"@de, "Sabor"@es;
+  skos:broader apmwg:8QTRPWZL;
+  skos:narrower apmwg:G5K95028, apmwg:N4N102947, apmwg:U0Q110866 .
+
+apmwg:HNML a apmwg:SSR;
+  rdfs:label "HNML"@en;
+  skos:definition "Hindu (Non-Vegetarian) Meal"@en;
+  skos:prefLabel "HNML"@en .
+
+apmwg:KSML a apmwg:SSR;
+  rdfs:label "KSML"@en;
+  skos:definition "Kosher Meal"@en;
+  skos:prefLabel "KSML"@en;
+  apmwg:linkedSSR apmwg:KSML .
+
+apmwg:L9B71271 a skos:Concept;
+  skos:definition "Prepared in accordance with Jewish dietary laws."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Kosher"@en, "Casher"@fr, "Koscher"@de, "Kosher"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:KSML .
+
+apmwg:MOML a apmwg:SSR;
+  rdfs:label "MOML"@en;
+  skos:definition "Muslim Meal"@en;
+  skos:prefLabel "MOML"@en .
+
+apmwg:N4N102947 a skos:Concept;
+  skos:definition "Savory refers to foods characterized by a rich, salty, or spicy flavor, often associated with main courses or snacks, rather than sweet dishes. It typically includes ingredients like herbs, spices, meats, and vegetables."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Savory"@en, "Salé"@fr, "Herzhaft"@de, "Salado"@es;
+  skos:broader apmwg:Z9H87109 .
+
+apmwg:Q6S47514 a skos:Concept;
+  skos:definition "Prepared according to Jain customs, without root vegetables (like garlic, onions, potatoes) and without animal products."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Vegetarian Jain"@en, "Végétarien Jaïn"@fr, "Jain Vegetarisch"@de,
+    "Vegetariano Jainista"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:VJML .
+
+apmwg:S4E79190 a skos:Concept;
+  skos:definition "Prepared according to Islamic dietary laws, excluding pork and alcohol."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Halal"@en, "Halal"@fr, "Halal"@de, "Halal"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:HNML .
+
+apmwg:U0Q110866 a skos:Concept;
+  skos:definition "A flavor profile characterized by a noticeable heat or pungency, often resulting from ingredients like chili peppers, black pepper, or spices, used to enhance the taste and aroma of food."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Spicy"@en, "Épicé"@fr, "Scharf"@de, "Picante"@es;
+  skos:broader apmwg:Z9H87109 .
+
+apmwg:VJML a apmwg:SSR;
+  rdfs:label "VJML"@en;
+  skos:definition "Vegetarian Jain Meal"@en;
+  skos:prefLabel "VJML"@en .
+
+apmwg:X4V55433 a skos:Concept;
+  skos:definition "Includes dairy and eggs but excludes meat, fish, and poultry."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Vegetarian Lacto-Ovo"@en, "Végétarien Lacto-Ovo"@fr, "Lacto-Ovo-Vegetarisch"@de,
+    "Vegetariano Lacto-Ovo"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:VLML .
+
+apmwg:linkedSSR a rdf:Property;
+  rdfs:domain skos:Concept .
+
+apmwg:apmwgFood a skos:Collection;
+  skos:prefLabel "Food"@en, "Comida"@es, "Nourriture"@fr, "Essen"@de;
+  skos:member apmwg:8QTRPWZL, apmwg:ZXQHWRQS, apmwg:P3DSZWW8, apmwg:3FDRL8LK, apmwg:EX0SCMIE,
+    apmwg:B04E4HAJ, apmwg:YSVDF00S, apmwg:LPNKBNFY .
+
+apmwg:personalservices rdfs:label "Personal Service Requests"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Personal Service Requests"@en, "Demandes de Services Personnels"@fr,
+    "Persönliche Serviceanfragen"@de, "Solicitudes de Servicios Personales"@es .
+
+apmwg:O2IMBGNL a skos:Concept;
+  rdfs:label "Activities"@en;
+  skos:definition "Describes a a product which can be related to a specific action, behavior, or interaction that a customer can expect to expirience consuming the product. The product is meant for doing something in the area of the narrower terms"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Activities"@en, "Actividades"@es, "Aktivitäten"@de, "Activités"@fr;
+  skos:narrower apmwg:U3G5DFB3, apmwg:9JZO97LA, apmwg:LE9U2LWP, apmwg:4LFJPGRT, apmwg:6AKANDYN,
+    apmwg:2XGOSD4T, apmwg:7EYUQ7K1, apmwg:NWM2HPES, apmwg:GCU7A432;
+  skos:related apmwg:0PNOV4FA .
+
+apmwg:U3G5DFB3 a skos:Concept;
+  rdfs:label "Adventure"@en;
+  skos:definition "An unusual, exciting, or daring experience involving exploration, risk, or unexpected events."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Adventure"@en, "Aventure"@fr, "Abenteuer"@de, "Aventura"@es;
+  skos:broader apmwg:O2IMBGNL;
+  skos:narrower apmwg:XUFPQAA2, apmwg:IOHDHMBR, apmwg:KL65DS90 .
+
+apmwg:XUFPQAA2 a skos:Concept;
+  skos:definition "An extreme sport involving jumping from a high structure while connected to a large elastic cord, allowing participants to experience free-fall and rebound."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Bungee jumping"@en, "Saut à l'élastique"@fr, "Bungeespringen"@de,
+    "Puenting"@es;
+  skos:broader apmwg:U3G5DFB3 .
+
+apmwg:IOHDHMBR a skos:Concept;
+  skos:definition "Underwater activity involving the use of a self-contained breathing apparatus, allowing individuals to explore aquatic environments for recreation, research, or training purposes."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Scubadiving"@en, "Tauchen"@de, "Submarinismo"@es, "Plongée sous-marine"@fr;
+  skos:broader apmwg:U3G5DFB3 .
+
+apmwg:9JZO97LA a skos:Concept;
+  rdfs:label "Beach"@en;
+  skos:definition "A sandy or pebbly shoreline area adjacent to a body of water, typically used for recreational activities such as swimming, sunbathing, and beach sports."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Beach"@en, "Plage"@fr, "Strand"@de, "Playa"@es;
+  skos:broader apmwg:O2IMBGNL .
+
+apmwg:LE9U2LWP a skos:Concept;
+  rdfs:label "City life"@en;
+  skos:definition "City groups all activities which are predominantly available in larger cities (but not limited to)"@en;
+  skos:example "Hop on/off Sightseeing bus tour "@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "City"@en, "Ville"@fr, "Stadt"@de, "Ciudad"@es;
+  skos:altLabel "Metropolitan"@en;
+  skos:broader apmwg:O2IMBGNL;
+  skos:narrower apmwg:JPBEACRR, apmwg:3OO5XYF5 .
+
+apmwg:JPBEACRR a skos:Concept;
+  skos:definition "Social and entertainment activities typically occurring in the evening or late at night, often involving venues such as bars, clubs, and live music events, catering to leisure and recreational interests."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Nightlife"@en, "escapade de nuit"@fr, "Vie Nocturne"@fr, "Nachtleben"@de,
+    "Vida Nocturna"@es;
+  skos:broader apmwg:LE9U2LWP .
+
+apmwg:3OO5XYF5 a skos:Concept;
+  skos:definition "Organized sightseeing tour of a location with a guide, selfguides with tarnsport like a bus or by bike by foot etc ... "@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Sightseeing"@en, "Visite Touristique"@fr, "Sightseeing"@de, "Turismo"@es;
+  skos:broader apmwg:LE9U2LWP, apmwg:GCU7A432 .
+
+apmwg:V0V56SE8 a skos:Concept;
+  skos:definition "A facility offering various gambling games and entertainment activities, often including slot machines, card games, and betting, designed for leisure and recreation."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Casino"@en, "Casino"@fr, "Casino"@de, "Casino"@es;
+  skos:broader apmwg:6AKANDYN .
+
+apmwg:8QTRPWZL a skos:Concept;
+  rdfs:label "Meal"@en;
+  skos:definition "A product consisting of food and/or beverages, typically served as a set at a specific time, available for purchase by airline passengers."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Meal"@en, "Repas"@fr, "Mahlzeit"@de, "Comida"@es;
+  skos:narrower apmwg:Z9H87109, apmwg:EX0SCMIE, apmwg:B04E4HAJ, apmwg:YSVDF00S, apmwg:LPNKBNFY .
+
+apmwg:1ZK7VFQB a skos:Concept;
+  rdfs:label "Side Course"@en;
+  skos:definition "A side item or dish that complements the main course, often served simultaneously."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Accompaniment"@en, "Accompagnement"@fr, "Beilage"@de, "Guarnición"@es;
+  skos:altLabel "Side Course"@en;
+  skos:broader apmwg:EX0SCMIE;
+  skos:narrower apmwg:EG8VMFG8, apmwg:2HS0DZBG, apmwg:PNBA0OMT .
+
+apmwg:VGML a apmwg:SSR;
+  rdfs:label "VGML"@en;
+  skos:definition "Vegan Meal excluding all animal and animal derived products."@en;
+  skos:prefLabel "VGML"@en;
+  skos:note "Strictly plant-based; excludes all animal products including dairy, eggs, honey, and gelatin."@en .
+
+apmwg:VLML a apmwg:SSR;
+  rdfs:label "VLML"@en;
+  skos:definition "Vegetarian Lacto-Ovo Meal – Vegetarian with dairy and eggs, no meat or fish."@en;
+  skos:prefLabel "VLML"@en;
+  skos:note "Suitable for vegetarians who consume dairy and/or eggs; not vegan-safe."@en .
+
+apmwg:KL65DS90 a skos:Concept;
+  skos:definition "An outdoor recreational activity where participants glide along a suspended cable using a harness and pulley, typically set in natural settings like forests or mountains, offering an adventurous experience and scenic views."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Ziplining"@en, "Tyrolienne"@fr, "Seilrutschen"@de, "Tirolinas"@es;
+  skos:broader apmwg:U3G5DFB3 .
+
+apmwg:BBML a apmwg:SSR;
+  rdfs:label "BBML"@en;
+  skos:definition "Baby/Infant Meal"@en;
+  skos:prefLabel "BBML"@en .
+
+apmwg:BLML a apmwg:SSR;
+  rdfs:label "BLML"@en;
+  skos:definition "Bland/Soft Meal"@en;
+  skos:prefLabel "BLML"@en .
+
+apmwg:CHML a apmwg:SSR;
+  rdfs:label "CHML"@en;
+  skos:definition "Child Meal"@en;
+  skos:prefLabel "CHML"@en .
+
+apmwg:DBML a apmwg:SSR;
+  rdfs:label "DBML"@en;
+  skos:definition "Diabetic Meal"@en;
+  skos:prefLabel "DBML"@en .
+
+apmwg:FPML a apmwg:SSR;
+  rdfs:label "FPML"@en;
+  skos:definition "Fruit Platter Meal"@en;
+  skos:prefLabel "FPML"@en .
+
+apmwg:GFML a apmwg:SSR;
+  rdfs:label "GFML"@en;
+  skos:definition "Gluten-Intolerant Meal"@en;
+  skos:prefLabel "GFML"@en .
+
+apmwg:LCML a apmwg:SSR;
+  rdfs:label "LCML"@en;
+  skos:definition "Low-Calorie Meal"@en;
+  skos:prefLabel "LCML"@en .
+
+apmwg:LFML a apmwg:SSR;
+  rdfs:label "LFML"@en;
+  skos:definition "Low-Fat/Cholesterol Meal"@en;
+  skos:prefLabel "LFML"@en .
+
+apmwg:LSML a apmwg:SSR;
+  rdfs:label "LSML"@en;
+  skos:definition "Low-Sodium Meal"@en;
+  skos:prefLabel "LSML"@en .
+
+apmwg:NLML a apmwg:SSR;
+  rdfs:label "NLML"@en;
+  skos:definition "Non-Lactose Meal"@en;
+  skos:prefLabel "NLML"@en .
+
+apmwg:RVML a apmwg:SSR;
+  rdfs:label "RVML"@en;
+  skos:definition "Raw Vegetarian Meal"@en;
+  skos:prefLabel "RVML"@en .
+
+apmwg:SFML a apmwg:SSR;
+  rdfs:label "SFML"@en;
+  skos:definition "Seafood Meal"@en;
+  skos:prefLabel "SFML"@en .
+
+apmwg:VOML a apmwg:SSR;
+  rdfs:label "VOML"@en;
+  skos:definition "Vegetarian Oriental Meal"@en;
+  skos:prefLabel "VOML"@en;
+  skos:note "Vegetarian meal prepared in Oriental style; may include dairy or eggs, not vegan-safe."@en .
+
+apmwg:ZXQHWRQS a skos:Concept;
+  skos:definition "A beverage is any liquid intended for human consumption, including water, tea, coffee, juice, soft drinks, and alcoholic drinks, typically used for hydration, nourishment, or enjoyment."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Beverage"@en, "Boisson"@fr, "Getränk"@de, "Bebida"@es;
+  skos:narrower apmwg:P3DSZWW8, apmwg:3FDRL8LK;
+  skos:related apmwg:EX0SCMIE .
+
+apmwg:P3DSZWW8 a skos:Concept;
+  skos:definition "Refers to beverages containing ethanol, typically produced through fermentation or distillation, including beer, wine, and spirits. These drinks are regulated due to their intoxicating effects and are intended for adult consumption."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Alcoholic"@en, "Alcoolisé"@fr, "Alkoholisch"@de, "Alcohólico"@es;
+  skos:broader apmwg:ZXQHWRQS;
+  skos:narrower apmwg:GE08UBB5, apmwg:X2VFCRIO, apmwg:5GUQLDF1, apmwg:I3UJS91H .
+
+apmwg:GE08UBB5 a skos:Concept;
+  rdfs:label "Beer"@en;
+  skos:definition "An alcoholic drink made from fermented grains, typically barley, flavored with hops, and brewed through a process of mashing, boiling, fermenting, and conditioning. It varies in style, flavor, and alcohol content."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Beer"@en, "Bière"@fr, "Bier"@de, "Cerveza"@es;
+  skos:broader apmwg:P3DSZWW8 .
+
+apmwg:X2VFCRIO a skos:Concept;
+  rdfs:label "Cocktail"@en;
+  skos:definition "A mixed drink typically made with a combination of spirits, fruit juices, syrups, or other flavorings, often served chilled and garnished, intended for consumption as an alcoholic beverage."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cocktail"@en, "Cocktail"@fr, "Cocktail"@de, "Cóctel"@es;
+  skos:broader apmwg:P3DSZWW8, apmwg:3FDRL8LK .
+
+apmwg:5GUQLDF1 a skos:Concept;
+  rdfs:label "Spirits"@en;
+  skos:definition "Spirits are distilled alcoholic beverages with a high alcohol content, typically made from grains, fruits, or sugar. They include products like whiskey, vodka, rum, and gin, and are often consumed neat, mixed, or as cocktail ingredients."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Spirits"@en, "Spiritueux"@fr, "Spirituosen"@de, "Licores"@es;
+  skos:broader apmwg:P3DSZWW8 .
+
+apmwg:I3UJS91H a skos:Concept;
+  rdfs:label "Wine"@en;
+  skos:definition "An alcoholic drink made from fermented grapes or other fruits, typically categorized by color, region, and grape variety, often used for dining, celebrations, or as a standalone beverage."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Wine"@en, "Vin"@fr, "Wein"@de, "Vino"@es;
+  skos:broader apmwg:P3DSZWW8 .
+
+apmwg:3FDRL8LK a skos:Concept;
+  skos:definition "All beverages not containing any alcohol such as coffee, tea, soft drinks, smoothies, alcohol free cocktails, etc ..."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Non-Alcoholic"@en, "Sans Alcool"@fr, "Alkoholfrei"@de, "Sin Alcohol"@es;
+  skos:broader apmwg:ZXQHWRQS;
+  skos:narrower apmwg:X2VFCRIO, apmwg:M2P6I08B, apmwg:NSDW9T01, apmwg:UO2UIJFQ, apmwg:MDNTOZGW,
+    apmwg:HB6WVMZ6 .
+
+apmwg:M2P6I08B a skos:Concept;
+  rdfs:label "Coffee"@en;
+  skos:definition "A brewed drink made from roasted coffee beans, known for its stimulating caffeine content, diverse flavors, and aromas. Commonly consumed hot or cold, it is a popular beverage worldwide, often enjoyed black or with added milk and sweeteners."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Coffee"@en, "Café"@fr, "Kaffee"@de, "Café"@es;
+  skos:broader apmwg:3FDRL8LK .
+
+apmwg:NSDW9T01 a skos:Concept;
+  rdfs:label "Juices & Mixers"@en;
+  skos:definition "A category of beverages including fruit and vegetable extracts, and liquid ingredients used to prepare or enhance drinks, often non-alcoholic, such as cocktail mixers and flavored syrups."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Juices & Mixers"@en, "Jus et Mélangeurs"@fr, "Säfte & Mixer"@de, "Jugos y Mezcladores"@es;
+  skos:broader apmwg:3FDRL8LK .
+
+apmwg:UO2UIJFQ a skos:Concept;
+  rdfs:label "Sodas"@en;
+  skos:definition "Carbonated soft drinks typically sweetened and flavored, often containing caffeine or fruit extracts, served cold."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Sodas"@en, "Sodas"@fr, "Limonaden"@de, "Refrescos"@es;
+  skos:broader apmwg:3FDRL8LK .
+
+apmwg:MDNTOZGW a skos:Concept;
+  rdfs:label "Tea"@en;
+  skos:definition "A beverage made by steeping cured leaves of the Camellia sinensis plant in hot water, often enjoyed for its variety of flavors, caffeine content, and potential health benefits."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Tea"@en, "Thé"@fr, "Tee"@de, "Té"@es;
+  skos:broader apmwg:3FDRL8LK .
+
+apmwg:HB6WVMZ6 a skos:Concept;
+  rdfs:label "Water"@en;
+  skos:definition "A clear, colorless, and odorless liquid essential for life, often consumed as a drink. It can be still or carbonated, and may include variations like mineral, spring, or purified, typically packaged in bottles or containers."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Water"@en, "Eau"@fr, "Wasser"@de, "Agua"@es;
+  skos:broader apmwg:3FDRL8LK .
+
+apmwg:W6SO89HD a skos:Concept;
+  rdfs:label "Climate"@en;
+  skos:definition "Climate encompasses the long-term patterns of temperature, humidity, wind, precipitation, and other atmospheric conditions in a particular region. Unlike weather, which describes short-term conditions, climate represents the average and variability of these conditions over extended periods, typically 30 years or more."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Climate"@en, "Klima"@de, "Climat"@fr, "Clima"@es;
+  skos:narrower apmwg:WMBWCNUE, apmwg:3C8SZ9E2, apmwg:BWW32OX3, apmwg:5TNYC6G8, apmwg:FOVHA4A8 .
+
+apmwg:WMBWCNUE a skos:Concept;
+  rdfs:label "Continental"@en;
+  skos:definition "Describes a climate characterized by significant temperature variations between seasons, typically found in inland areas, with hot summers and cold winters, and relatively low humidity."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Continental"@en, "Continental"@fr, "Kontinental"@de, "Continental"@es;
+  skos:broader apmwg:W6SO89HD .
+
+apmwg:3C8SZ9E2 a skos:Concept;
+  rdfs:label "Dry"@en;
+  skos:definition "Lacking moisture or water content, often used to describe environments, conditions, or products that are arid, dehydrated, or free from humidity, such as dry climates, dry foods, or dry materials."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Dry"@en, "Trocken"@de, "Sec"@fr, "Seco"@es;
+  skos:broader apmwg:W6SO89HD .
+
+apmwg:BWW32OX3 a skos:Concept;
+  rdfs:label "Polar"@en;
+  skos:definition "Relating to regions characterized by extremely cold temperatures, ice, and snow, typically found near the Earth's poles, influencing product features like insulation, durability in cold, and suitability for Arctic or Antarctic conditions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Polar"@en, "Polaire"@fr, "Polar"@de, "Polar"@es;
+  skos:broader apmwg:W6SO89HD .
+
+apmwg:5TNYC6G8 a skos:Concept;
+  rdfs:label "Mild"@en;
+  skos:definition "Characterized by moderate temperatures and weather conditions, typically without extreme heat or cold, suitable for products designed for environments with gentle climatic conditions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Mild"@en, "Doux"@fr, "Mild"@de, "Suave"@es;
+  skos:broader apmwg:W6SO89HD .
+
+apmwg:FOVHA4A8 a skos:Concept;
+  rdfs:label "Tropical"@en;
+  skos:definition "Relating to regions near the equator, characterized by warm temperatures and high humidity year-round, often with distinct wet and dry seasons, influencing the design and functionality of products suited for such climates."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Tropical"@en, "Tropical"@fr, "Tropisch"@de, "Tropical"@es;
+  skos:broader apmwg:W6SO89HD .
+
+apmwg:PE5IAOAI a skos:Concept;
+  rdfs:label "Delivery Location"@en;
+  skos:definition "Delivery Location refers to the specific place where goods, services, or materials are to be delivered. This could be a physical address, such as a customers's home, business, or warehouse, or a designated spot within a broader area, such as a gate area, onboard of a plane or pickup point.  The delivery location is typically specified by the recipient or purchaser based and is crucial for ensuring that the delivery is made accurately and efficiently."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Delivery Location"@en, "Lieferort"@de, "Lieu de Livraison"@fr, "Lugar de Entrega"@es;
+  skos:narrower apmwg:Y5Q3FV4V, apmwg:T9308NAR, apmwg:7L46PAOQ, apmwg:8YRTMU3K .
+
+apmwg:Y5Q3FV4V a skos:Concept;
+  rdfs:label "Airport"@en;
+  skos:definition "A designated area where aircraft land and take off, including facilities for passengers, cargo handling, and related services, used as a delivery destination for goods transported by air."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Airport"@en, "Aéroport"@fr, "Flughafen"@de, "Aeropuerto"@es;
+  skos:broader apmwg:PE5IAOAI .
+
+apmwg:T9308NAR a skos:Concept;
+  rdfs:label "Home"@en;
+  skos:definition "A residential address where individuals live, used as a destination for delivering goods and services directly to consumers."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Home"@en, "Domicile"@fr, "Zuhause"@de, "Casa"@es;
+  skos:broader apmwg:PE5IAOAI .
+
+apmwg:7L46PAOQ a skos:Concept;
+  rdfs:label "Lounge"@en;
+  skos:definition "A room in a home or public space designed for relaxation and socializing, typically furnished with comfortable seating and often used for leisure activities."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Lounge"@en, "Salon"@fr, "Lounge"@de, "Sala VIP"@es;
+  skos:broader apmwg:PE5IAOAI .
+
+apmwg:8YRTMU3K a skos:Concept;
+  rdfs:label "Onboard"@en;
+  skos:definition "Refers to items delivered directly onto a vehicle, such as a ship, plane, or train, for use or distribution during transit."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Onboard"@en, "À Bord"@fr, "An Bord"@de, "A Bordo"@es;
+  skos:broader apmwg:PE5IAOAI .
+
+apmwg:NYBKU16D a skos:Concept;
+  rdfs:label "Geographie"@de, "Geography"@en;
+  skos:definition "Geographical classifications of products e.g. an adventure experience offered may be offer as a product only in a given geography so the product shall be labeled as such. The precise location , as the promise to the customer, shall be part of the product definition and be reflected as such as either individual products and/or product variants"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Geographie"@de, "Geography"@en, "Géographie"@fr, "Geografía"@es;
+  skos:narrower apmwg:VBSLCLX7, apmwg:L8WJR1IC, apmwg:O0XAI6G1, apmwg:MBYGOWXR, apmwg:OA5B410W,
+    apmwg:GeographicScope;
+  dct:source "'https://en.wikipedia.org/wiki/Geography?wprov=sfti1#"@en .
+
+apmwg:VBSLCLX7 a skos:Concept;
+  rdfs:label "Areas"@en;
+  skos:definition "An area is a geographical entity not necessarily limit by administrative boundaries such as e.g. Sahara or Alps"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Areas"@en, "Zones"@fr, "Gebiete"@de, "Áreas"@es;
+  skos:broader apmwg:NYBKU16D .
+
+apmwg:L8WJR1IC a skos:Concept;
+  rdfs:label "Cities"@en;
+  skos:definition "Urban areas with significant population density, infrastructure, and economic activity, serving as central hubs for commerce, culture, and governance within a region, often influencing surrounding areas and characterized by diverse services and amenities."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cities"@en, "Villes"@fr, "Städte"@de, "Ciudades"@es;
+  skos:broader apmwg:NYBKU16D .
+
+apmwg:O0XAI6G1 a skos:Concept;
+  rdfs:label "Continent"@en;
+  skos:definition "A large, continuous landmass typically comprising multiple countries, characterized by distinct geographical, cultural, and ecological features, used to categorize products based on their origin or market region within global contexts."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Continent"@en, "Continent"@fr, "Kontinent"@de, "Continente"@es;
+  skos:broader apmwg:NYBKU16D;
+  skos:narrower apmwg:1HJT7649KP, apmwg:GH62LMOX, apmwg:OSHGFC67, apmwg:ISD569GH, apmwg:IJSCMLV5,
+    apmwg:9GS0OPFD, apmwg:9635FDSL .
+
+apmwg:MBYGOWXR a skos:Concept;
+  rdfs:label "Country"@en;
+  skos:definition "A nation with defined borders, recognized sovereignty, and a distinct government, often used to categorize products based on origin, regulations, or market relevance within a geographical context."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Country"@en, "Pays"@fr, "Land"@de, "País"@es;
+  skos:broader apmwg:NYBKU16D .
+
+apmwg:OA5B410W a skos:Concept;
+  rdfs:label "Region"@en;
+  skos:definition "A region is a specific geographical area characterized by distinct physical, cultural, or economic features, used to categorize products based on their origin, market, or relevance within that area."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Region"@en, "Région"@fr, "Region"@de, "Región"@es;
+  skos:broader apmwg:NYBKU16D;
+  skos:narrower apmwg:85FKTVM9, apmwg:LR9FGJD7, apmwg:2ETBOUEW, apmwg:X5ZYGHH6 .
+
+apmwg:85FKTVM9 a skos:Concept;
+  skos:definition "Relating to the distribution of living organisms across different regions, considering factors like climate, terrain, and ecosystems, to classify products based on their geographic origin or ecological characteristics."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Biogeographic"@en, "Biogéographique"@fr, "Biogeografisch"@de, "Biogeográfico"@es;
+  skos:broader apmwg:OA5B410W;
+  skos:narrower apmwg:MMGI4T63, apmwg:P07E5WIB .
+
+apmwg:MMGI4T63 a skos:Concept;
+  skos:definition "A barren, arid region with minimal precipitation, extreme temperatures, and sparse vegetation, often characterized by sand dunes or rocky terrain, supporting limited wildlife."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Desert"@en, "Désert"@fr, "Wüste"@de, "Desierto"@es;
+  skos:broader apmwg:85FKTVM9 .
+
+apmwg:P07E5WIB a skos:Concept;
+  skos:definition "A dense, tropical forest characterized by high annual rainfall, diverse species, and a multi-layered canopy, typically found near the equator."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Rainforest"@en, "Forêt Tropicale"@fr, "Regenwald"@de, "Selva Tropical"@es;
+  skos:broader apmwg:85FKTVM9 .
+
+apmwg:LR9FGJD7 a skos:Concept;
+  skos:definition "Cultur refers to the shared customs, traditions, and social behaviors of a specific group or region, influencing local products, practices, and lifestyles, and is used to categorize items reflecting these cultural characteristics within a geographical context."@en;
+  skos:example "US Hispanic Community"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cultur"@en, "Culture"@en, "Culture"@fr, "Kultur"@de, "Cultura"@es;
+  skos:broader apmwg:OA5B410W .
+
+apmwg:2ETBOUEW a skos:Concept;
+  skos:definition "'Economic' refers to aspects related to the production, distribution, and consumption of goods and services, including factors like cost, market trends, and financial impact, within a specific geographic region."@en;
+  skos:example "European Economic Community"@en, "SiliconValley"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Economic"@en, "Économique"@fr, "Wirtschaftlich"@de, "Económico"@es;
+  skos:broader apmwg:OA5B410W .
+
+apmwg:X5ZYGHH6 a skos:Concept;
+  skos:definition "Relating to the governance, boundaries, or administrative divisions of a region, such as countries, states, or municipalities, used to classify products based on their geographical origin or relevance to political entities."@en;
+  skos:example "European Union"@en, "Provinces of Canada"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Political"@en, "Politique"@fr, "Politisch"@de, "Político"@es;
+  skos:broader apmwg:OA5B410W .
+
+apmwg:EX0SCMIE a skos:Concept;
+  rdfs:label "Course"@en;
+  skos:definition "A specific part of a meal, usually served in sequence, such as appetizer, main course, or dessert."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Course"@en, "Service"@fr, "Gang"@de, "Plato"@es;
+  skos:broader apmwg:8QTRPWZL;
+  skos:narrower apmwg:1ZK7VFQB, apmwg:O9AG8DDD, apmwg:IOJ50DYM, apmwg:L4MSMSBK;
+  skos:related apmwg:ZXQHWRQS .
+
+apmwg:EG8VMFG8 a skos:Concept;
+  rdfs:label "Bread"@en;
+  skos:definition "A baked food made from flour, water, and yeast or another leavening agent, typically shaped into loaves or rolls, and commonly used as a staple in meals."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Bread"@en, "Pain"@fr, "Brot"@de, "Pan"@es;
+  skos:broader apmwg:1ZK7VFQB .
+
+apmwg:2HS0DZBG a skos:Concept;
+  rdfs:label "Soup"@en;
+  skos:definition "A liquid-based dish, typically savory, made by simmering ingredients like vegetables, meat, or fish in broth or water, often served hot. It can be smooth or chunky and is commonly consumed as a starter or main course."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Soup"@en, "Soupe"@fr, "Suppe"@de, "Sopa"@es;
+  skos:broader apmwg:1ZK7VFQB .
+
+apmwg:PNBA0OMT a skos:Concept;
+  rdfs:label "Salad"@en;
+  skos:definition "A dish typically consisting of mixed vegetables, fruits, or grains, often served cold, and sometimes including proteins or dressings, commonly used as a side or main course."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Salad"@en, "Salade"@fr, "Salat"@de, "Ensalada"@es;
+  skos:broader apmwg:1ZK7VFQB .
+
+apmwg:O9AG8DDD a skos:Concept;
+  rdfs:label "Appetizer"@en;
+  skos:definition "An appetizer is a small meal served at the beginning of the main course"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Appetizer"@en, "Entradas"@es, "Hors d'oeuvre"@fr, "Başlangıçlar"@tr,
+    "Vorspeise"@de, "Entrante"@es;
+  skos:broader apmwg:EX0SCMIE .
+
+apmwg:IOJ50DYM a skos:Concept;
+  rdfs:label "Dessert"@en;
+  skos:definition "A sweet course typically served at the end of a meal, often consisting of items like cakes, pastries, ice cream, or fruit, designed to provide a satisfying conclusion to dining."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Dessert"@en, "Dessert"@fr, "Nachtisch"@de, "Postre"@es;
+  skos:broader apmwg:EX0SCMIE .
+
+apmwg:L4MSMSBK a skos:Concept;
+  rdfs:label "Main Course"@en;
+  skos:definition "A substantial dish typically served as the central part of a meal, often featuring protein such as meat, fish, or plant-based alternatives, accompanied by vegetables or grains, designed to satisfy hunger and provide nutritional balance."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Main Course"@en, "Plat Principal"@fr, "Hauptgang"@de, "Plato Principal"@es;
+  skos:broader apmwg:EX0SCMIE .
+
+apmwg:B04E4HAJ a skos:Concept;
+  rdfs:label "Cuisine"@en;
+  skos:definition "A style of cooking characterized by specific ingredients, techniques, and cultural influences, often associated with a particular region or country, used to categorize and describe meal types in product classification."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cuisine"@en, "Cuisine"@fr, "Küche"@de, "Cocina"@es;
+  skos:broader apmwg:8QTRPWZL;
+  skos:narrower apmwg:1PIZRPAA, apmwg:M3WRAEAI, apmwg:AMN6V4FF, apmwg:FIMFXSDH, apmwg:66B0BOM6,
+    apmwg:2Y1JP09V .
+
+apmwg:1PIZRPAA a skos:Concept;
+  rdfs:label "American"@en;
+  skos:definition "A meal style characterized by diverse dishes influenced by various cultures, often featuring items like burgers, hot dogs, barbecue, and regional specialties, reflecting the culinary traditions and preferences commonly found in the United States."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "American"@en, "Américaine"@fr, "Amerikanisch"@de, "Americana"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:M3WRAEAI a skos:Concept;
+  rdfs:label "French"@en;
+  skos:definition "French cuisine refers to any dish whose primary ingredients, preparation methods, and presentation are characteristic of established culinary traditions from France. To be labeled as French cuisine, a dish should either originate from France or faithfully adhere to recognized French recipes, techniques, and flavor profiles, reflecting the cultural and gastronomic practices typical of French culinary heritage."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "French"@en, "Française"@fr, "Französisch"@de, "Francesa"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:AMN6V4FF a skos:Concept;
+  rdfs:label "German"@en;
+  skos:definition "Relating to traditional dishes, ingredients, or culinary styles originating from Germany, often characterized by hearty flavors, sausages, breads, and regional specialties like sauerkraut and pretzels, used to classify products associated with German cuisine."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "German"@en, "Allemande"@fr, "Deutsch"@de, "Alemana"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:FIMFXSDH a skos:Concept;
+  skos:definition "A meal prepared according to Hindu dietary practices, often vegetarian, avoiding beef and sometimes other meats, and may exclude certain ingredients like garlic and onions, aligning with religious and cultural traditions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Hindu"@en, "Hindou"@fr, "Hindu"@de, "Hindú"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:66B0BOM6 a skos:Concept;
+  rdfs:label "Indian"@en;
+  skos:definition "A style of cuisine originating from India, characterized by the use of spices, herbs, and ingredients like rice, lentils, and vegetables, often featuring dishes such as curry, biryani, and naan."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Indian"@en, "Indienne"@fr, "Indisch"@de, "India"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:2Y1JP09V a skos:Concept;
+  rdfs:label "Japanese"@en;
+  skos:definition "A style of cuisine originating from Japan, characterized by ingredients like rice, seafood, soy, and vegetables, often featuring dishes such as sushi, sashimi, and ramen, emphasizing freshness, balance, and presentation."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Japanese"@en, "Japonaise"@fr, "Japanisch"@de, "Japonesa"@es;
+  skos:broader apmwg:B04E4HAJ .
+
+apmwg:YSVDF00S a skos:Concept;
+  rdfs:label "Nutrition"@en;
+  skos:definition "Nutrition refers to the essential nutrients and energy provided by food and beverages, influencing health and well-being. It includes macronutrients, micronutrients, and other dietary components that support growth, maintenance, and overall bodily functions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Nutrition"@en, "Nutrition"@fr, "Ernährung"@de, "Nutrición"@es;
+  skos:broader apmwg:8QTRPWZL;
+  skos:narrower apmwg:E7Y63352, apmwg:L9B71271, apmwg:Q6S47514, apmwg:S4E79190, apmwg:X4V55433,
+    apmwg:9ZKXLR5J, apmwg:C929BGE9, apmwg:5E6PG2L2, apmwg:G3OGS8IE, apmwg:7MLYWI83, apmwg:3DGXSRMK,
+    apmwg:TDBKD84O, apmwg:BX15OBHH, apmwg:KXW2YZ8Z .
+
+apmwg:9ZKXLR5J a skos:Concept;
+  rdfs:label "Diary-Free"@en;
+  skos:definition "Excludes all dairy products and thus eliminates in particular lactose"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Dairy-Free"@en, "Sans Produits Laitiers"@fr, "Milchfrei"@de, "Sin Lácteos"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:NLML .
+
+apmwg:C929BGE9 a skos:Concept;
+  rdfs:label "Flexitarian"@en;
+  skos:definition "A dietary preference primarily for plant-based foods, occasionally including meat or fish, suitable for those reducing meat consumption without fully eliminating it."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Flexitarian"@en, "Flexitarien"@fr, "Flexitarier"@de, "Flexitariano"@es;
+  skos:broader apmwg:YSVDF00S .
+
+apmwg:5E6PG2L2 a skos:Concept;
+  rdfs:label "Gluten-Free"@en;
+  skos:definition " Excludes gluten, a protein found in wheat, barley, and rye."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Gluten-Free"@en, "Sans Gluten"@fr, "Glutenfrei"@de, "Sin Gluten"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:GFML .
+
+apmwg:G3OGS8IE a skos:Concept;
+  rdfs:label "Keto"@en;
+  skos:definition "High in fats, low in carbohydrates."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Keto"@en, "Cétogène"@fr, "Keto"@de, "Cetogénico"@es;
+  skos:broader apmwg:YSVDF00S .
+
+apmwg:7MLYWI83 a skos:Concept;
+  rdfs:label "Low-Carb"@en;
+  skos:definition "Reduces carbohydrate intake, often increasing protein and fat consumption."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Low-Carb"@en, "Faible en Glucides"@fr, "Kohlenhydratarm"@de, "Bajo en Carbohidratos"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:LCML .
+
+apmwg:3DGXSRMK a skos:Concept;
+  rdfs:label "Low-Sugar"@en;
+  skos:definition "Low-Sugar refers to food or beverages containing a reduced amount of sugar compared to standard versions, making them suitable for individuals seeking to limit sugar intake for health or dietary reasons."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Low-Sugar"@en, "Faible en Sucre"@fr, "Zuckerarm"@de, "Bajo en Azúcar"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:DBML .
+
+apmwg:TDBKD84O a skos:Concept;
+  rdfs:label "Paleo"@en;
+  skos:definition "Focuses on foods presumed to have been eaten by early humans, including lean meats, fish, fruits, vegetables, nuts, and seeds."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Paleo"@en, "Paléo"@fr, "Paleo"@de, "Paleo"@es;
+  skos:broader apmwg:YSVDF00S .
+
+apmwg:BX15OBHH a skos:Concept;
+  rdfs:label "Vegan"@en;
+  skos:definition "A meal prepared without any animal-derived ingredients, including meat, dairy, eggs, and honey, suitable for individuals following a plant-based diet."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Vegan"@en, "Végan"@fr, "Vegan"@de, "Vegano"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:VGML .
+
+apmwg:KXW2YZ8Z a skos:Concept;
+  rdfs:label "Vegetarian"@en;
+  skos:definition "Excludes meat, but may include dairy and eggs."@en, "Exclut la viande, mais peut inclure des produits laitiers et des œufs."@fr,
+    "肉を除外するが、乳製品や卵を含むことがある。"@ja;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Vegetarian"@en, "Végétarien"@fr, "ベジタリアン (Bejitarian)"@ja, "Vegetarisch"@de,
+    "Vegetariano"@es;
+  skos:broader apmwg:YSVDF00S;
+  apmwg:linkedSSR apmwg:VLML, apmwg:VOML .
+
+apmwg:LPNKBNFY a skos:Concept;
+  rdfs:label "Time"@en;
+  rdfs:comment "Time of day when a meal is served. Snack can possibly be served anytime"@en;
+  skos:definition "Time refers to the specific period or occasion when a meal is typically consumed, such as breakfast, lunch, or dinner, helping to categorize products based on their intended use during different parts of the day."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Time"@en, "Moment"@fr, "Zeit"@de, "Momento"@es;
+  skos:broader apmwg:8QTRPWZL;
+  skos:narrower apmwg:O5WUPEDX, apmwg:SDHYLSYP, apmwg:U6ZEWMZC, apmwg:8SGBM5NO .
+
+apmwg:O5WUPEDX a skos:Concept;
+  rdfs:label "Breakfast"@en;
+  skos:definition "The first meal of the day, typically consumed in the morning, often featuring foods like eggs, cereal, toast, or fruit, designed to provide energy and nutrients after overnight fasting."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Breakfast"@en, "Zmorge"@gsw, "Petit-déjeuner"@fr, "Frühstück"@de,
+    "Desayuno"@es;
+  skos:broader apmwg:LPNKBNFY .
+
+apmwg:SDHYLSYP a skos:Concept;
+  rdfs:label "Diner"@en;
+  skos:definition "A casual, often retro-style restaurant offering a wide range of affordable meals, typically including breakfast, lunch, and dinner options, served in a relaxed atmosphere."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Diner"@en, "Dîner"@fr, "Abendessen"@de, "Cena"@es;
+  skos:broader apmwg:LPNKBNFY .
+
+apmwg:U6ZEWMZC a skos:Concept;
+  rdfs:label "Lunch"@en;
+  skos:definition "A midday meal typically consumed between late morning and early afternoon, often lighter than dinner, and can include sandwiches, salads, or hot dishes, commonly eaten at home, work, or school."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Lunch"@en, "Déjeuner"@fr, "Mittagessen"@de, "Almuerzo"@es;
+  skos:broader apmwg:LPNKBNFY .
+
+apmwg:8SGBM5NO a skos:Concept;
+  rdfs:label "Snack"@en;
+  skos:definition "A small portion of food consumed between main meals, often for quick energy or to satisfy hunger temporarily. Typically easy to prepare and eat, it includes items like chips, nuts, or fruit."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Snack"@en, "Collation"@fr, "Snack"@de, "Aperitivo"@es;
+  skos:broader apmwg:LPNKBNFY .
+
+apmwg:VEW3D584 a skos:Concept;
+  rdfs:label "Onboard Experience"@en;
+  skos:definition "All classifications for products delivered on board of a transport product. "@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Onboard Experience"@en, "Expérience à Bord"@fr, "Bordservice"@de,
+    "Experiencia a Bordo"@es;
+  skos:editorialNote "This facet will expand as other transport options become available / integrated into the airline retail offerings. This facet is today build around the 4 different cabin types which are present in the airline industry. "@en;
+  skos:narrower apmwg:KJ0K3YN4, apmwg:M3BMDY3J, apmwg:IIXB0MPA, apmwg:MM686ASI, apmwg:ProductExperience .
+
+apmwg:KJ0K3YN4 a skos:Concept;
+  rdfs:label "Business"@en;
+  skos:definition "A premium travel class offering enhanced comfort, services, and amenities, typically including spacious seating, gourmet meals, and priority boarding, designed for corporate travelers or those seeking a higher level of service during their journey."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Business"@en, "Affaires"@fr, "Business"@de, "Business"@es;
+  skos:broader apmwg:VEW3D584;
+  skos:narrowMatch apmwg:BLTILXX4 .
+
+apmwg:M3BMDY3J a skos:Concept;
+  rdfs:label "Economy"@en;
+  skos:definition "A class of airline service offering basic amenities at a lower cost, typically including standard seating, limited meal options, and fewer complimentary services compared to premium classes."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Economy"@en, "Économique"@fr, "Economy"@de, "Económica"@es;
+  skos:broader apmwg:VEW3D584;
+  skos:narrowMatch apmwg:BHYMYVQY .
+
+apmwg:IIXB0MPA a skos:Concept;
+  rdfs:label "First"@en;
+  skos:definition "In the context of onboard experience, \"First\" refers to the highest class of service offered, featuring premium amenities, enhanced comfort, and exclusive privileges designed to provide passengers with a superior and luxurious travel experience."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "First"@en, "Première"@fr, "Erste Klasse"@de, "Primera"@es;
+  skos:broader apmwg:VEW3D584;
+  skos:related apmwg:P2EETAH6, apmwg:Y96OYAGD .
+
+apmwg:MM686ASI a skos:Concept;
+  rdfs:label "Premium Economy"@en;
+  skos:definition "A travel class offering enhanced comfort and amenities compared to standard economy, including extra legroom, upgraded seating, and improved service, positioned between economy and business class in terms of price and features."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Premium Economy"@en, "Économique Premium"@fr, "Premium Economy"@de,
+    "Económica Premium"@es;
+  skos:broader apmwg:VEW3D584;
+  skos:narrowMatch apmwg:5ISBEKWX .
+
+apmwg:ZSUGLUEO a skos:Concept;
+  dc:description "Used for products which can be shipped to customers independently e.g. Model Plane, Baggage, Cat boxes etc. "@en;
+  skos:definition "A packaged product designed for sale in retail environments, typically enclosed in a box, containing one or more items intended for consumer purchase."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Box Retail Item"@en, "Article de Vente en Boîte"@fr, "Einzelhandelsartikel in Box"@de,
+    "Artículo de Venta en Caja"@es;
+  skos:broader apmwg:PI0ZMZJY .
+
+apmwg:PI0ZMZJY a skos:Concept;
+  dc:description "Physical Items: travelling together with a pax ( excl. travelling by themselves ) Classifies products aiming ay transporting items not requiring the owner of the items to be present at the same time at the means of transport used. To the contrary of the other concepts on Cabin and Checked Baggage"@en;
+  rdfs:label "Physical Item"@en;
+  skos:definition "A tangible object that can be physically handled, measured, or weighed, typically used for sale or distribution. It includes products like electronics, furniture, and clothing, distinguishing them from digital or intangible goods."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Physical Item"@en, "Article Physique"@fr, "Physischer Gegenstand"@de,
+    "Artículo Físico"@es;
+  skos:note """Cool
+Vulnerable/fragile
+Express/time definite
+Life
+Pharmaceutical : Proposals to think about to be added to the Phys Item facet"""@en,
+    "Cool/Vulnerable/fragile / Express/time definite Life Pharmaceutical : Proposals to think about to be added to the Phys Item facet"@en;
+  skos:narrower apmwg:ZSUGLUEO, apmwg:2NXFT2D9, apmwg:IFZ74JIL, apmwg:Z9XJIM3N .
+
+apmwg:2NXFT2D9 a skos:Concept;
+  dc:description "use that term to label a product called \"cabin baggage\" as the tag will improve searchability "@en;
+  rdfs:label "Cabin Baggage"@en;
+  skos:definition "Small luggage designed to fit in an aircraft's overhead compartment or under the seat, adhering to airline size and weight restrictions, typically used for carrying personal items during a flight."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cabin Baggage"@en, "Baggage Cabine"@fr, "Handgepäck"@de, "Equipaje de Cabina"@es;
+  skos:broader apmwg:PI0ZMZJY .
+
+apmwg:IFZ74JIL a skos:Concept;
+  dc:description "Excluded for the time being to be reviewed later"@en;
+  rdfs:label "Cargo & Parcel Delivery"@en;
+  skos:definition ""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cargo & Parcel"@en, "Fret et Colis"@fr, "Fracht & Paket"@de, "Carga y Paquete"@es;
+  skos:broader apmwg:PI0ZMZJY .
+
+apmwg:Z9XJIM3N a skos:Concept;
+  rdfs:label "Checked Baggage"@en;
+  skos:definition "Luggage handed over to a transport carrier for storage in a separate compartment during travel, typically retrieved at the destination. It is subject to size, weight, and security regulations and is not accessible during transit."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Checked Baggage"@en, "Baggage Enregistré"@fr, "Aufgegebenes Gepäck"@de,
+    "Equipaje Facturado"@es;
+  skos:broader apmwg:PI0ZMZJY .
+
+apmwg:GXT1H3T9 a skos:Concept;
+  rdfs:label "Product Experience"@en;
+  skos:definition "Focuses on the customer’s perception of the products and service provided, including customer support, ease of access, and personalization."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Product Experience"@en, "Expérience Produit"@fr, "Produkterlebnis"@de,
+    "Experiencia del Producto"@es;
+  skos:narrower apmwg:BHYMYVQY, apmwg:P2EETAH6, apmwg:BLTILXX4, apmwg:5ISBEKWX, apmwg:Y96OYAGD .
+
+apmwg:BHYMYVQY a skos:Concept;
+  rdfs:label "Basic"@en;
+  skos:definition """Service : Minimal service, focused on functionality. Customer interactions are generic and limited.
+Item:  Basic, functional, and often mass-produced with minimal attention to aesthetics or durability.
+Item Design & Materials: Simple design, low-cost materials, and utilitarian in nature."""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Basic"@en, "Basique"@fr, "Basic"@de, "Básico"@es;
+  skos:broader apmwg:GXT1H3T9;
+  skos:broadMatch apmwg:M3BMDY3J .
+
+apmwg:P2EETAH6 a skos:Concept;
+  rdfs:label "Luxury"@en;
+  skos:definition """Service: Highly personalized and attentive service. Every detail is managed to create an exclusive and memorable experience.
+Item quality: Exceptional quality with meticulous craftsmanship. Products are built to last and often feature unique, high-end features.
+Item design & materials: Exquisite design, often handmade or with artisanal elements. Premium materials like leather, fine metals, and rare woods."""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Luxury"@en, "Luxe"@fr, "Luxus"@de, "Lujo"@es;
+  skos:altLabel "4-Star"@en;
+  skos:broader apmwg:GXT1H3T9;
+  skos:related apmwg:IIXB0MPA .
+
+apmwg:BLTILXX4 a skos:Concept;
+  rdfs:label "Premium"@en;
+  skos:definition """Service: Enhanced service with attention to detail. Some level of personalization, and proactive customer service.
+Item quality: High-quality products with superior performance and longer lifespan. Designed for comfort and satisfaction.
+Item design & materials: Sophisticated design with high-quality materials. Focus on aesthetics and functionality."""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Premium"@en, "Premium"@fr, "Premium"@de, "Premium"@es;
+  skos:broader apmwg:GXT1H3T9;
+  skos:broadMatch apmwg:KJ0K3YN4 .
+
+apmwg:5ISBEKWX a skos:Concept;
+  rdfs:label "Standard"@en;
+  skos:definition """Service: Reliable and consistent service that meets basic expectations. Some customer support is available, usually polite but not personalized. 
+  Item Quality: Decent quality, offers good value for money, reliable for everyday use. 
+  Item Design & Materials: Functional design with moderate attention to aesthetics. Materials are durable but not premium."""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Standard"@en, "Standard"@fr, "Standard"@de, "Estándar"@es;
+  skos:broader apmwg:GXT1H3T9;
+  skos:broadMatch apmwg:MM686ASI .
+
+apmwg:Y96OYAGD a skos:Concept;
+  rdfs:label "Ultra Luxury"@en;
+  skos:definition """Service: Exceptionally personalized service, tailored to the customer’s specific preferences and needs. Services often include private, bespoke experiences that go beyond expectations.
+Item quality: The pinnacle of quality and craftsmanship. Products are often custom-made or limited edition, with attention to the finest details.
+Item design & materials: Unique, often one-of-a-kind designs, using the most exclusive and luxurious materials available. These products are as much about artistry as they are about functionality."""@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Ultra Luxury"@en, "Ultra Luxe"@fr, "Ultra Luxus"@de, "Ultra Lujo"@es;
+  skos:altLabel "5-Star"@en;
+  skos:broader apmwg:GXT1H3T9;
+  skos:related apmwg:IIXB0MPA .
+
+apmwg:0PNOV4FA a skos:Concept;
+  rdfs:label "Season"@en;
+  skos:definition "A period of the year characterized by specific weather patterns and daylight hours, influencing product relevance and consumer demand, such as spring, summer, autumn, and winter."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Season"@en, "Saison"@fr, "Jahreszeit"@de, "Estación"@es;
+  skos:narrower apmwg:4RL1RO1L, apmwg:9RZ3QZAE, apmwg:9JGRROHS, apmwg:FU02KNYR;
+  skos:related apmwg:O2IMBGNL .
+
+apmwg:4RL1RO1L a skos:Concept;
+  skos:definition "Fall is the season between summer and winter, characterized by cooler temperatures and leaves changing color. It typically spans September to November in the Northern Hemisphere, influencing product themes like clothing, decor, and seasonal foods."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Fall"@en, "Automne"@fr, "Herbst"@de, "Otoño"@es;
+  skos:broader apmwg:0PNOV4FA .
+
+apmwg:9RZ3QZAE a skos:Concept;
+  skos:definition "A season characterized by mild temperatures and blooming flora, typically occurring between winter and summer, often associated with renewal and growth, influencing product features like color palettes, materials, and themes in fashion, gardening, and outdoor activities."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Spring"@en, "Printemps"@fr, "Frühling"@de, "Primavera"@es;
+  skos:broader apmwg:0PNOV4FA .
+
+apmwg:9JGRROHS a skos:Concept;
+  skos:definition "A warm season typically occurring between late June and early September, characterized by longer daylight hours, higher temperatures, and activities like vacations, outdoor sports, and festivals, often influencing product features such as lightweight materials and bright colors."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Summer"@en, "Été"@fr, "Sommer"@de, "Verano"@es;
+  skos:broader apmwg:0PNOV4FA .
+
+apmwg:FU02KNYR a skos:Concept;
+  skos:definition "The coldest season, typically characterized by low temperatures, snow, and shorter days, occurring between autumn and spring. It influences product features like insulation, warmth, and suitability for cold weather activities or conditions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Winter"@en, "Hiver"@fr, "Winter"@de, "Invierno"@es;
+  skos:broader apmwg:0PNOV4FA;
+  skos:related apmwg:WTA2AYDH .
+
+apmwg:WTA2AYDH a skos:Concept;
+  skos:definition "A winter sport involving gliding over snow using long, narrow runners attached to boots, typically performed on slopes or trails, and includes various styles such as alpine, cross-country, and freestyle."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Ski"@en, "Ski"@fr, "Ski"@de, "Esquí"@es;
+  skos:broader apmwg:4LFJPGRT;
+  skos:related apmwg:FU02KNYR .
+
+apmwg:9UVDK0I2 a skos:Concept;
+  skos:definition "A water sport involving riding waves on a surfboard, typically performed in the ocean, requiring balance and skill to navigate and maneuver through varying wave conditions."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Surf"@en, "Surf"@fr, "Surfen"@de, "Surf"@es;
+  skos:broader apmwg:4LFJPGRT .
+
+apmwg:XEIQT60M a skos:Concept;
+  skos:definition "A sport where players use clubs to hit a small ball into a series of holes on a course in as few strokes as possible, typically played outdoors on a large, landscaped area."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Golf"@en, "Golf"@fr, "Golf"@de, "Golf"@es;
+  skos:broader apmwg:4LFJPGRT .
+
+apmwg:4LFJPGRT a skos:Concept;
+  skos:definition "An organized physical activity involving skill, competition, and rules, often played individually or in teams, designed for entertainment, fitness, or recreation."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Sport"@en, "Sport"@fr, "Sport"@de, "Deporte"@es;
+  skos:broader apmwg:O2IMBGNL;
+  skos:narrower apmwg:WTA2AYDH, apmwg:9UVDK0I2, apmwg:XEIQT60M .
+
+apmwg:6AKANDYN a skos:Concept;
+  skos:definition "Activities involving amusement, enjoyment, or leisure, often including performances, games, or events designed to engage and captivate an audience, providing relaxation or diversion from daily routines."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Entertainment"@en, "Divertissement"@fr, "Unterhaltung"@de, "Entretenimiento"@es;
+  skos:broader apmwg:O2IMBGNL;
+  skos:narrower apmwg:V0V56SE8, apmwg:06XA4SPG, apmwg:JQ1MBA5I, apmwg:HTZDLMFD .
+
+apmwg:06XA4SPG a skos:Concept;
+  skos:definition "A form of entertainment involving the projection of films onto a screen for an audience, typically in a theater setting, encompassing various genres and styles, and often associated with the film industry and cinematic arts."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cinema"@en, "Cinéma"@fr, "Kino"@de, "Cine"@es;
+  skos:broader apmwg:6AKANDYN .
+
+apmwg:JQ1MBA5I a skos:Concept;
+  skos:definition "An establishment where meals are prepared and served to customers, typically offering a menu with various food and drink options, and providing seating for dining on the premises."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Restaurant"@en, "Restaurant"@fr, "Restaurant"@de, "Restaurante"@es;
+  skos:broader apmwg:6AKANDYN .
+
+apmwg:HTZDLMFD a skos:Concept;
+  skos:definition "A form of performing arts involving live actors presenting a scripted story or performance on stage, often in a designated venue, for an audience's entertainment or cultural enrichment."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Theater"@en, "Théâtre"@fr, "Theater"@de, "Teatro"@es;
+  skos:broader apmwg:6AKANDYN .
+
+apmwg:2XGOSD4T a skos:Concept;
+  skos:definition "A social unit consisting of parents and their children, or all descendants of a common ancestor, often considered as a target group for products related to home, childcare, and shared activities."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Family"@en, "Famille"@fr, "Familie"@de, "Familia"@es;
+  skos:broader apmwg:O2IMBGNL .
+
+apmwg:7EYUQ7K1 a skos:Concept;
+  rdfs:label "Retreat"@en;
+  skos:definition "A retreat is a planned event where individuals or groups temporarily withdraw from daily routines to focus on relaxation, reflection, or personal development, often in a tranquil setting, for purposes such as wellness, team-building, or spiritual growth."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Retreat"@en, "Retraite"@fr, "Rückzug"@de, "Retiro"@es;
+  skos:altLabel "Seclusion"@en;
+  skos:broader apmwg:O2IMBGNL .
+
+apmwg:NWM2HPES a skos:Concept;
+  skos:definition "Refers to products specifically designed or used during certain times of the year, often linked to holidays, weather changes, or seasonal events, such as winter clothing, summer sports gear, or holiday decorations."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Seasonal"@en, "Saisonnier"@fr, "Saisonal"@de, "Estacional"@es;
+  skos:broader apmwg:O2IMBGNL .
+
+apmwg:GCU7A432 a skos:Concept;
+  skos:definition "Guided journeys or excursions designed for leisure, education, or exploration, often led by a guide, covering specific routes or destinations, and typically offered as a service to individuals or groups."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Tours"@en, "Visites"@fr, "Touren"@de, "Tours"@es;
+  skos:broader apmwg:O2IMBGNL;
+  skos:narrower apmwg:3OO5XYF5, apmwg:IMM8O9JQ, apmwg:L97JEB0F, apmwg:P9ZMNGW9, apmwg:GW8QCM3W .
+
+apmwg:IMM8O9JQ a skos:Concept;
+  skos:definition "Pertaining to activities, products, or experiences related to the arts, traditions, customs, and social practices of a particular society or group, often reflecting their heritage, beliefs, and values."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Cultural"@en, "Culturel"@fr, "Kulturell"@de, "Cultural"@es;
+  skos:note "Cultural-related tours incl. religious activities ( e.g. Hadj ) "@en;
+  skos:broader apmwg:GCU7A432 .
+
+apmwg:L97JEB0F a skos:Concept;
+  skos:definition "A public display or presentation of items, artworks, or products, often organized in a specific venue, aimed at showcasing, promoting, or educating about the featured subjects to an audience."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Exhibition"@en, "Exposition"@fr, "Ausstellung"@de, "Exposición"@es;
+  skos:broader apmwg:GCU7A432 .
+
+apmwg:P9ZMNGW9 a skos:Concept;
+  rdfs:label "Historic"@en;
+  skos:definition "Relating to activities, events, or periods from the past that hold significance or interest, often involving exploration, study, or commemoration of historical events, sites, or cultures."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Historic"@en, "Historique"@fr, "Historisch"@de, "Histórico"@es;
+  skos:broader apmwg:GCU7A432 .
+
+apmwg:GW8QCM3W a skos:Concept;
+  skos:definition "An institution that collects, preserves, and displays artifacts and artworks for public education and enjoyment, often featuring exhibitions, educational programs, and research activities related to history, culture, science, or art."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Museum"@en, "Musée"@fr, "Museum"@de, "Museo"@es;
+  skos:broader apmwg:GCU7A432 .
+
+apmwg:4QN4PC8S a skos:Concept;
+  rdfs:label "Transport Duration"@en;
+  rdfs:comment "Classification used to describe transport products in terms of the duration of the travel on a coarse grained level. The exact interpretation of what short medium and long mean is up to the appreciation of each individual organisation when labeling their products. Bilateral agreements may also clarify this in further detail and add ev additional classification like XS or XXL etc ... if required together with the min max duration attached as added information to the taxonomy concepts. "@en;
+  skos:definition "The time period required to move from the point of origin to the destination, used to categorise products based on travel timeframes"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Transport Duration"@en, "Durée de Transport"@fr, "Transportdauer"@de,
+    "Duración del Transporte"@es;
+  skos:narrower apmwg:H4QMWLP4, apmwg:875UG2O3, apmwg:JRY7HJII, apmwg:Topology, apmwg:SegmentType .
+
+apmwg:H4QMWLP4 a skos:Concept;
+  rdfs:label "Long"@en;
+  skos:definition "In product classification, \"Long\" refers to a transport duration that exceeds the standard or average time typically expected for delivery, often involving extended distances. For travelers this is often inked to cross-country or international travel.  For parcels this can involve complex logistics, and usually taking several days or weeks to complete."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Long"@en, "Long"@fr, "Lang"@de, "Largo"@es;
+  skos:broader apmwg:4QN4PC8S .
+
+apmwg:875UG2O3 a skos:Concept;
+  dc:description "This is some description of the concept of medium haul flights "@en;
+  rdfs:label "Medium"@en;
+  skos:definition "Medium refers to a transport duration that is neither short nor long, typically ranging from several hours to a day. It is used to classify products based on the time required for transportation."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Medium"@en, "Moyen"@fr, "Mittel"@de, "Medio"@es;
+  skos:broader apmwg:4QN4PC8S .
+
+apmwg:JRY7HJII a skos:Concept;
+  rdfs:label "Short"@en;
+  rdfs:comment "C'est moins de 2h"@fr;
+  skos:definition "In product classification, \"Short\" refers to a transport duration typically lasting less than 24 hours, often used for local or regional deliveries where quick turnaround is expected."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Short"@en, "Court"@fr, "Kurz"@de, "Corto"@es;
+  skos:broader apmwg:4QN4PC8S .
+
+apmwg:12AZYHGL a skos:Concept;
+  rdfs:label "Transport Mode"@en;
+  rdfs:comment "For a transport product characterizes the broader means of transportation. Air is plane, helicopter, hot air ballon ( e.g. for expirence related products ) Rail in general is a train. Road can be Bus, Limo, VTC, Uber, etc... Sea would typically be a boat but could be anything else which floats and would enable transportation and could be more specialized if not part of the product definition"@en;
+  skos:definition "A method or system used for moving people or goods from one place to another, such as by road, rail, air, or sea, essential for categorizing products related to transportation and logistics."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:topConceptOf apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Transport Mode"@en, "Mode de Transport"@fr, "Transportmittel"@de,
+    "Modo de Transporte"@es;
+  skos:narrower apmwg:ESYO2YSV, apmwg:LLG7126G, apmwg:CTGSOZE0, apmwg:QZH407AE, apmwg:ModeOfTransport,
+    apmwg:74SDZLOW .
+
+apmwg:ESYO2YSV a skos:Concept;
+  rdfs:label "Air"@en;
+  skos:definition "A mode of transportation involving aircraft, used for moving goods or passengers through the atmosphere, typically over long distances, offering speed and efficiency compared to other methods."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Air"@en, "Aérien"@fr, "Luft"@de, "Aéreo"@es;
+  skos:broader apmwg:12AZYHGL .
+
+apmwg:LLG7126G a skos:Concept;
+  rdfs:label "Rail"@en;
+  skos:definition "A mode of transportation utilizing trains running on tracks, typically used for moving passengers or goods over long distances efficiently and reliably, often within a network of interconnected routes."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Rail"@en, "Ferroviaire"@fr, "Schiene"@de, "Ferrocarril"@es;
+  skos:broader apmwg:12AZYHGL .
+
+apmwg:CTGSOZE0 a skos:Concept;
+  rdfs:label "Road"@en;
+  skos:definition "A transportation method involving vehicles traveling on paved or unpaved surfaces, including highways, streets, and rural roads, primarily for moving goods or passengers using cars, trucks, buses, and motorcycles."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Road"@en, "Route"@fr, "Straße"@de, "Carretera"@es;
+  skos:broader apmwg:12AZYHGL .
+
+apmwg:QZH407AE a skos:Concept;
+  rdfs:label "Sea"@en;
+  skos:definition "A mode of transport involving the movement of goods or passengers over bodies of saltwater, typically using ships or boats, for commercial or recreational purposes."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Sea"@en, "Maritime"@fr, "See"@de, "Marítimo"@es;
+  skos:broader apmwg:12AZYHGL .
+
+apmwg:TransportAttributes a skos:Collection;
+  skos:prefLabel "Transport Attributes"@en;
+  skos:broader apmwg:TransportProduct;
+  skos:narrower apmwg:ModeOfTransport, apmwg:Topology, apmwg:GeographicScope, apmwg:SegmentType,
+    apmwg:ProductExperience;
+  skos:member apmwg:ModeOfTransport, apmwg:Topology, apmwg:GeographicScope, apmwg:SegmentType,
+    apmwg:ProductExperience .
+
+apmwg:ModeOfTransport a skos:Collection;
+  skos:inScheme apmwg:APMWGTransportProductScheme;
+  skos:prefLabel "Mode of Transport"@en;
+  skos:broader apmwg:12AZYHGL, apmwg:TransportAttributes;
+  skos:narrower apmwg:Air, apmwg:Rail, apmwg:BusCoach, apmwg:Ferry;
+  skos:member apmwg:Air, apmwg:Rail, apmwg:BusCoach, apmwg:Ferry .
+
+apmwg:Topology a skos:Collection;
+  skos:inScheme apmwg:APMWGTransportProductScheme;
+  skos:prefLabel "Topology / Routing"@en;
+  skos:broader apmwg:4QN4PC8S, apmwg:TransportAttributes;
+  skos:narrower apmwg:Direct, apmwg:WithStops, apmwg:Shuttle, apmwg:TechnicalStopNoPax;
+  skos:member apmwg:Direct, apmwg:WithStops, apmwg:Shuttle, apmwg:TechnicalStopNoPax .
+
+apmwg:GeographicScope a skos:Collection;
+  skos:inScheme apmwg:product_taxonomy_scheme, apmwg:APMWGTransportProductScheme;
+  skos:prefLabel "Geographic Scope"@en;
+  skos:broader apmwg:NYBKU16D, apmwg:TransportAttributes;
+  skos:narrower apmwg:Domestic, apmwg:Regional, apmwg:International, apmwg:Intercontinental;
+  skos:member apmwg:Domestic, apmwg:Regional, apmwg:International, apmwg:Intercontinental .
+
+apmwg:SegmentType a skos:Collection;
+  skos:inScheme apmwg:APMWGTransportProductScheme;
+  skos:prefLabel "Segment / Service Type"@en;
+  skos:broader apmwg:4QN4PC8S, apmwg:TransportAttributes;
+  skos:narrower apmwg:Feeder, apmwg:Intercity, apmwg:LongHaul, apmwg:Overnight, apmwg:ShuttleService;
+  skos:member apmwg:Feeder, apmwg:Intercity, apmwg:LongHaul, apmwg:Overnight, apmwg:ShuttleService .
+
+apmwg:ProductExperience skos:inScheme apmwg:APMWGTransportProductScheme;
+  skos:altLabel "Comfort Profile"@en;
+  skos:broader apmwg:VEW3D584, apmwg:TransportAttributes;
+  skos:narrower apmwg:Basic, apmwg:Standard, apmwg:Premium, apmwg:High .
+
+apmwg:Air a skos:Concept;
+  skos:definition "Transport by airplane, jet, or other aircraft."@en;
+  skos:prefLabel "Air"@en;
+  skos:broader apmwg:ModeOfTransport .
+
+apmwg:Rail a skos:Concept;
+  skos:definition "Transport by train or other rail-based systems."@en;
+  skos:prefLabel "Rail"@en;
+  skos:broader apmwg:ModeOfTransport .
+
+apmwg:BusCoach a skos:Concept;
+  skos:definition "Transport by bus or long-distance coach services."@en;
+  skos:prefLabel "Bus/Coach"@en;
+  skos:broader apmwg:ModeOfTransport .
+
+apmwg:Ferry a skos:Concept;
+  skos:definition "Transport by ferry or other ship-based scheduled service."@en;
+  skos:prefLabel "Ferry"@en;
+  skos:broader apmwg:ModeOfTransport .
+
+apmwg:Direct a skos:Concept;
+  skos:definition "Transport service without passenger stops between origin and destination."@en;
+  skos:prefLabel "Direct"@en;
+  skos:broader apmwg:Topology .
+
+apmwg:WithStops a skos:Concept;
+  skos:definition "Transport service with scheduled passenger stops between origin and destination."@en;
+  skos:prefLabel "With Stops"@en;
+  skos:broader apmwg:Topology .
+
+apmwg:Shuttle a skos:Concept;
+  skos:definition "Point-to-point service, typically frequent and short-distance."@en;
+  skos:prefLabel "Shuttle"@en;
+  skos:broader apmwg:Topology .
+
+apmwg:TechnicalStopNoPax a skos:Concept;
+  skos:definition "Intermediate stop for operational reasons (refuelling, crew) without passenger embarkation or disembarkation."@en;
+  skos:prefLabel "Technical Stop (No Pax)"@en;
+  skos:broader apmwg:Topology .
+
+apmwg:Domestic a skos:Concept;
+  skos:definition "Transport within a single country."@en;
+  skos:prefLabel "Domestic"@en;
+  skos:broader apmwg:GeographicScope .
+
+apmwg:Regional a skos:Concept;
+  skos:definition "Transport across a limited region, typically within a continent or subregion."@en;
+  skos:prefLabel "Regional"@en;
+  skos:broader apmwg:GeographicScope .
+
+apmwg:International a skos:Concept;
+  skos:definition "Transport crossing national borders."@en;
+  skos:prefLabel "International"@en;
+  skos:broader apmwg:GeographicScope .
+
+apmwg:Intercontinental a skos:Concept;
+  skos:definition "Transport connecting two or more continents."@en;
+  skos:prefLabel "Intercontinental"@en;
+  skos:broader apmwg:GeographicScope .
+
+apmwg:Feeder a skos:Concept;
+  skos:definition "Short-haul service feeding passengers into longer-haul or mainline networks."@en;
+  skos:prefLabel "Feeder"@en;
+  skos:broader apmwg:SegmentType .
+
+apmwg:Intercity a skos:Concept;
+  skos:definition "Service connecting major cities, usually medium distance."@en;
+  skos:prefLabel "Intercity"@en;
+  skos:broader apmwg:SegmentType .
+
+apmwg:LongHaul a skos:Concept;
+  skos:definition "Service covering long distances, typically overnight or intercontinental."@en;
+  skos:prefLabel "Long Haul"@en;
+  skos:broader apmwg:SegmentType .
+
+apmwg:Overnight a skos:Concept;
+  skos:definition "Service that operates overnight with arrival the following day."@en;
+  skos:prefLabel "Overnight"@en;
+  skos:broader apmwg:SegmentType .
+
+apmwg:ShuttleService a skos:Concept;
+  skos:definition "Frequent, short-haul service often operating at high frequency between fixed points."@en;
+  skos:prefLabel "Shuttle Service"@en;
+  skos:broader apmwg:SegmentType .
+
+apmwg:Basic a skos:Concept;
+  skos:definition "Lowest comfort profile, limited amenities."@en;
+  skos:prefLabel "Basic"@en;
+  skos:broader apmwg:ProductExperience .
+
+apmwg:Standard a skos:Concept;
+  skos:definition "Regular comfort profile, average amenities."@en;
+  skos:prefLabel "Standard"@en;
+  skos:broader apmwg:ProductExperience .
+
+apmwg:Premium a skos:Concept;
+  skos:definition "Higher comfort profile with enhanced services or seating."@en;
+  skos:prefLabel "Premium"@en;
+  skos:broader apmwg:ProductExperience .
+
+apmwg:High a skos:Concept;
+  skos:definition "Top comfort profile, luxury-level service and amenities."@en;
+  skos:prefLabel "High"@en;
+  skos:broader apmwg:ProductExperience .
+
+apmwg:transport_product_scheme a skos:ConceptScheme;
+  skos:hasTopConcept apmwg:NYBKU16D, apmwg:VEW3D584, apmwg:GXT1H3T9, apmwg:4QN4PC8S,
+    apmwg:12AZYHGL;
+  skos:prefLabel "TransportProductScheme"@en .
+
+apmwg:1HJT7649KP a skos:Concept;
+  skos:definition "A peninsula extending from western Asia, separated by the Ural Mountains, characterized by its temperate climate and dense population."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Europe"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:GH62LMOX a skos:Concept;
+  skos:definition "The second-largest continent, located south of Europe across the Mediterranean, known for its vast deserts, savannas, and diverse wildlife."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Africa"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:OSHGFC67 a skos:Concept;
+  skos:definition "The northern continent of the Western Hemisphere, extending from the Arctic to Central America."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "North America"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:ISD569GH a skos:Concept;
+  skos:definition "The southern continent of the Western Hemisphere, connected to North America by the Isthmus of Panama."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "South America"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:IJSCMLV5 a skos:Concept;
+  skos:definition "The southernmost frozen continent surrounding the South Pole, almost entirely covered by ice sheets."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Antarctica"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:9GS0OPFD a skos:Concept;
+  skos:definition "The largest continent, stretching from the Middle East to the Pacific, home to over half the world's population."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Asia"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:9635FDSL a skos:Concept;
+  skos:definition "The wider region including Australia plus the Pacific islands"@en;
+  skos:inScheme apmwg:product_taxonomy_scheme;
+  skos:prefLabel "Oceania"@en;
+  skos:broader apmwg:O0XAI6G1 .
+
+apmwg:74SDZLOW a skos:Concept;
+  skos:definition "Rail-based urban transit system operating primarily in tunnels beneath city streets."@en;
+  skos:inScheme apmwg:product_taxonomy_scheme, apmwg:transport_product_scheme;
+  skos:prefLabel "Underground"@en, "Metro"@fr, "U-Bahn"@de;
+  skos:broader apmwg:12AZYHGL .

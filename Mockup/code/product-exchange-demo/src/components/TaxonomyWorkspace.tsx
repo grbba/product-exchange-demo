@@ -152,6 +152,7 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
     () => (selectedId ? collections.filter((collection) => collection.members.includes(selectedId)) : []),
     [collections, selectedId]
   );
+  const linkedSsrs = selectedConcept?.linkedSsrs ?? [];
 
   const { ontologyDetailItems, hasOntologyMetadata } = useMemo(() => {
     const details: { label: string; value: string }[] = [];
@@ -195,25 +196,28 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
   return (
     <Stack spacing={3} sx={{ height: "100%" }}>
       <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="stretch" sx={{ flex: 1 }}>
-        <Card variant="outlined" sx={{ flex: 1 }}>
+        <Card variant="outlined" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <CardHeader title="Concept hierarchy" subheader={concepts.length ? `${concepts.length} concepts` : undefined} />
-          <CardContent sx={{ maxHeight: 520, overflow: "auto" }}>
+          <CardContent sx={{ flex: 1, overflow: "auto", display: "flex" }}>
             {concepts.length ? (
-              <SimpleTreeView
-                key={tree.roots.join("|")}
-                aria-label="taxonomy tree"
-                selectedItems={selectedId ?? null}
-                defaultExpandedItems={tree.defaultExpanded}
-                onSelectedItemsChange={(_, itemIds) => {
-                  if (Array.isArray(itemIds)) {
-                    setSelectedId(itemIds[0] ?? null);
-                  } else {
-                    setSelectedId(itemIds ?? null);
-                  }
-                }}
-              >
-                {tree.roots.map((rootId) => renderNode(rootId))}
-              </SimpleTreeView>
+              <Box sx={{ flex: 1 }}>
+                <SimpleTreeView
+                  key={tree.roots.join("|")}
+                  aria-label="taxonomy tree"
+                  selectedItems={selectedId ?? null}
+                  defaultExpandedItems={tree.defaultExpanded}
+                  onSelectedItemsChange={(_, itemIds) => {
+                    if (Array.isArray(itemIds)) {
+                      setSelectedId(itemIds[0] ?? null);
+                    } else {
+                      setSelectedId(itemIds ?? null);
+                    }
+                  }}
+                  sx={{ height: "100%" }}
+                >
+                  {tree.roots.map((rootId) => renderNode(rootId))}
+                </SimpleTreeView>
+              </Box>
             ) : (
               <Alert severity="info">Import a SKOS TTL file to view the taxonomy hierarchy.</Alert>
             )}
@@ -327,6 +331,20 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
                       ) : (
                         <Typography variant="body2" color="text.secondary">
                           No related concepts.
+                        </Typography>
+                      )}
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle2">Linked SSRs</Typography>
+                      {linkedSsrs.length ? (
+                        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                          {linkedSsrs.map((ssr) => (
+                            <Chip key={ssr.id} label={ssr.label} size="small" variant="outlined" title={ssr.id} />
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          No linked SSRs.
                         </Typography>
                       )}
                     </Box>
