@@ -46,6 +46,41 @@ export type Partner = {
 
 export type PartnerProductMap = Record<string, string[]>;
 
+export const IDENTITY_CAPABILITIES = [
+  "product-updates",
+  "schema-updates",
+  "taxonomy-updates",
+  "reference-system-updates",
+] as const;
+export type IdentityCapability = (typeof IDENTITY_CAPABILITIES)[number];
+
+export type AppIdentity = {
+  instanceId: string;
+  displayName: string;
+  organization: string;
+  contactEmail: string;
+  description: string;
+  endpointUrl: string;
+  capabilities: IdentityCapability[];
+};
+
+export const EXCHANGE_PROTOCOLS = ["webhook", "sse", "websocket"] as const;
+export type ExchangeProtocol = (typeof EXCHANGE_PROTOCOLS)[number];
+
+export type ChannelConfiguration = {
+  protocol: ExchangeProtocol;
+  destinationUrl: string;
+  authToken: string;
+  requireAcknowledgement: boolean;
+  notes: string;
+};
+
+export type AppSettings = {
+  identity: AppIdentity;
+  channel: ChannelConfiguration;
+  updatedAt: string;
+};
+
 export type ReferenceSystemType =
   | "Measurement"
   | "Enumeration"
@@ -445,6 +480,82 @@ export const schemaCategoryLabel = (category: SchemaCategory) =>
   category.charAt(0).toUpperCase() + category.slice(1);
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
+
+const capabilitySet = new Set<IdentityCapability>(IDENTITY_CAPABILITIES);
+const isCapability = (value: unknown): value is IdentityCapability =>
+  typeof value === "string" && capabilitySet.has(value as IdentityCapability);
+
+const sanitizeCapabilities = (
+  value: unknown,
+  fallback: IdentityCapability[]
+): IdentityCapability[] => {
+  if (!Array.isArray(value)) return fallback;
+  const filtered = value.filter(isCapability);
+  return filtered.length ? filtered : fallback;
+};
+
+const isProtocol = (value: unknown): value is ExchangeProtocol =>
+  typeof value === "string" && (EXCHANGE_PROTOCOLS as readonly string[]).includes(value);
+
+const randomInstanceId = () => `apmwg-node-${uid()}`;
+
+export const createDefaultIdentity = (): AppIdentity => ({
+  instanceId: randomInstanceId(),
+  displayName: "Workbench Instance",
+  organization: "",
+  contactEmail: "",
+  description: "Local sandbox for exchanging product data.",
+  endpointUrl: "",
+  capabilities: ["product-updates", "schema-updates", "taxonomy-updates"] as IdentityCapability[],
+});
+
+export const createDefaultSettings = (): AppSettings => ({
+  identity: createDefaultIdentity(),
+  channel: {
+    protocol: "webhook",
+    destinationUrl: "",
+    authToken: "",
+    requireAcknowledgement: true,
+    notes: "",
+  },
+  updatedAt: new Date().toISOString(),
+});
+
+export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSettings => {
+  const defaults = createDefaultSettings();
+  const identityInput = input?.identity;
+  const channelInput = input?.channel;
+
+  return {
+    identity: {
+      ...defaults.identity,
+      ...identityInput,
+      instanceId: typeof identityInput?.instanceId === "string" && identityInput.instanceId.trim()
+        ? identityInput.instanceId
+        : defaults.identity.instanceId,
+      displayName: typeof identityInput?.displayName === "string" ? identityInput.displayName : defaults.identity.displayName,
+      organization: typeof identityInput?.organization === "string" ? identityInput.organization : defaults.identity.organization,
+      contactEmail: typeof identityInput?.contactEmail === "string" ? identityInput.contactEmail : defaults.identity.contactEmail,
+      description: typeof identityInput?.description === "string" ? identityInput.description : defaults.identity.description,
+      endpointUrl: typeof identityInput?.endpointUrl === "string" ? identityInput.endpointUrl : defaults.identity.endpointUrl,
+      capabilities: sanitizeCapabilities(identityInput?.capabilities, defaults.identity.capabilities),
+    },
+    channel: {
+      ...defaults.channel,
+      ...channelInput,
+      protocol: isProtocol(channelInput?.protocol) ? (channelInput?.protocol as ExchangeProtocol) : defaults.channel.protocol,
+      destinationUrl:
+        typeof channelInput?.destinationUrl === "string" ? channelInput.destinationUrl : defaults.channel.destinationUrl,
+      authToken: typeof channelInput?.authToken === "string" ? channelInput.authToken : defaults.channel.authToken,
+      requireAcknowledgement:
+        typeof channelInput?.requireAcknowledgement === "boolean"
+          ? channelInput.requireAcknowledgement
+          : defaults.channel.requireAcknowledgement,
+      notes: typeof channelInput?.notes === "string" ? channelInput.notes : defaults.channel.notes,
+    },
+    updatedAt: input?.updatedAt ?? defaults.updatedAt,
+  };
+};
 
 export const cloneFeatureValue = (value: FeatureValue): FeatureValue => {
   if (value.kind === "SingleValue") return { ...value };

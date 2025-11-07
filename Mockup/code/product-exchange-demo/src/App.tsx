@@ -36,6 +36,7 @@ const ProductWorkspace = lazy(() => import("./components/ProductWorkspace"));
 const TaxonomyWorkspace = lazy(() => import("./components/TaxonomyWorkspace"));
 const ReferenceSystemWorkspace = lazy(() => import("./components/ReferenceSystemWorkspace"));
 const RulesWorkspace = lazy(() => import("./components/RulesWorkspace"));
+const SettingsWorkspace = lazy(() => import("./components/SettingsWorkspace"));
 import {
   COLLECTIONS,
   CONTEXT_REFS,
@@ -46,16 +47,19 @@ import {
   createRule,
   createExternalReferenceSource,
   createIndianMealRuleBundle,
+  createBurgerMealRuleBundle,
   createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
   instantiateProduct,
+  normalizeAppSettings,
   resolveCollectionMembers,
   schemaCategoryLabel,
   updateTimestamp,
   uid,
 } from "./domain";
 import type {
+  AppSettings,
   ContextRef,
   Partner,
   PartnerProductMap,
@@ -86,6 +90,7 @@ import {
   loadReferenceSystems,
   loadRuleLinks,
   loadRules,
+  loadSettings,
   loadSchemas,
   persistInstances,
   persistPartnerProducts,
@@ -93,6 +98,7 @@ import {
   persistReferenceSystems,
   persistRuleLinks,
   persistRules,
+  persistSettings,
   persistSchemas,
 } from "./storage";
 
@@ -508,6 +514,7 @@ const App: React.FC = () => {
     ruleCatalogue.rules[0]?.id ?? null
   );
   const [ruleLinks, setRuleLinks] = useState<RuleLink[]>(ruleCatalogue.links);
+  const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
 
   const [retailerPayload, setRetailerPayload] = useState<RetailerPayload | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -517,6 +524,11 @@ const App: React.FC = () => {
   });
   const notify = (message: string, severity: AlertColor = "info") => {
     setSnack({ open: true, message, severity });
+  };
+  const handleSaveSettings = (next: AppSettings) => {
+    setSettings(next);
+    persistSettings(next);
+    notify("Settings saved", "success");
   };
 
   useEffect(() => {
@@ -1101,12 +1113,13 @@ const App: React.FC = () => {
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>
           <Tab id="tab-0" label="Product Schemas" />
           <Tab id="tab-1" label="Taxonomy" />
-        <Tab id="tab-2" label="Specified Products" />
-        <Tab id="tab-3" label="Reference Systems" />
-        <Tab id="tab-4" label="Rules" />
-        <Tab id="tab-5" label="Exchange" />
-        <Tab id="tab-6" label="Partners" />
-      </Tabs>
+          <Tab id="tab-2" label="Specified Products" />
+          <Tab id="tab-3" label="Reference Systems" />
+          <Tab id="tab-4" label="Rules" />
+          <Tab id="tab-5" label="Exchange" />
+          <Tab id="tab-6" label="Partners" />
+          <Tab id="tab-7" label="Settings" />
+        </Tabs>
       </AppBar>
 
       {tab === 0 && (
@@ -1591,6 +1604,14 @@ const App: React.FC = () => {
               </CardContent>
             </Card>
           </Stack>
+        </Box>
+      )}
+
+      {tab === 7 && (
+        <Box sx={{ p: 2 }}>
+          <Suspense fallback={<WorkspaceFallback label="settings" />}>
+            <SettingsWorkspace settings={settings} onSave={handleSaveSettings} />
+          </Suspense>
         </Box>
       )}
 
