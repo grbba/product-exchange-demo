@@ -38,12 +38,14 @@ const ReferenceSystemWorkspace = lazy(() => import("./components/ReferenceSystem
 const RulesWorkspace = lazy(() => import("./components/RulesWorkspace"));
 import {
   COLLECTIONS,
+  CONTEXT_REFS,
   DEFAULT_CONCEPTS,
   CONCEPT_SCHEMES,
   REFERENCE_SYSTEM_TYPES,
   SCHEMA_CATEGORIES,
+  createRule,
   createExternalReferenceSource,
-  createIndianMealRule,
+  createIndianMealRuleBundle,
   createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
@@ -54,6 +56,7 @@ import {
   uid,
 } from "./domain";
 import type {
+  ContextRef,
   Partner,
   PartnerProductMap,
   PartnerRole,
@@ -68,6 +71,8 @@ import type {
   ReferenceSystemType,
   ReferenceSystemDraft,
   Rule,
+  RuleLink,
+  RuleLinkKind,
   RuleScope,
   RuleTarget,
   SchemaCategory,
@@ -79,19 +84,23 @@ import {
   loadPartnerProducts,
   loadPartners,
   loadReferenceSystems,
+  loadRuleLinks,
+  loadRules,
   loadSchemas,
   persistInstances,
   persistPartnerProducts,
   persistPartners,
   persistReferenceSystems,
+  persistRuleLinks,
+  persistRules,
   persistSchemas,
 } from "./storage";
 
 type RetailerPayload = { receivedAt: string; product: Product };
 
 const MAPPINGS = [
-  { fromConceptId: "C-PriorityBoarding", toConceptId: "C-PriorityBoarding" },
-  { fromConceptId: "C-Flight", toConceptId: "C-Flight" },
+  { fromConceptId: "apmwg:C-PriorityBoarding", toConceptId: "apmwg:C-PriorityBoarding" },
+  { fromConceptId: "apmwg:C-Flight", toConceptId: "apmwg:C-Flight" },
 ];
 
 const WorkspaceFallback: React.FC<{ label: string }> = ({ label }) => (
@@ -191,8 +200,58 @@ const normalizeReferenceSystem = (system: unknown): ReferenceSystem => {
   };
 };
 
+const normalizeRule = (rule: Rule): Rule => {
+  const createdAt = rule.createdAt ?? new Date().toISOString();
+  const updatedAt = rule.updatedAt ?? createdAt;
+  return { ...rule, createdAt, updatedAt };
+};
+
+type StoredRuleLink = RuleLink & { ruleId?: string };
+
+const normalizeRuleLink = (link: StoredRuleLink): RuleLink => {
+  const { ruleId: legacyRuleId, ...rest } = link;
+  const createdAt = rest.createdAt ?? new Date().toISOString();
+  const updatedAt = rest.updatedAt ?? createdAt;
+  const kind: RuleLinkKind = rest.kind === "Schema" || rest.kind === "Product" ? rest.kind : "Global";
+  const ruleRef = rest.ruleRef ?? legacyRuleId ?? "";
+  return {
+    ...rest,
+    id: rest.id ?? uid(),
+    ruleRef,
+    kind,
+    targetId: kind === "Global" ? undefined : rest.targetId ?? "",
+    description: rest.description ?? "",
+    effectiveFrom: rest.effectiveFrom,
+    effectiveTo: rest.effectiveTo,
+    createdAt,
+    updatedAt,
+  };
+};
+
+const isRuleLinkActive = (link: RuleLink, now: number) => {
+  const start = link.effectiveFrom ? Date.parse(link.effectiveFrom) : undefined;
+  const end = link.effectiveTo ? Date.parse(link.effectiveTo) : undefined;
+  if (!Number.isFinite(start ?? NaN) && link.effectiveFrom) return true;
+  if (!Number.isFinite(end ?? NaN) && link.effectiveTo) return true;
+  if (typeof start === "number" && now < start) return false;
+  if (typeof end === "number" && now > end) return false;
+  return true;
+};
+
 type RuleEvaluationStatus = "pass" | "fail" | "unknown";
-type RuleEvaluationResult = { ruleId: string; name: string; status: RuleEvaluationStatus; details: string[] };
+type RuleEvaluationResult = {
+  internalId: string;
+  ruleId: string;
+  name: string;
+  status: RuleEvaluationStatus;
+  details: string[];
+};
+
+const formatEffectivityWindow = (from?: string, to?: string) => {
+  if (!from && !to) return null;
+  if (from && to) return `${from} → ${to}`;
+  return from ? `${from} → …` : `… → ${to}`;
+};
 
 const addDetail = (details: string[], depth: number, message: string) => {
   details.push(`${"  ".repeat(depth)}${message}`);
@@ -363,6 +422,7 @@ const evaluateRules = (product: Product, rules: Rule[]): RuleEvaluationResult[] 
     details.push(...describeScope(rule.scope));
 
     return {
+      internalId: rule.id,
       ruleId: rule.ruleId,
       name: rule.name,
       status,
@@ -427,7 +487,27 @@ const App: React.FC = () => {
     ? partnerAssociations[selectedRetailPartnerId] ?? []
     : [];
 
-  const [rules, setRules] = useState<Rule[]>(() => [createIndianMealRule()]);
+  const ruleCatalogue = useMemo(() => {
+    const storedRules = loadRules();
+    const storedLinks = loadRuleLinks();
+    if (storedRules.length || storedLinks.length) {
+      const normalizedRules = storedRules.map((rule) => normalizeRule(rule));
+      const validRuleRefs = new Set(normalizedRules.map((rule) => rule.id));
+      const normalizedLinks = storedLinks
+        .map((link) => normalizeRuleLink(link as StoredRuleLink))
+        .filter((link) => validRuleRefs.has(link.ruleRef));
+      return { rules: normalizedRules, links: normalizedLinks };
+    }
+    const indian = createIndianMealRuleBundle();
+    const burger = createBurgerMealRuleBundle();
+    return { rules: [indian.rule, burger.rule], links: [...indian.links, ...burger.links] };
+  }, []);
+
+  const [rules, setRules] = useState<Rule[]>(ruleCatalogue.rules);
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(
+    ruleCatalogue.rules[0]?.id ?? null
+  );
+  const [ruleLinks, setRuleLinks] = useState<RuleLink[]>(ruleCatalogue.links);
 
   const [retailerPayload, setRetailerPayload] = useState<RetailerPayload | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -458,6 +538,22 @@ const App: React.FC = () => {
   useEffect(() => {
     persistPartnerProducts(partnerAssociations);
   }, [partnerAssociations]);
+
+  useEffect(() => {
+    persistRules(rules);
+  }, [rules]);
+
+  useEffect(() => {
+    persistRuleLinks(ruleLinks);
+  }, [ruleLinks]);
+
+  useEffect(() => {
+    setRuleLinks((previous) => {
+      const valid = new Set(rules.map((rule) => rule.id));
+      const filtered = previous.filter((link) => valid.has(link.ruleRef));
+      return filtered.length === previous.length ? previous : filtered;
+    });
+  }, [rules]);
 
   useEffect(() => {
     setSelectedRetailPartnerId((current) => {
@@ -828,9 +924,134 @@ const App: React.FC = () => {
     );
   };
 
+  const handleCreateRule = () => {
+    const newRule = createRule("New Rule");
+    setRules((previous) => [...previous, newRule]);
+    setSelectedRuleId(newRule.id);
+  };
+
+  const handleUpdateRuleContext = (
+    ruleId: string,
+    updater: (context: Rule["context"]) => Rule["context"]
+  ) => {
+    setRules((previous) =>
+      previous.map((rule) =>
+        rule.id === ruleId ? updateTimestamp({ ...rule, context: updater(rule.context) }) : rule
+      )
+    );
+  };
+
+  const handleChangeContextId = (ruleId: string, nextValue: string) => {
+    handleUpdateRuleContext(ruleId, (context) => ({ ...context, contextId: nextValue }));
+  };
+
+  const handleAddContextBinding = (ruleId: string) => {
+    handleUpdateRuleContext(ruleId, (context) => {
+      const available = CONTEXT_REFS.find((ref) => context.bindings[ref] === undefined);
+      if (!available) return context;
+      return { ...context, bindings: { ...context.bindings, [available]: "" } };
+    });
+  };
+
+  const handleChangeBindingReference = (ruleId: string, from: ContextRef, to: ContextRef) => {
+    if (from === to) return;
+    handleUpdateRuleContext(ruleId, (context) => {
+      if (context.bindings[to] !== undefined) return context;
+      const bindings = { ...context.bindings };
+      const value = bindings[from];
+      delete bindings[from];
+      bindings[to] = value ?? "";
+      return { ...context, bindings };
+    });
+  };
+
+  const handleChangeBindingValue = (ruleId: string, ref: ContextRef, value: string) => {
+    handleUpdateRuleContext(ruleId, (context) => ({
+      ...context,
+      bindings: { ...context.bindings, [ref]: value },
+    }));
+  };
+
+  const handleRemoveContextBinding = (ruleId: string, ref: ContextRef) => {
+    handleUpdateRuleContext(ruleId, (context) => {
+      const bindings = { ...context.bindings };
+      delete bindings[ref];
+      return { ...context, bindings };
+    });
+  };
+
+  const fallbackSchema = useMemo(() => {
+    if (selectedInstance) return null;
+    if (!schemas.length) return defaultSchemaTemplate();
+    if (productSchemaSelection) {
+      return schemas.find((schema) => schema.id === productSchemaSelection) ?? schemas[0];
+    }
+    return schemas[0];
+  }, [selectedInstance, productSchemaSelection, schemas]);
+
+  const activeSchemaId = selectedInstance?.schemaId ?? fallbackSchema?.id ?? null;
   const activeProduct =
-    selectedInstance?.product ?? instantiateProduct(schemas[0] ?? defaultSchemaTemplate(), collections).product;
-  const ruleResults = useMemo(() => evaluateRules(activeProduct, rules), [activeProduct, rules]);
+    selectedInstance?.product ?? instantiateProduct(fallbackSchema ?? defaultSchemaTemplate(), collections).product;
+  const activeProductId = selectedInstance?.product.id ?? null;
+
+  const evaluationCatalogue = useMemo(() => {
+    const ruleIndex = new Map(rules.map((rule) => [rule.id, rule]));
+    const schemaNames = new Map(schemas.map((schema) => [schema.id, schema.name]));
+    const productNames = new Map(instances.map((instance) => [instance.product.id, instance.product.name]));
+    const activeAssignments = new Map<string, string[]>();
+    const matchedRuleIds = new Set<string>();
+    const now = Date.now();
+    const addAssignment = (ruleRef: string, description: string) => {
+      if (!activeAssignments.has(ruleRef)) activeAssignments.set(ruleRef, []);
+      const bucket = activeAssignments.get(ruleRef)!;
+      if (!bucket.includes(description)) bucket.push(description);
+    };
+    for (const link of ruleLinks) {
+      const rule = ruleIndex.get(link.ruleRef);
+      if (!rule) continue;
+      if (!isRuleLinkActive(link, now)) continue;
+      if (link.kind === "Global") {
+        const window = formatEffectivityWindow(link.effectiveFrom, link.effectiveTo);
+        addAssignment(link.ruleRef, window ? `Global (${window})` : "Global");
+        matchedRuleIds.add(link.ruleRef);
+        continue;
+      }
+      if (link.kind === "Schema") {
+        if (!link.targetId || link.targetId !== activeSchemaId) continue;
+        const label = schemaNames.get(link.targetId) ?? link.targetId;
+        const window = formatEffectivityWindow(link.effectiveFrom, link.effectiveTo);
+        addAssignment(link.ruleRef, window ? `Schema · ${label} (${window})` : `Schema · ${label}`);
+        matchedRuleIds.add(link.ruleRef);
+        continue;
+      }
+      if (link.kind === "Product") {
+        if (!link.targetId || link.targetId !== activeProductId) continue;
+        const label = productNames.get(link.targetId) ?? link.targetId;
+        const window = formatEffectivityWindow(link.effectiveFrom, link.effectiveTo);
+        addAssignment(link.ruleRef, window ? `Product · ${label} (${window})` : `Product · ${label}`);
+        matchedRuleIds.add(link.ruleRef);
+      }
+    }
+    const applicableRules = rules.filter((rule) => matchedRuleIds.has(rule.id));
+    return { applicableRules, activeAssignments };
+  }, [rules, ruleLinks, schemas, instances, activeSchemaId, activeProductId]);
+
+  const ruleResults = useMemo(() => {
+    const evaluated = evaluateRules(activeProduct, evaluationCatalogue.applicableRules);
+    return evaluated.map((result) => {
+      const assignments = evaluationCatalogue.activeAssignments.get(result.internalId);
+      if (!assignments || !assignments.length) return result;
+      return {
+        ...result,
+        details: [...result.details, `Assignments: ${assignments.join(" | ")}`],
+      };
+    });
+  }, [activeProduct, evaluationCatalogue]);
+
+  const contextEditableRules = useMemo(
+    () => (selectedRuleId ? rules.filter((rule) => rule.id === selectedRuleId) : rules),
+    [rules, selectedRuleId]
+  );
 
   const exportSupplierPayload = () => {
     if (!selectedInstance) return null;
@@ -979,7 +1200,18 @@ const App: React.FC = () => {
           <Suspense fallback={<WorkspaceFallback label="rules" />}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <Box sx={{ flex: 1 }}>
-                <RulesWorkspace rules={rules} onChange={setRules} conceptLabel={conceptLabel} />
+                <RulesWorkspace
+                  rules={rules}
+                  selectedRuleId={selectedRuleId}
+                  onSelectRule={(ruleId) => setSelectedRuleId(ruleId)}
+                  onCreateRule={handleCreateRule}
+                  onChange={setRules}
+                  ruleLinks={ruleLinks}
+                  onChangeRuleLinks={setRuleLinks}
+                  schemas={schemas}
+                  instances={instances}
+                  conceptLabel={conceptLabel}
+                />
               </Box>
               <Box sx={{ flex: 1 }}>
                 <Card variant="outlined" sx={{ borderRadius: 3 }}>
@@ -992,38 +1224,153 @@ const App: React.FC = () => {
                     }
                   />
                   <CardContent>
-                    {ruleResults.map((result) => (
-                      <Card key={result.ruleId} variant="outlined" sx={{ borderRadius: 2, p: 2, mb: 2 }}>
-                        <Stack direction="row" alignItems="center" justifyContent="space-between">
-                          <Box>
-                            <Typography variant="subtitle1">{result.name}</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {result.ruleId}
+                    <Stack spacing={3}>
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Evaluation context
+                        </Typography>
+                        <Stack spacing={2}>
+                          {contextEditableRules.map((rule) => {
+                            const bindingEntries = Object.entries(rule.context.bindings) as [ContextRef, string][];
+                            const availableRefs = CONTEXT_REFS.filter(
+                              (ref) => !bindingEntries.some(([current]) => current === ref)
+                            );
+                            return (
+                              <Box
+                                key={`${rule.id}-context`}
+                                sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
+                              >
+                                <Stack spacing={1.5}>
+                                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Box>
+                                      <Typography variant="subtitle2">{rule.name}</Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {rule.ruleId}
+                                      </Typography>
+                                    </Box>
+                                  </Stack>
+                                  <TextField
+                                    size="small"
+                                    label="Context ID"
+                                    value={rule.context.contextId}
+                                    onChange={(event) => handleChangeContextId(rule.id, event.target.value)}
+                                  />
+                                  <Stack spacing={1}>
+                                    {bindingEntries.map(([ref, value]) => (
+                                      <Stack
+                                        key={`${rule.id}-${ref}`}
+                                        direction={{ xs: "column", sm: "row" }}
+                                        spacing={1}
+                                        alignItems={{ xs: "stretch", sm: "center" }}
+                                      >
+                                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                                          <InputLabel>Reference</InputLabel>
+                                          <Select
+                                            label="Reference"
+                                            value={ref}
+                                            onChange={(event) =>
+                                              handleChangeBindingReference(
+                                                rule.id,
+                                                ref,
+                                                event.target.value as ContextRef
+                                              )
+                                            }
+                                          >
+                                            {CONTEXT_REFS.map((candidate) => (
+                                              <MenuItem
+                                                key={candidate}
+                                                value={candidate}
+                                                disabled={
+                                                  candidate !== ref &&
+                                                  rule.context.bindings[candidate] !== undefined
+                                                }
+                                              >
+                                                {candidate}
+                                              </MenuItem>
+                                            ))}
+                                          </Select>
+                                        </FormControl>
+                                        <TextField
+                                          fullWidth
+                                          size="small"
+                                          label="Binding description"
+                                          value={value}
+                                          onChange={(event) =>
+                                            handleChangeBindingValue(rule.id, ref, event.target.value)
+                                          }
+                                        />
+                                        <Button
+                                          size="small"
+                                          color="error"
+                                          onClick={() => handleRemoveContextBinding(rule.id, ref)}
+                                        >
+                                          Remove
+                                        </Button>
+                                      </Stack>
+                                    ))}
+                                    <Button
+                                      size="small"
+                                      startIcon={<AddIcon fontSize="small" />}
+                                      disabled={!availableRefs.length}
+                                      onClick={() => handleAddContextBinding(rule.id)}
+                                    >
+                                      Add binding
+                                    </Button>
+                                  </Stack>
+                                </Stack>
+                              </Box>
+                            );
+                          })}
+                          {contextEditableRules.length === 0 && rules.length > 0 && (
+                            <Typography variant="body2" color="text.secondary">
+                              Select a rule to configure its context.
+                            </Typography>
+                          )}
+                          {rules.length === 0 && (
+                            <Typography variant="body2" color="text.secondary">
+                              No rules available. Create one to configure evaluation context.
+                            </Typography>
+                          )}
+                        </Stack>
+                      </Box>
+                      <Divider />
+                      <Box>
+                        {ruleResults.map((result) => (
+                          <Card key={result.internalId} variant="outlined" sx={{ borderRadius: 2, p: 2, mb: 2 }}>
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                              <Box>
+                                <Typography variant="subtitle1">{result.name}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {result.ruleId}
+                                </Typography>
+                              </Box>
+                              <Chip
+                                label={result.status.toUpperCase()}
+                                color={
+                                  result.status === "pass" ? "success" : result.status === "fail" ? "error" : "default"
+                                }
+                                variant={result.status === "unknown" ? "outlined" : "filled"}
+                              />
+                            </Stack>
+                            <Divider sx={{ my: 1 }} />
+                            <Stack spacing={0.5}>
+                              {result.details.map((detail, index) => (
+                                <Typography key={index} variant="body2">
+                                  {detail}
+                                </Typography>
+                              ))}
+                            </Stack>
+                          </Card>
+                        ))}
+                        {ruleResults.length === 0 && (
+                          <Box sx={{ textAlign: "center", py: 4 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No rules to evaluate.
                             </Typography>
                           </Box>
-                          <Chip
-                            label={result.status.toUpperCase()}
-                            color={result.status === "pass" ? "success" : result.status === "fail" ? "error" : "default"}
-                            variant={result.status === "unknown" ? "outlined" : "filled"}
-                          />
-                        </Stack>
-                        <Divider sx={{ my: 1 }} />
-                        <Stack spacing={0.5}>
-                          {result.details.map((detail, index) => (
-                            <Typography key={index} variant="body2">
-                              {detail}
-                            </Typography>
-                          ))}
-                        </Stack>
-                      </Card>
-                    ))}
-                    {ruleResults.length === 0 && (
-                      <Box sx={{ textAlign: "center", py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No rules to evaluate.
-                        </Typography>
+                        )}
                       </Box>
-                    )}
+                    </Stack>
                   </CardContent>
                 </Card>
               </Box>

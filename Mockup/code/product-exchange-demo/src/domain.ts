@@ -178,7 +178,7 @@ export type Mapping = { fromConceptId: string; toConceptId: string; relation: "e
 export const RULE_TYPES = ["Dependency", "Exclusion", "AvailabilityConstraint", "ValueConstraint", "Inclusion"] as const;
 export type RuleType = (typeof RULE_TYPES)[number];
 
-export const CONTEXT_REFS = ["currentProduct", "transport", "order", "customer", "itinerary", "segment"] as const;
+export const CONTEXT_REFS = ["currentProduct", "transport", "offer", "customer", "itinerary", "segment"] as const;
 export type ContextRef = (typeof CONTEXT_REFS)[number];
 
 export const LOGICAL_OPERATORS = ["AND", "OR", "NOT", "XOR", "NAND", "NOR"] as const;
@@ -326,6 +326,22 @@ export type Rule = {
   expression: LogicalExpression;
   targets: RuleTarget[];
   scope?: RuleScope;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RuleLinkKind = "Global" | "Schema" | "Product";
+
+export type RuleLink = {
+  id: string;
+  ruleRef: string;
+  kind: RuleLinkKind;
+  targetId?: string;
+  description?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type SchemaCategory = "transport" | "baggage" | "seat" | "lounge" | "meal" | "other";
@@ -400,20 +416,20 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
 };
 
 export const DEFAULT_CONCEPTS: Concept[] = [
-  { id: "C-Flight", label: "Flight" },
-  { id: "C-PriorityBoarding", label: "Priority boarding" },
-  { id: "C-Baggage", label: "Baggage" },
-  { id: "C-Origin", label: "Origin airport" },
-  { id: "C-Destination", label: "Destination airport" },
-  { id: "C-Seat", label: "Seat assignment" },
+  { id: "apmwg:C-Flight", label: "Flight" },
+  { id: "apmwg:C-PriorityBoarding", label: "Priority boarding" },
+  { id: "apmwg:C-Baggage", label: "Baggage" },
+  { id: "apmwg:C-Origin", label: "Origin airport" },
+  { id: "apmwg:C-Destination", label: "Destination airport" },
+  { id: "apmwg:C-Seat", label: "Seat assignment" },
 ];
 
 export const CONCEPT_SCHEMES: ConceptScheme[] = [
-  { id: "SCH-Airline", label: "Airline Services", topConcepts: ["C-Flight", "C-Baggage", "C-Seat"] },
+  { id: "apmwg:SCH-Airline", label: "Airline Services", topConcepts: ["apmwg:C-Flight", "apmwg:C-Baggage", "apmwg:C-Seat"] },
 ];
 
 export const COLLECTIONS: Collection[] = [
-  { id: "COL-Ancillaries", label: "Ancillary Services", members: ["C-PriorityBoarding", "C-Seat"] },
+  { id: "apmwg:COL-Ancillaries", label: "Ancillary Services", members: ["apmwg:C-PriorityBoarding", "apmwg:C-Seat"] },
 ];
 
 export const SCHEMA_CATEGORIES: SchemaCategory[] = [
@@ -496,6 +512,7 @@ export const defaultScopeDefinition = (): ScopeDefinition => ({
 });
 
 export const createRule = (name = "New Rule"): Rule => {
+  const timestamp = new Date().toISOString();
   const ruleId = `R-${randomSuffix()}`;
   return {
     id: uid(),
@@ -521,71 +538,200 @@ export const createRule = (name = "New Rule"): Rule => {
       description: "",
       definition: defaultScopeDefinition(),
     },
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
 };
 
-export const createIndianMealRule = (): Rule => ({
-  id: uid(),
-  ruleId: "R-INDIAN-001",
-  name: "Indian meal blackout on EU→NA transports",
-  description: "Disable Indian cuisine selections for EU→NA transports during the blackout window.",
-  type: "AvailabilityConstraint",
-  priority: 10,
-  context: {
-    contextId: "CTX-1",
-    bindings: {
-      transport: "CDG-JFK transport segment",
-      order: "ORD-9876 travel order",
+export const createRuleLink = (ruleRef: string, kind: RuleLinkKind): RuleLink => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleRef,
+    kind,
+    targetId: kind === "Global" ? undefined : "",
+    description: "",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createIndianMealRule = (): Rule => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleId: "R-INDIAN-001",
+    name: "Indian meal blackout on EU→NA transports",
+    description: "Disable Indian cuisine selections for EU→NA transports during the blackout window.",
+    type: "AvailabilityConstraint",
+    priority: 10,
+    context: {
+      contextId: "CTX-1",
+      bindings: {
+        transport: "CDG-JFK transport segment",
+        offer: "OFF-9876 offer snapshot",
+      },
     },
-  },
-  expression: {
-    kind: "Compound",
-    expressionId: "EXP-INDIAN-ROOT",
-    operator: "AND",
-    description: "Transport in EU→NA AND date in blackout window",
-    children: [
+    expression: {
+      kind: "Compound",
+      expressionId: "EXP-INDIAN-ROOT",
+      operator: "AND",
+      description: "Transport touches Europe and North America AND date in blackout window",
+      children: [
+        {
+          kind: "Compound",
+          expressionId: "EXP-INDIAN-ROUTE",
+          operator: "AND",
+          description: "Transport tagged with both Europe and North America regions",
+          children: [
+            {
+              kind: "Taxonomy",
+              expressionId: "EXP-INDIAN-ROUTE-EU",
+              taxonomyConceptId: "apmwg:1HJT7649KP",
+              taxonomyScheme: "apmwg:product_taxonomy_scheme",
+              subjectRef: "transport",
+              selectionScope: "ANY_SELECTED",
+              description: "Transport segment tagged with Europe",
+            },
+            {
+              kind: "Taxonomy",
+              expressionId: "EXP-INDIAN-ROUTE-NA",
+              taxonomyConceptId: "apmwg:OSHGFC67",
+              taxonomyScheme: "apmwg:product_taxonomy_scheme",
+              subjectRef: "transport",
+              selectionScope: "ANY_SELECTED",
+              description: "Transport segment tagged with North America",
+            },
+          ],
+        },
+        {
+          kind: "Taxonomy",
+          expressionId: "EXP-INDIAN-CUISINE",
+          taxonomyConceptId: "apmwg:66B0BOM6",
+          taxonomyScheme: "apmwg:product_taxonomy_scheme",
+          subjectRef: "currentProduct",
+          selectionScope: "ANY_SELECTED",
+          description: "Product tagged as Indian cuisine",
+        },
+        {
+          kind: "DateTime",
+          expressionId: "EXP-INDIAN-DATE",
+          subjectRef: "offer",
+          operator: "IN",
+          value: "2025-10-01/2025-12-31",
+          description: "Travel/service date within blackout period",
+        },
+      ],
+    },
+    targets: [
       {
         kind: "Taxonomy",
-        expressionId: "EXP-INDIAN-MARKET",
-        taxonomyConceptId: "region:EU-NA",
-        taxonomyScheme: "apmwg:market_taxonomy_scheme",
-        subjectRef: "transport",
-        selectionScope: "ANY_SELECTED",
-        description: "At least one selected transport is tagged EU→NA",
-      },
-      {
-        kind: "DateTime",
-        expressionId: "EXP-INDIAN-DATE",
-        subjectRef: "order",
-        operator: "IN",
-        value: "2025-10-01/2025-12-31",
-        description: "Travel/service date within blackout period",
+        targetId: "TARGET-INDIAN-DISABLE",
+        action: "DISABLE",
+        conceptId: "apmwg:66B0BOM6",
+        description: "Disable all products tagged as Indian cuisine",
       },
     ],
-  },
-  targets: [
-    {
-      kind: "Taxonomy",
-      targetId: "TARGET-INDIAN-DISABLE",
-      action: "DISABLE",
-      conceptId: "apmwg:66B0BOM6",
-      description: "Disable all products tagged as Indian cuisine",
+    scope: {
+      scopeId: "SCOPE-INDIAN",
+      description: "EU→NA blackout period",
+      definition: {
+        channels: [],
+        markets: ["region:EU-NA"],
+        customerSegments: [],
+        effectiveFrom: "2025-10-01",
+        effectiveTo: "2025-12-31",
+      },
     },
-  ],
-  scope: {
-    scopeId: "SCOPE-INDIAN",
-    description: "EU→NA blackout period",
-    definition: {
-      channels: [],
-      markets: ["region:EU-NA"],
-      customerSegments: [],
-      effectiveFrom: "2025-10-01",
-      effectiveTo: "2025-12-31",
-    },
-  },
-});
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createIndianMealRuleBundle = () => {
+  const rule = createIndianMealRule();
+  const link = {
+    ...createRuleLink(rule.id, "Global"),
+    description: "Applies to all offers during the EU↔NA blackout window",
+    effectiveFrom: "2025-10-01",
+    effectiveTo: "2025-12-31",
+  };
+  return { rule, links: [link] };
+};
 
 export const updateTimestamp = <T extends { updatedAt: string }>(item: T): T => ({
   ...item,
   updatedAt: new Date().toISOString(),
 });
+export const createBurgerMealRule = (): Rule => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleId: "R-BURGER-001",
+    name: "Burger meal allowed only on CDG-JFK",
+    description: "American burger meals may only be selected on the CDG→JFK transport product.",
+    type: "AvailabilityConstraint",
+    priority: 5,
+    context: {
+      contextId: "CTX-BURGER",
+      bindings: {
+        transport: "CDG-JFK transport segment",
+        currentProduct: "Burger meal product",
+      },
+    },
+    expression: {
+      kind: "Compound",
+      expressionId: "EXP-BURGER-ROOT",
+      operator: "AND",
+      description: "Transport equals CDG-JFK AND product tagged American cuisine",
+      children: [
+        {
+          kind: "Product",
+          expressionId: "EXP-BURGER-ROUTE",
+          subjectRef: "transport",
+          productId: "CDG-JFK",
+          operator: "EQUALS",
+          description: "Transport corresponds to CDG-JFK",
+        },
+        {
+          kind: "Taxonomy",
+          expressionId: "EXP-BURGER-AMERICAN",
+          taxonomyConceptId: "apmwg:1PIZRPAA",
+          taxonomyScheme: "apmwg:product_taxonomy_scheme",
+          subjectRef: "currentProduct",
+          description: "Product tagged with American cuisine",
+        },
+      ],
+    },
+    targets: [
+      {
+        kind: "Product",
+        targetId: "TARGET-BURGER-ALLOW",
+        action: "ENABLE",
+        productId: "BURGER-MEAL",
+        description: "Enable burger meal product when rule matches",
+      },
+    ],
+    scope: {
+      scopeId: "SCOPE-BURGER",
+      description: "Limited to CDG-JFK transport product",
+      definition: {
+        channels: [],
+        markets: [],
+        customerSegments: [],
+      },
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createBurgerMealRuleBundle = () => {
+  const rule = createBurgerMealRule();
+  const link = {
+    ...createRuleLink(rule.id, "Product"),
+    targetId: "CDG-JFK",
+    description: "Burger meal restricted to CDG-JFK specified product",
+  };
+  return { rule, links: [link] };
+};
