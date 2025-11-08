@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useState, lazy } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState, lazy } from "react";
 import {
   Alert,
   AppBar,
@@ -30,7 +30,13 @@ import DownloadIcon from "@mui/icons-material/Download";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import UploadIcon from "@mui/icons-material/Upload";
 import AddIcon from "@mui/icons-material/Add";
+import SendIcon from "@mui/icons-material/Send";
+import CachedIcon from "@mui/icons-material/Cached";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+
+const CONFIGURED_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? null;
+const CONFIGURED_API_PORT = (import.meta.env.VITE_API_PORT as string | undefined) ?? "5175";
+
 const SchemaWorkspace = lazy(() => import("./components/SchemaWorkspace"));
 const ProductWorkspace = lazy(() => import("./components/ProductWorkspace"));
 const TaxonomyWorkspace = lazy(() => import("./components/TaxonomyWorkspace"));
@@ -103,6 +109,26 @@ import {
 } from "./storage";
 
 type RetailerPayload = { receivedAt: string; product: Product };
+
+type WebhookDispatchLog = {
+  id: string;
+  timestamp: string;
+  target: string;
+  kind: string;
+  ok: boolean;
+  status?: number;
+  statusText?: string;
+  bodyPreview?: string;
+  error?: string;
+};
+
+type WebhookInboxEvent = {
+  id: string;
+  channelId: string;
+  receivedAt: string;
+  payload: unknown;
+  headers: Record<string, string>;
+};
 
 const MAPPINGS = [
   { fromConceptId: "apmwg:C-PriorityBoarding", toConceptId: "apmwg:C-PriorityBoarding" },
@@ -515,6 +541,11 @@ const App: React.FC = () => {
   );
   const [ruleLinks, setRuleLinks] = useState<RuleLink[]>(ruleCatalogue.links);
   const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
+  const [webhookDestination, setWebhookDestination] = useState(settings.channel.destinationUrl);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookDispatchLog[]>([]);
+  const [webhookDispatching, setWebhookDispatching] = useState(false);
+  const [webhookInbox, setWebhookInbox] = useState<WebhookInboxEvent[]>([]);
+  const [webhookInboxLoading, setWebhookInboxLoading] = useState(false);
 
   const [retailerPayload, setRetailerPayload] = useState<RetailerPayload | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -522,14 +553,32 @@ const App: React.FC = () => {
     message: "",
     severity: "info",
   });
-  const notify = (message: string, severity: AlertColor = "info") => {
+  const notify = useCallback((message: string, severity: AlertColor = "info") => {
     setSnack({ open: true, message, severity });
-  };
+  }, []);
   const handleSaveSettings = (next: AppSettings) => {
     setSettings(next);
     persistSettings(next);
     notify("Settings saved", "success");
   };
+
+  useEffect(() => {
+    setWebhookDestination(settings.channel.destinationUrl);
+  }, [settings.channel.destinationUrl]);
+
+  const inboundProxyEndpoint = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return `${window.location.origin}/api/webhooks/inbound/${encodeURIComponent(settings.identity.instanceId)}`;
+  }, [settings.identity.instanceId]);
+
+  const inboundDirectEndpoint = useMemo(() => {
+    const encoded = encodeURIComponent(settings.identity.instanceId);
+    if (CONFIGURED_API_BASE) {
+      return `${CONFIGURED_API_BASE}/webhooks/${encoded}`;
+    }
+    if (typeof window === "undefined") return "";
+    return `${window.location.protocol}//${window.location.hostname}:${CONFIGURED_API_PORT}/webhooks/${encoded}`;
+  }, [settings.identity.instanceId]);
 
   useEffect(() => {
     persistSchemas(schemas);
@@ -1065,9 +1114,9 @@ const App: React.FC = () => {
     [rules, selectedRuleId]
   );
 
-  const exportSupplierPayload = () => {
+  const buildSupplierSnapshot = useCallback(() => {
     if (!selectedInstance) return null;
-    const payload = {
+    return {
       product: selectedInstance.product,
       schemaId: selectedInstance.schemaId,
       referenceSystems,
@@ -1075,6 +1124,45 @@ const App: React.FC = () => {
       concepts,
       collections,
     };
+  }, [selectedInstance, referenceSystems, concepts, collections]);
+
+  const buildProductEnvelope = useCallback(() => {
+    const snapshot = buildSupplierSnapshot();
+    if (!snapshot) return null;
+    return {
+      kind: "product-update",
+      issuedAt: new Date().toISOString(),
+      identity: settings.identity,
+      requireAcknowledgement: settings.channel.requireAcknowledgement,
+      payload: snapshot,
+    };
+  }, [buildSupplierSnapshot, settings.identity, settings.channel.requireAcknowledgement]);
+
+  const buildSchemaEnvelope = useCallback(
+    () => ({
+      kind: "schema-catalog",
+      issuedAt: new Date().toISOString(),
+      identity: settings.identity,
+      schemas,
+    }),
+    [schemas, settings.identity]
+  );
+
+  const buildTaxonomyEnvelope = useCallback(
+    () => ({
+      kind: "taxonomy-update",
+      issuedAt: new Date().toISOString(),
+      identity: settings.identity,
+      concepts,
+      collections,
+      metadata: taxonomy.metadata,
+    }),
+    [concepts, collections, taxonomy.metadata, settings.identity]
+  );
+
+  const exportSupplierPayload = () => {
+    const payload = buildSupplierSnapshot();
+    if (!payload) return null;
     navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
     notify("Payload copied to clipboard", "success");
     return payload;
@@ -1101,6 +1189,87 @@ const App: React.FC = () => {
       notify(`Import failed: ${message}`, "error");
     }
   };
+
+  const sendWebhookPayload = useCallback(
+    async (kind: string, payloadFactory: () => unknown | null) => {
+      const target = webhookDestination.trim();
+      if (!target) {
+        notify("Set a destination URL before sending.", "warning");
+        return;
+      }
+      const payload = payloadFactory();
+      if (!payload) {
+        notify("Nothing to send – select a product or add data first.", "warning");
+        return;
+      }
+      setWebhookDispatching(true);
+      try {
+        const response = await fetch("/api/webhooks/dispatch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            destinationUrl: target,
+            payload,
+            authToken: settings.channel.authToken || undefined,
+            sourceInstanceId: settings.identity.instanceId,
+          }),
+        });
+        const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+        const ok = response.ok && (typeof data.ok !== "boolean" || data.ok);
+        const entry: WebhookDispatchLog = {
+          id: uid(),
+          timestamp: new Date().toISOString(),
+          target,
+          kind,
+          ok,
+          status: typeof data.status === "number" ? (data.status as number) : response.status,
+          statusText: typeof data.statusText === "string" ? (data.statusText as string) : response.statusText,
+          bodyPreview: typeof data.body === "string" ? (data.body as string) : undefined,
+          error: typeof data.error === "string" ? (data.error as string) : undefined,
+        };
+        setWebhookLogs((previous) => [entry, ...previous].slice(0, 8));
+        notify(ok ? "Webhook delivered" : "Webhook failed", ok ? "success" : "error");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        notify(`Webhook failed: ${message}`, "error");
+      } finally {
+        setWebhookDispatching(false);
+      }
+    },
+    [notify, settings.channel.authToken, settings.identity.instanceId, webhookDestination]
+  );
+
+  const fetchWebhookInbox = useCallback(async () => {
+    setWebhookInboxLoading(true);
+    try {
+      const response = await fetch(`/api/webhooks/${encodeURIComponent(settings.identity.instanceId)}`);
+      if (!response.ok) {
+        throw new Error(`Failed with status ${response.status}`);
+      }
+      const data = (await response.json()) as { events?: WebhookInboxEvent[] };
+      setWebhookInbox(data.events ?? []);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Inbox refresh failed: ${message}`, "error");
+    } finally {
+      setWebhookInboxLoading(false);
+    }
+  }, [notify, settings.identity.instanceId]);
+
+  const clearWebhookInbox = useCallback(async () => {
+    try {
+      await fetch(`/api/webhooks/${encodeURIComponent(settings.identity.instanceId)}`, { method: "DELETE" });
+      setWebhookInbox([]);
+      notify("Inbox cleared", "info");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Failed clearing inbox: ${message}`, "error");
+    }
+  }, [notify, settings.identity.instanceId]);
+
+  useEffect(() => {
+    fetchWebhookInbox();
+  }, [fetchWebhookInbox]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -1394,8 +1563,8 @@ const App: React.FC = () => {
 
       {tab === 5 && (
         <Box sx={{ p: 2 }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-            <Box sx={{ flex: 1 }}>
+          <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
+            <Stack spacing={2} sx={{ flex: 1 }}>
               <Card variant="outlined" sx={{ borderRadius: 3 }}>
                 <CardHeader
                   title="Supplier Payload"
@@ -1422,14 +1591,95 @@ const App: React.FC = () => {
                     {selectedInstance ? "Current product payload preview." : "Select a product to see the payload."}
                   </Typography>
                   <pre style={{ margin: 0, maxHeight: 320, overflow: "auto" }}>
-                    {selectedInstance
-                      ? JSON.stringify({ product: selectedInstance.product, referenceSystems }, null, 2)
-                      : "—"}
+                    {selectedInstance ? JSON.stringify(buildSupplierSnapshot(), null, 2) : "—"}
                   </pre>
                 </CardContent>
               </Card>
-            </Box>
-            <Box sx={{ flex: 1 }}>
+
+              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                <CardHeader title="Webhook Outbound" subheader="Push updates to a partner endpoint." />
+                <CardContent>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Destination URL"
+                      value={webhookDestination}
+                      onChange={(event) => setWebhookDestination(event.target.value)}
+                      helperText="Use Settings → Channel to store the canonical endpoint."
+                      fullWidth
+                    />
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                      <Button
+                        startIcon={<SendIcon />}
+                        variant="contained"
+                        disabled={webhookDispatching || !selectedInstance}
+                        onClick={() => sendWebhookPayload("product-update", buildProductEnvelope)}
+                      >
+                        Send product update
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        disabled={webhookDispatching}
+                        onClick={() => sendWebhookPayload("schema-catalog", buildSchemaEnvelope)}
+                      >
+                        Send schema catalog
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        disabled={webhookDispatching}
+                        onClick={() => sendWebhookPayload("taxonomy-update", buildTaxonomyEnvelope)}
+                      >
+                        Send taxonomy
+                      </Button>
+                    </Stack>
+                    <Divider />
+                    <Typography variant="subtitle2">Recent deliveries</Typography>
+                    {webhookLogs.length === 0 ? (
+                      <Alert severity="info">No webhooks sent yet.</Alert>
+                    ) : (
+                      <Stack spacing={1}>
+                        {webhookLogs.map((entry) => (
+                          <Box
+                            key={entry.id}
+                            sx={{
+                              border: "1px solid",
+                              borderColor: entry.ok ? "success.light" : "error.light",
+                              borderRadius: 2,
+                              p: 1.5,
+                            }}
+                          >
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Typography variant="subtitle2">{entry.kind}</Typography>
+                              <Chip
+                                size="small"
+                                label={entry.ok ? `OK · ${entry.status ?? ""}` : `Error · ${entry.status ?? "n/a"}`}
+                                color={entry.ok ? "success" : "error"}
+                              />
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(entry.timestamp).toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                              Target: {entry.target}
+                            </Typography>
+                            {entry.error ? (
+                              <Typography variant="body2" color="error">
+                                {entry.error}
+                              </Typography>
+                            ) : entry.bodyPreview ? (
+                              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-all" }}>
+                                {entry.bodyPreview}
+                              </Typography>
+                            ) : null}
+                          </Box>
+                        ))}
+                      </Stack>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Stack>
+
+            <Stack spacing={2} sx={{ flex: 1 }}>
               <Card variant="outlined" sx={{ borderRadius: 3 }}>
                 <CardHeader
                   title="Retailer View (Simulated)"
@@ -1460,7 +1710,81 @@ const App: React.FC = () => {
                   </Stack>
                 </CardContent>
               </Card>
-            </Box>
+
+              <Card variant="outlined" sx={{ borderRadius: 3 }}>
+                <CardHeader title="Inbound Webhooks" subheader="Share an endpoint for partners to push updates." />
+                <CardContent>
+                  <Stack spacing={2}>
+                    {inboundProxyEndpoint ? (
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2">Through this app</Typography>
+                        <TextField value={inboundProxyEndpoint} size="small" InputProps={{ readOnly: true }} />
+                        <Button
+                          size="small"
+                          startIcon={<ContentCopyIcon fontSize="small" />}
+                          sx={{ alignSelf: "flex-start" }}
+                          onClick={() => navigator.clipboard.writeText(inboundProxyEndpoint)}
+                        >
+                          Copy proxy endpoint
+                        </Button>
+                      </Stack>
+                    ) : null}
+                    {inboundDirectEndpoint ? (
+                      <Stack spacing={0.5}>
+                        <Typography variant="subtitle2">Direct API</Typography>
+                        <TextField value={inboundDirectEndpoint} size="small" InputProps={{ readOnly: true }} />
+                        <Button
+                          size="small"
+                          startIcon={<ContentCopyIcon fontSize="small" />}
+                          sx={{ alignSelf: "flex-start" }}
+                          onClick={() => navigator.clipboard.writeText(inboundDirectEndpoint)}
+                        >
+                          Copy direct endpoint
+                        </Button>
+                      </Stack>
+                    ) : null}
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        startIcon={<CachedIcon />}
+                        variant="outlined"
+                        onClick={fetchWebhookInbox}
+                        disabled={webhookInboxLoading}
+                      >
+                        Refresh inbox
+                      </Button>
+                      <Button
+                        variant="text"
+                        color="secondary"
+                        onClick={clearWebhookInbox}
+                        disabled={webhookInboxLoading || webhookInbox.length === 0}
+                      >
+                        Clear
+                      </Button>
+                    </Stack>
+                    {webhookInbox.length === 0 ? (
+                      <Alert severity="info">No inbound events yet. POST any JSON payload to the endpoint above.</Alert>
+                    ) : (
+                      <Stack spacing={1} sx={{ maxHeight: 300, overflow: "auto" }}>
+                        {webhookInbox.map((event) => (
+                          <Box key={event.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.5 }}>
+                            <Typography variant="subtitle2">Received {new Date(event.receivedAt).toLocaleString()}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Event ID: {event.id}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                              Headers: {Object.keys(event.headers).length ? JSON.stringify(event.headers) : "—"}
+                            </Typography>
+                            <pre style={{ margin: 0, marginTop: 8, maxHeight: 200, overflow: "auto" }}>
+                              {JSON.stringify(event.payload, null, 2)}
+                            </pre>
+                          </Box>
+                        ))}
+                      </Stack>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Stack>
           </Stack>
         </Box>
       )}
