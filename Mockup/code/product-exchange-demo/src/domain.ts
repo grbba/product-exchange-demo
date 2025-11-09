@@ -54,6 +54,9 @@ export const IDENTITY_CAPABILITIES = [
 ] as const;
 export type IdentityCapability = (typeof IDENTITY_CAPABILITIES)[number];
 
+export const INBOUND_PROCESSING_MODES = ["manual", "auto"] as const;
+export type InboundProcessingMode = (typeof INBOUND_PROCESSING_MODES)[number];
+
 export type AppIdentity = {
   instanceId: string;
   displayName: string;
@@ -78,6 +81,7 @@ export type ChannelConfiguration = {
 export type AppSettings = {
   identity: AppIdentity;
   channel: ChannelConfiguration;
+  inboundProcessingMode: InboundProcessingMode;
   updatedAt: string;
 };
 
@@ -518,6 +522,7 @@ export const createDefaultSettings = (): AppSettings => ({
     requireAcknowledgement: true,
     notes: "",
   },
+  inboundProcessingMode: "manual",
   updatedAt: new Date().toISOString(),
 });
 
@@ -553,6 +558,9 @@ export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSe
           : defaults.channel.requireAcknowledgement,
       notes: typeof channelInput?.notes === "string" ? channelInput.notes : defaults.channel.notes,
     },
+    inboundProcessingMode: INBOUND_PROCESSING_MODES.includes(input?.inboundProcessingMode as InboundProcessingMode)
+      ? (input?.inboundProcessingMode as InboundProcessingMode)
+      : defaults.inboundProcessingMode,
     updatedAt: input?.updatedAt ?? defaults.updatedAt,
   };
 };

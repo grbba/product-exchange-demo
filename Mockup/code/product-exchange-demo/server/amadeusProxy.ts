@@ -122,6 +122,15 @@ const storeEvent = (channelId: string, event: StoredWebhookEvent) => {
   webhookInbox.set(channelId, existing.slice(0, MAX_EVENTS_PER_CHANNEL));
 };
 
+const deleteEvent = (channelId: string, eventId: string) => {
+  const existing = webhookInbox.get(channelId);
+  if (!existing) return false;
+  const next = existing.filter((event) => event.id !== eventId);
+  if (next.length === existing.length) return false;
+  webhookInbox.set(channelId, next);
+  return true;
+};
+
 export const createServer = () => {
   const app = express();
   app.use(cors());
@@ -241,6 +250,21 @@ export const createServer = () => {
       return;
     }
     webhookInbox.delete(channelId);
+    res.status(204).end();
+  });
+
+  app.delete("/api/webhooks/:channelId/:eventId", (req: Request, res: Response) => {
+    const channelId = String(req.params.channelId ?? "").trim();
+    const eventId = String(req.params.eventId ?? "").trim();
+    if (!channelId || !eventId) {
+      res.status(400).json({ error: "Missing identifiers" });
+      return;
+    }
+    const removed = deleteEvent(channelId, eventId);
+    if (!removed) {
+      res.status(404).json({ error: "Event not found" });
+      return;
+    }
     res.status(204).end();
   });
 

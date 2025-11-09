@@ -26,13 +26,29 @@ import type {
   ChannelConfiguration,
   ExchangeProtocol,
   IdentityCapability,
+  InboundProcessingMode,
 } from "../domain";
-import { EXCHANGE_PROTOCOLS, IDENTITY_CAPABILITIES, createDefaultSettings, normalizeAppSettings, uid } from "../domain";
+import {
+  EXCHANGE_PROTOCOLS,
+  IDENTITY_CAPABILITIES,
+  INBOUND_PROCESSING_MODES,
+  createDefaultSettings,
+  normalizeAppSettings,
+  uid,
+} from "../domain";
+
+type ResetAction = {
+  key: string;
+  label: string;
+  description: string;
+  onReset: () => void;
+};
 
 type SettingsWorkspaceProps = {
   settings: AppSettings;
   capabilityOptions?: IdentityCapability[];
   protocolOptions?: ExchangeProtocol[];
+  resetActions?: ResetAction[];
   onSave: (settings: AppSettings) => void;
 };
 
@@ -70,6 +86,7 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
   settings,
   capabilityOptions = IDENTITY_CAPABILITIES,
   protocolOptions = EXCHANGE_PROTOCOLS,
+  resetActions = [],
   onSave,
 }) => {
   const [draft, setDraft] = useState<AppSettings>(settings);
@@ -277,9 +294,70 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
               multiline
               minRows={2}
             />
+            <Divider />
+            <Typography variant="subtitle2">Inbound handling</Typography>
+            <FormControl fullWidth>
+              <InputLabel id="inbound-processing-mode-label">Processing mode</InputLabel>
+              <Select
+                labelId="inbound-processing-mode-label"
+                label="Processing mode"
+                value={draft.inboundProcessingMode}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    inboundProcessingMode: event.target.value as InboundProcessingMode,
+                  }))
+                }
+              >
+                {INBOUND_PROCESSING_MODES.map((mode) => (
+                  <MenuItem key={mode} value={mode}>
+                    {mode === "manual" ? "Manual (review inbox)" : "Automatic (apply on receipt)"}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Typography variant="caption" color="text.secondary">
+                Manual mode keeps inbound payloads in the inbox until you load them. Automatic mode applies supported
+                payloads as soon as they arrive.
+              </Typography>
+            </FormControl>
           </Stack>
         </CardContent>
       </Card>
+
+      {resetActions.length ? (
+        <Card variant="outlined" sx={{ borderRadius: 3 }}>
+          <CardHeader title="Demo data reset" subheader="Quickly revert parts of the workspace to factory defaults." />
+          <CardContent>
+            <Stack spacing={1.5}>
+              {resetActions.map((action) => (
+                <Stack
+                  key={action.key}
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems={{ xs: "flex-start", sm: "center" }}
+                >
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle2">{action.label}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {action.description}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      const confirmed = window.confirm(`Reset ${action.label}? This cannot be undone.`);
+                      if (confirmed) action.onReset();
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </Stack>
+              ))}
+            </Stack>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Box
         sx={{
