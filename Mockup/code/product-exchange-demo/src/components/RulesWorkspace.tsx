@@ -14,6 +14,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
@@ -23,9 +24,7 @@ import {
   LOGICAL_OPERATORS,
   RULE_TYPES,
   SELECTION_SCOPES,
-  TARGET_ACTIONS,
   VALUE_OPERATORS,
-  type ValueOperator,
   createRuleLink,
   defaultScopeDefinition,
   updateTimestamp,
@@ -42,7 +41,7 @@ import {
   type Rule,
   type RuleLink,
   type RuleLinkKind,
-  type RuleTarget,
+  type Concept,
   uid,
 } from "../domain";
 
@@ -57,17 +56,20 @@ type RulesWorkspaceProps = {
   schemas: ProductSchema[];
   instances: ProductInstance[];
   conceptLabel: (id: string) => string;
+  concepts: Concept[];
 };
-
-const nextExpressionId = () => `EXP-${uid().toUpperCase()}`;
-const nextTargetId = () => `TARGET-${uid().toUpperCase()}`;
 
 type ExpressionEditorProps = {
   expression: LogicalExpression;
   onChange: (expression: LogicalExpression) => void;
   onRemove?: () => void;
   conceptLabel: (id: string) => string;
+  concepts: Concept[];
 };
+
+type ConditionKind = "Taxonomy" | "DateTime" | "Feature" | "Product" | "Quantity";
+
+const nextExpressionId = () => `EXP-${uid().toUpperCase()}`;
 
 const isCompound = (expression: LogicalExpression): expression is CompoundExpression =>
   expression.kind === "Compound";
@@ -75,9 +77,22 @@ const isTaxonomy = (expression: LogicalExpression): expression is TaxonomyExpres
   expression.kind === "Taxonomy";
 const isDateTime = (expression: LogicalExpression): expression is DateTimeExpression =>
   expression.kind === "DateTime";
+const isFeatureExpression = (expression: LogicalExpression): expression is FeatureExpression =>
+  expression.kind === "Feature";
+const isProductExpression = (expression: LogicalExpression): expression is ProductExpression =>
+  expression.kind === "Product";
+const isQuantityExpression = (expression: LogicalExpression): expression is QuantityExpression =>
+  expression.kind === "Quantity";
 
-const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChange, onRemove, conceptLabel }) => {
-  const [selectedConditionKind, setSelectedConditionKind] = useState<"Taxonomy" | "DateTime" | "Feature" | "Product" | "Quantity">("Taxonomy");
+const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
+  expression,
+  onChange,
+  onRemove,
+  conceptLabel,
+  concepts,
+}) => {
+  const [conditionKind, setConditionKind] = useState<ConditionKind>("Taxonomy");
+
   if (isCompound(expression)) {
     const handleChildUpdate = (index: number, updated: LogicalExpression) => {
       onChange({
@@ -86,14 +101,14 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
       });
     };
 
-    const handleAddChild = (kind: LogicalExpression["kind"]) => {
+    const handleAddChild = (kind: ConditionKind | "Compound") => {
       if (kind === "Taxonomy") {
         const next: TaxonomyExpression = {
           kind: "Taxonomy",
           expressionId: nextExpressionId(),
           subjectRef: "currentProduct",
           taxonomyConceptId: "",
-          taxonomyScheme: "",
+          taxonomyScheme: "apmwg:product_taxonomy_scheme",
         };
         onChange({ ...expression, children: [...expression.children, next] });
       } else if (kind === "DateTime") {
@@ -130,11 +145,11 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
           expressionId: nextExpressionId(),
           subjectRef: "currentProduct",
           itemId: "",
-          quantity: 1,
+          quantity: 0,
           operator: "EQUALS",
         };
         onChange({ ...expression, children: [...expression.children, next] });
-      } else if (kind === "Compound") {
+      } else {
         const next: CompoundExpression = {
           kind: "Compound",
           expressionId: nextExpressionId(),
@@ -193,6 +208,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
               onChange={(updated) => handleChildUpdate(index, updated)}
               onRemove={() => handleRemoveChild(index)}
               conceptLabel={conceptLabel}
+              concepts={concepts}
             />
           ))}
         </Stack>
@@ -201,23 +217,21 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
             <InputLabel>Condition type</InputLabel>
             <Select
               label="Condition type"
-              value={selectedConditionKind}
-              onChange={(event) =>
-                setSelectedConditionKind(event.target.value as typeof selectedConditionKind)
-              }
+              value={conditionKind}
+              onChange={(event) => setConditionKind(event.target.value as ConditionKind)}
             >
-              <MenuItem value="Taxonomy">Taxonomy</MenuItem>
-              <MenuItem value="DateTime">Date/Time</MenuItem>
-              <MenuItem value="Feature">Feature</MenuItem>
-              <MenuItem value="Product">Product</MenuItem>
-              <MenuItem value="Quantity">Quantity</MenuItem>
+              <MenuItem value="Taxonomy">Taxonomy condition</MenuItem>
+              <MenuItem value="DateTime">Date/time condition</MenuItem>
+              <MenuItem value="Feature">Feature condition</MenuItem>
+              <MenuItem value="Product">Product condition</MenuItem>
+              <MenuItem value="Quantity">Quantity condition</MenuItem>
             </Select>
           </FormControl>
           <Button
             size="small"
             variant="outlined"
             startIcon={<AddIcon fontSize="small" />}
-            onClick={() => handleAddChild(selectedConditionKind)}
+            onClick={() => handleAddChild(conditionKind)}
           >
             Add condition
           </Button>
@@ -265,11 +279,40 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
               ))}
             </Select>
           </FormControl>
-          <TextField
+          <Autocomplete<Concept, false, false, true>
+            freeSolo
             size="small"
-            label="Concept ID"
-            value={expression.taxonomyConceptId}
-            onChange={(event) => onChange({ ...expression, taxonomyConceptId: event.target.value })}
+            options={concepts}
+            value={
+              concepts.find((concept) => concept.id === expression.taxonomyConceptId) ??
+              (expression.taxonomyConceptId ? expression.taxonomyConceptId : null)
+            }
+            onChange={(_, newValue) => {
+              if (!newValue) {
+                onChange({ ...expression, taxonomyConceptId: "" });
+              } else if (typeof newValue === "string") {
+                onChange({ ...expression, taxonomyConceptId: newValue });
+              } else {
+                onChange({ ...expression, taxonomyConceptId: newValue.id });
+              }
+            }}
+            isOptionEqualToValue={(option, value) =>
+              typeof value === "string" ? option.id === value : option.id === value.id
+            }
+            getOptionLabel={(option) => (typeof option === "string" ? option : option.label || option.id)}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Stack spacing={0}>
+                  <Typography variant="body2">{option.label || option.id}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {option.id}
+                  </Typography>
+                </Stack>
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField {...params} label="Taxonomy concept" placeholder="Search by label or ID" />
+            )}
           />
           <TextField
             size="small"
@@ -381,7 +424,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
     );
   }
 
-  if (expression.kind === "Feature") {
+  if (isFeatureExpression(expression)) {
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -413,16 +456,16 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
           </FormControl>
           <TextField
             size="small"
-            label="Feature ID"
+            label="Feature name or ID"
             value={expression.featureId}
             onChange={(event) => onChange({ ...expression, featureId: event.target.value })}
           />
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
               label="Operator"
               value={expression.operator}
-              onChange={(event) => onChange({ ...expression, operator: event.target.value as ValueOperator })}
+              onChange={(event) => onChange({ ...expression, operator: event.target.value as typeof expression.operator })}
             >
               {VALUE_OPERATORS.map((operator) => (
                 <MenuItem key={operator} value={operator}>
@@ -449,7 +492,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
     );
   }
 
-  if (expression.kind === "Product") {
+  if (isProductExpression(expression)) {
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -485,7 +528,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
             value={expression.productId}
             onChange={(event) => onChange({ ...expression, productId: event.target.value })}
           />
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
               label="Operator"
@@ -513,7 +556,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
     );
   }
 
-  if (expression.kind === "Quantity") {
+  if (isQuantityExpression(expression)) {
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -558,7 +601,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
               onChange({ ...expression, quantity: Number(event.target.value) || 0 })
             }
           />
-          <FormControl size="small" sx={{ minWidth: 180 }}>
+          <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
               label="Operator"
@@ -586,12 +629,11 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({ expression, onChang
     );
   }
 
-  const unsupportedKind = (expression as LogicalExpression).kind;
   return (
     <Stack spacing={1} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
       <Stack direction="row" spacing={2} alignItems="center">
         <Typography variant="subtitle2" sx={{ flex: 1 }}>
-          Unsupported expression type: {unsupportedKind}
+          Unsupported expression type: {(expression as LogicalExpression).kind}
         </Typography>
         {onRemove && (
           <IconButton onClick={onRemove} aria-label="Remove expression">
@@ -629,6 +671,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
   schemas,
   instances,
   conceptLabel,
+  concepts,
 }) => {
   const schemaOptions = useMemo(
     () => schemas.map((schema) => ({ id: schema.id, label: schema.name })),
@@ -687,10 +730,6 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
     }
   };
 
-  const handleAddRule = () => {
-    onCreateRule();
-  };
-
   const handleAddLink = (ruleRef: string, kind: RuleLinkKind) => {
     const link = createRuleLink(ruleRef, kind);
     if (kind === "Schema" && schemaOptions.length) {
@@ -727,7 +766,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                 {!rules.length && <MenuItem value="">No rules yet</MenuItem>}
               </Select>
             </FormControl>
-            <Button size="small" startIcon={<AddIcon />} onClick={handleAddRule}>
+            <Button size="small" startIcon={<AddIcon />} onClick={onCreateRule}>
               Create rule
             </Button>
           </Stack>
@@ -827,8 +866,11 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                       </Typography>
                       <ExpressionEditor
                         expression={rule.expression}
-                        onChange={(expression) => updateRule(rule.id, (current) => ({ ...current, expression }))}
+                        onChange={(expressionValue) =>
+                          updateRule(rule.id, (current) => ({ ...current, expression: expressionValue }))
+                        }
                         conceptLabel={conceptLabel}
+                        concepts={concepts}
                       />
                     </Box>
                     <Box>
@@ -837,7 +879,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                       </Typography>
                       <Stack spacing={2}>
                         {linksForRule.map((link) => {
-                          const windowLabel = formatWindow(link.effectiveFrom, link.effectiveTo);
+                          const window = formatWindow(link.effectiveFrom, link.effectiveTo);
                           return (
                             <Stack
                               key={link.id}
@@ -955,7 +997,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                                   : link.kind === "Schema"
                                   ? `Schema: ${schemaName(link.targetId)}`
                                   : `Product: ${productName(link.targetId)}`}
-                                {windowLabel ? ` · ${windowLabel}` : ""}
+                                {window ? ` · ${window}` : ""}
                               </Typography>
                             </Stack>
                           );
@@ -990,170 +1032,6 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                             Add product assignment
                           </Button>
                         </Stack>
-                      </Stack>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Targets
-                      </Typography>
-                      <Stack spacing={2}>
-                        {rule.targets.map((target, index) => (
-                          <Stack
-                            key={target.targetId}
-                            spacing={2}
-                            sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
-                          >
-                            <Stack direction="row" spacing={2} alignItems="center">
-                              <FormControl size="small" sx={{ minWidth: 160 }}>
-                                <InputLabel>Target type</InputLabel>
-                                <Select
-                                  label="Target type"
-                                  value={target.kind}
-                                  onChange={(event) =>
-                                    updateRule(rule.id, (current) => {
-                                      const nextKind = event.target.value as RuleTarget["kind"];
-                                      const nextTargets = current.targets.map((existing, idx) => {
-                                        if (idx !== index) return existing;
-                                        if (nextKind === "Taxonomy") {
-                                          return {
-                                            kind: "Taxonomy" as const,
-                                            targetId: existing.targetId,
-                                            action: existing.action,
-                                            description: existing.description,
-                                            conceptId: "apmwg:66B0BOM6",
-                                          };
-                                        }
-                                        return {
-                                          kind: "Product" as const,
-                                          targetId: existing.targetId,
-                                          action: existing.action,
-                                          description: existing.description,
-                                          productId: "",
-                                        };
-                                      });
-                                      return { ...current, targets: nextTargets };
-                                    })
-                                  }
-                                >
-                                  <MenuItem value="Taxonomy">Taxonomy</MenuItem>
-                                  <MenuItem value="Product">Product</MenuItem>
-                                </Select>
-                              </FormControl>
-                              <TextField
-                                size="small"
-                                label="Target ID"
-                                value={target.targetId}
-                                onChange={(event) =>
-                                  updateRule(rule.id, (current) => ({
-                                    ...current,
-                                    targets: current.targets.map((existing, idx) =>
-                                      idx === index ? { ...existing, targetId: event.target.value } : existing
-                                    ),
-                                  }))
-                                }
-                              />
-                              <FormControl size="small" sx={{ minWidth: 160 }}>
-                                <InputLabel>Action</InputLabel>
-                                <Select
-                                  label="Action"
-                                  value={target.action}
-                                  onChange={(event) =>
-                                    updateRule(rule.id, (current) => ({
-                                      ...current,
-                                      targets: current.targets.map((existing, idx) =>
-                                        idx === index
-                                          ? { ...existing, action: event.target.value as RuleTarget["action"] }
-                                          : existing
-                                      ),
-                                    }))
-                                  }
-                                >
-                                  {TARGET_ACTIONS.map((action) => (
-                                    <MenuItem key={action} value={action}>
-                                      {action}
-                                    </MenuItem>
-                                  ))}
-                                </Select>
-                              </FormControl>
-                              <IconButton
-                                onClick={() =>
-                                  updateRule(rule.id, (current) => ({
-                                    ...current,
-                                    targets: current.targets.filter((_, idx) => idx !== index),
-                                  }))
-                                }
-                                aria-label="Remove target"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Stack>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Description"
-                              value={target.description ?? ""}
-                              onChange={(event) =>
-                                updateRule(rule.id, (current) => ({
-                                  ...current,
-                                  targets: current.targets.map((existing, idx) =>
-                                    idx === index ? { ...existing, description: event.target.value } : existing
-                                  ),
-                                }))
-                              }
-                            />
-                            {target.kind === "Taxonomy" ? (
-                              <TextField
-                                size="small"
-                                label="Taxonomy concept ID"
-                                value={target.conceptId}
-                                onChange={(event) =>
-                                  updateRule(rule.id, (current) => ({
-                                    ...current,
-                                    targets: current.targets.map((existing, idx) =>
-                                      idx === index ? { ...existing, conceptId: event.target.value } : existing
-                                    ),
-                                  }))
-                                }
-                                helperText={conceptLabel(target.conceptId) || "Enter a concept ID"}
-                              />
-                            ) : (
-                              <TextField
-                                size="small"
-                                label="Product ID"
-                                value={target.productId}
-                                onChange={(event) =>
-                                  updateRule(rule.id, (current) => ({
-                                    ...current,
-                                    targets: current.targets.map((existing, idx) =>
-                                      idx === index ? { ...existing, productId: event.target.value } : existing
-                                    ),
-                                  }))
-                                }
-                              />
-                            )}
-                          </Stack>
-                        ))}
-                        <Button
-                          size="small"
-                          startIcon={<AddIcon fontSize="small" />}
-                          onClick={() =>
-                            updateRule(rule.id, (current) => ({
-                              ...current,
-                              targets: [
-                                ...current.targets,
-                                {
-                                  kind: "Taxonomy" as const,
-                                  targetId: nextTargetId(),
-                                  action: "DISABLE",
-                                  conceptId: "",
-                                  description: "",
-                                },
-                              ],
-                            }))
-                          }
-                        >
-                          Add target
-                        </Button>
                       </Stack>
                     </Box>
                     <Box>
@@ -1313,6 +1191,5 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
     </Card>
   );
 };
-
 
 export default RulesWorkspace;

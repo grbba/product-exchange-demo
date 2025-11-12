@@ -56,7 +56,6 @@ import {
   createRule,
   createExternalReferenceSource,
   createIndianMealRuleBundle,
-  createBurgerMealRuleBundle,
   createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
@@ -79,6 +78,8 @@ import type {
   ProductInstance,
   ProductSchema,
   InternalReferenceSource,
+  Feature,
+  FeatureExpression,
   LogicalExpression,
   LogicalOperator,
   ReferenceSource,
@@ -335,10 +336,98 @@ const combineStatuses = (operator: LogicalOperator, statuses: RuleEvaluationStat
   }
 };
 
+const getFeatureValues = (feature: Feature): string[] => {
+  const collected: string[] = [];
+  for (const value of feature.values) {
+    if (value.kind === "SingleValue") {
+      collected.push(String(value.value));
+    } else if (value.kind === "ValueRange") {
+      collected.push(`${value.min}-${value.max}`);
+    } else if (value.kind === "DiscreteSet") {
+      collected.push(...value.values.map((entry) => String(entry)));
+    }
+  }
+  return collected;
+};
+
+const findFeatureByIdentifier = (product: Product, identifier: string) =>
+  product.features.find((feature) => feature.id === identifier || feature.name === identifier);
+
+const evaluateFeatureExpression = (
+  expression: FeatureExpression,
+  product: Product,
+  details: string[],
+  depth: number
+): RuleEvaluationStatus => {
+  const feature = findFeatureByIdentifier(product, expression.featureId);
+  if (!feature) {
+    addDetail(details, depth, `? Feature '${expression.featureId}' not found on product`);
+    return "unknown";
+  }
+  const featureLabel = feature.name || feature.id || expression.featureId;
+  const values = getFeatureValues(feature);
+  const targetValue = expression.value ?? "";
+  const log = (passed: boolean, message: string) =>
+    addDetail(details, depth, `${passed ? "✓" : "✗"} ${message}`);
+
+  switch (expression.operator) {
+    case "EQUALS": {
+      if (!expression.value) {
+        addDetail(details, depth, "? No comparison value provided for feature condition");
+        return "unknown";
+      }
+      const result = values.some((value) => value === targetValue);
+      log(result, `${featureLabel} equals '${targetValue}'`);
+      return result ? "pass" : "fail";
+    }
+    case "NOT_EQUALS": {
+      if (!expression.value) {
+        addDetail(details, depth, "? No comparison value provided for feature condition");
+        return "unknown";
+      }
+      const result = values.every((value) => value !== targetValue);
+      log(result, `${featureLabel} not equal to '${targetValue}'`);
+      return result ? "pass" : "fail";
+    }
+    case "EXISTS": {
+      const result = values.length > 0;
+      log(result, `${featureLabel} has at least one value`);
+      return result ? "pass" : "fail";
+    }
+    case "NOT_EXISTS": {
+      const result = values.length === 0;
+      log(result, `${featureLabel} has no values`);
+      return result ? "pass" : "fail";
+    }
+    case "CONTAINS": {
+      if (!expression.value) {
+        addDetail(details, depth, "? No comparison value provided for feature condition");
+        return "unknown";
+      }
+      const result = values.some((value) => value.includes(targetValue));
+      log(result, `${featureLabel} contains '${targetValue}'`);
+      return result ? "pass" : "fail";
+    }
+    case "NOT_CONTAINS": {
+      if (!expression.value) {
+        addDetail(details, depth, "? No comparison value provided for feature condition");
+        return "unknown";
+      }
+      const result = values.every((value) => !value.includes(targetValue));
+      log(result, `${featureLabel} does not contain '${targetValue}'`);
+      return result ? "pass" : "fail";
+    }
+    default:
+      addDetail(details, depth, `? Operator '${expression.operator}' not supported for feature conditions`);
+      return "unknown";
+  }
+};
+
 const evaluateLogicalExpression = (
   expression: LogicalExpression,
   product: Product,
   details: string[],
+  conceptLabelFn: (id: string) => string,
   depth = 0
 ): RuleEvaluationStatus => {
   if (expression.kind === "Compound") {
@@ -352,7 +441,7 @@ const evaluateLogicalExpression = (
       return "unknown";
     }
     const childStatuses = expression.children.map((child) =>
-      evaluateLogicalExpression(child, product, details, depth + 1)
+      evaluateLogicalExpression(child, product, details, conceptLabelFn, depth + 1)
     );
     const result = combineStatuses(expression.operator, childStatuses);
     addDetail(details, depth, `Result: ${result.toUpperCase()}`);
@@ -360,20 +449,17 @@ const evaluateLogicalExpression = (
   }
 
   if (expression.kind === "Taxonomy") {
-    const descriptor = expression.description ?? `Taxonomy concept ${expression.taxonomyConceptId}`;
+    const label = conceptLabelFn(expression.taxonomyConceptId) || expression.taxonomyConceptId;
+    const descriptor = expression.description ?? `Taxonomy concept ${label}`;
     if (expression.subjectRef === "currentProduct") {
       const hasConcept = product.tags.includes(expression.taxonomyConceptId);
-      addDetail(
-        details,
-        depth,
-        `${hasConcept ? "✓" : "✗"} ${descriptor} (${expression.taxonomyConceptId}) on current product`
-      );
+      addDetail(details, depth, `${hasConcept ? "✓" : "✗"} ${descriptor} (${label}) on current product`);
       return hasConcept ? "pass" : "fail";
     }
     addDetail(
       details,
       depth,
-      `? ${descriptor} (${expression.taxonomyConceptId}) requires '${expression.subjectRef}' context (not available in demo)`
+      `? ${descriptor} (${label}) requires '${expression.subjectRef}' context (not available in demo)`
     );
     return "unknown";
   }
@@ -389,8 +475,7 @@ const evaluateLogicalExpression = (
   }
 
   if (expression.kind === "Feature") {
-    addDetail(details, depth, "? Feature condition evaluation not implemented in the demo");
-    return "unknown";
+    return evaluateFeatureExpression(expression, product, details, depth);
   }
 
   if (expression.kind === "Product") {
@@ -407,10 +492,11 @@ const evaluateLogicalExpression = (
   return "unknown";
 };
 
-const describeTarget = (target: RuleTarget) => {
+const describeTarget = (target: RuleTarget, conceptLabelFn: (id: string) => string) => {
   if (target.kind === "Taxonomy") {
+    const label = conceptLabelFn(target.conceptId) || target.conceptId;
     const suffix = target.description ? ` – ${target.description}` : "";
-    return `Target ${target.targetId}: ${target.action} taxonomy concept ${target.conceptId}${suffix}`;
+    return `Target ${target.targetId}: ${target.action} taxonomy concept ${label}${suffix}`;
   }
   const suffix = target.description ? ` – ${target.description}` : "";
   return `Target ${target.targetId}: ${target.action} product ${target.productId}${suffix}`;
@@ -435,7 +521,7 @@ const describeScope = (scope?: RuleScope): string[] => {
   return lines;
 };
 
-const evaluateRules = (product: Product, rules: Rule[]): RuleEvaluationResult[] =>
+const evaluateRules = (product: Product, rules: Rule[], conceptLabelFn: (id: string) => string): RuleEvaluationResult[] =>
   rules.map((rule) => {
     const details: string[] = [];
     details.push(`Type ${rule.type} · Priority ${rule.priority}`);
@@ -449,11 +535,11 @@ const evaluateRules = (product: Product, rules: Rule[]): RuleEvaluationResult[] 
         : "Context bindings: none"
     );
 
-    const status = evaluateLogicalExpression(rule.expression, product, details, 0);
+    const status = evaluateLogicalExpression(rule.expression, product, details, conceptLabelFn, 0);
 
     if (rule.targets.length) {
       for (const target of rule.targets) {
-        details.push(describeTarget(target));
+        details.push(describeTarget(target, conceptLabelFn));
       }
     } else {
       details.push("⚠ No targets defined");
@@ -616,8 +702,7 @@ const App: React.FC = () => {
       return { rules: normalizedRules, links: normalizedLinks };
     }
     const indian = createIndianMealRuleBundle();
-    const burger = createBurgerMealRuleBundle();
-    return { rules: [indian.rule, burger.rule], links: [...indian.links, ...burger.links] };
+    return { rules: [indian.rule], links: [...indian.links] };
   }, []);
 
   const [rules, setRules] = useState<Rule[]>(ruleCatalogue.rules);
@@ -1239,7 +1324,7 @@ const App: React.FC = () => {
   }, [rules, ruleLinks, schemas, instances, activeSchemaId, activeProductId]);
 
   const ruleResults = useMemo(() => {
-    const evaluated = evaluateRules(activeProduct, evaluationCatalogue.applicableRules);
+    const evaluated = evaluateRules(activeProduct, evaluationCatalogue.applicableRules, conceptLabel);
     return evaluated.map((result) => {
       const assignments = evaluationCatalogue.activeAssignments.get(result.internalId);
       if (!assignments || !assignments.length) return result;
@@ -1672,9 +1757,8 @@ const App: React.FC = () => {
 
   const handleResetRules = useCallback(() => {
     const indian = createIndianMealRuleBundle();
-    const burger = createBurgerMealRuleBundle();
-    setRules([indian.rule, burger.rule]);
-    setRuleLinks([...indian.links, ...burger.links]);
+    setRules([indian.rule]);
+    setRuleLinks(indian.links);
     setSelectedRuleId(indian.rule.id);
     notify("Rules reset", "info");
   }, [notify]);
@@ -1888,6 +1972,7 @@ const App: React.FC = () => {
                   schemas={schemas}
                   instances={instances}
                   conceptLabel={conceptLabel}
+                  concepts={concepts}
                 />
               </Box>
               <Box sx={{ flex: 1 }}>
