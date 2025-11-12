@@ -138,17 +138,18 @@ const splitStatements = (input: string): string[] => {
   return statements;
 };
 
+const cleanToken = (token: string) => token.trim().replace(/[.,;]+$/, "");
+
 const normalizeToken = (token: string) => {
-  const cleaned = token.trim().replace(/[.,;]+$/, "");
+  const cleaned = cleanToken(token);
   if (!cleaned) return null;
   if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
     const uri = cleaned.slice(1, -1);
     const parts = uri.split(/[#/]/);
     return parts[parts.length - 1] || uri;
   }
-  if (cleaned.includes(":")) {
-    const parts = cleaned.split(":");
-    return parts[parts.length - 1] || cleaned;
+  if (cleaned.includes(":") && !cleaned.includes("://")) {
+    return cleaned;
   }
   return cleaned;
 };
@@ -157,7 +158,7 @@ const extractNamespaceFromToken = (
   token: string,
   prefixes: Map<string, string>
 ): { namespace: string; prefix?: string } | undefined => {
-  const cleaned = token.trim();
+  const cleaned = cleanToken(token);
   if (!cleaned) return undefined;
   if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
     const iri = cleaned.slice(1, -1);
@@ -182,12 +183,12 @@ const extractNamespaceFromToken = (
 };
 
 const resolveIriFromToken = (token: string, prefixes: Map<string, string>): string | undefined => {
-  const cleaned = token.trim();
+  const cleaned = cleanToken(token);
   if (!cleaned) return undefined;
   if (cleaned.startsWith("<") && cleaned.endsWith(">")) {
     return cleaned.slice(1, -1);
   }
-  if (cleaned.includes(":")) {
+  if (cleaned.includes(":") && !cleaned.includes("://")) {
     const [prefix, ...rest] = cleaned.split(":");
     const namespace = prefixes.get(prefix);
     if (namespace) return namespace + rest.join(":");
@@ -478,6 +479,23 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
     }
 
     if (isConcept) {
+      const namespaceInfo = extractNamespaceFromToken(subjectToken, prefixes);
+      const namespace = namespaceInfo?.namespace;
+      const namespacePrefix = namespaceInfo?.prefix;
+      const localName =
+        namespacePrefix && id.startsWith(`${namespacePrefix}:`)
+          ? id.slice(namespacePrefix.length + 1)
+          : namespacePrefix
+          ? id
+          : id;
+      const iri = resolveIriFromToken(subjectToken, prefixes);
+      const qualifiedId =
+        namespacePrefix && id.includes(":")
+          ? id
+          : namespacePrefix
+          ? `${namespacePrefix}:${localName}`
+          : undefined;
+      const iriValue = iri ?? (namespace ? `${namespace}${localName}` : undefined);
       const label = pickLiteralValue(rdfsLabels) ?? pickLiteralValue(prefLabels) ?? id;
       const definition = pickLiteralValue(definitions);
       const concept: Concept = {
@@ -490,6 +508,10 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
         related: related.length ? Array.from(new Set(related)) : undefined,
         topConceptOf: topConceptOf.length ? Array.from(new Set(topConceptOf)) : undefined,
         inSchemes: inSchemes.length ? Array.from(new Set(inSchemes)) : undefined,
+        namespace,
+        namespacePrefix,
+        qualifiedId,
+        iri: iriValue,
       };
       concepts.set(id, concept);
       if (linkedSsrs.length) {

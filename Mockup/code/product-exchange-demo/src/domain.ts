@@ -46,6 +46,45 @@ export type Partner = {
 
 export type PartnerProductMap = Record<string, string[]>;
 
+export const IDENTITY_CAPABILITIES = [
+  "product-updates",
+  "schema-updates",
+  "taxonomy-updates",
+  "reference-system-updates",
+] as const;
+export type IdentityCapability = (typeof IDENTITY_CAPABILITIES)[number];
+
+export const INBOUND_PROCESSING_MODES = ["manual", "auto"] as const;
+export type InboundProcessingMode = (typeof INBOUND_PROCESSING_MODES)[number];
+
+export type AppIdentity = {
+  instanceId: string;
+  displayName: string;
+  organization: string;
+  contactEmail: string;
+  description: string;
+  endpointUrl: string;
+  capabilities: IdentityCapability[];
+};
+
+export const EXCHANGE_PROTOCOLS = ["webhook", "sse", "websocket"] as const;
+export type ExchangeProtocol = (typeof EXCHANGE_PROTOCOLS)[number];
+
+export type ChannelConfiguration = {
+  protocol: ExchangeProtocol;
+  destinationUrl: string;
+  authToken: string;
+  requireAcknowledgement: boolean;
+  notes: string;
+};
+
+export type AppSettings = {
+  identity: AppIdentity;
+  channel: ChannelConfiguration;
+  inboundProcessingMode: InboundProcessingMode;
+  updatedAt: string;
+};
+
 export type ReferenceSystemType =
   | "Measurement"
   | "Enumeration"
@@ -169,6 +208,10 @@ export type Concept = {
   topConceptOf?: string[];
   inSchemes?: string[];
   linkedSsrs?: LinkedSsr[];
+  namespace?: string;
+  namespacePrefix?: string;
+  qualifiedId?: string;
+  iri?: string;
 };
 export type ConceptScheme = { id: string; label: string; topConcepts: string[] };
 export type Collection = { id: string; label: string; members: string[] };
@@ -178,7 +221,7 @@ export type Mapping = { fromConceptId: string; toConceptId: string; relation: "e
 export const RULE_TYPES = ["Dependency", "Exclusion", "AvailabilityConstraint", "ValueConstraint", "Inclusion"] as const;
 export type RuleType = (typeof RULE_TYPES)[number];
 
-export const CONTEXT_REFS = ["currentProduct", "transport", "order", "customer", "itinerary", "segment"] as const;
+export const CONTEXT_REFS = ["currentProduct", "transport", "offer", "customer", "itinerary", "segment"] as const;
 export type ContextRef = (typeof CONTEXT_REFS)[number];
 
 export const LOGICAL_OPERATORS = ["AND", "OR", "NOT", "XOR", "NAND", "NOR"] as const;
@@ -326,6 +369,22 @@ export type Rule = {
   expression: LogicalExpression;
   targets: RuleTarget[];
   scope?: RuleScope;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RuleLinkKind = "Global" | "Schema" | "Product";
+
+export type RuleLink = {
+  id: string;
+  ruleRef: string;
+  kind: RuleLinkKind;
+  targetId?: string;
+  description?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type SchemaCategory = "transport" | "baggage" | "seat" | "lounge" | "meal" | "other";
@@ -400,20 +459,20 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
 };
 
 export const DEFAULT_CONCEPTS: Concept[] = [
-  { id: "C-Flight", label: "Flight" },
-  { id: "C-PriorityBoarding", label: "Priority boarding" },
-  { id: "C-Baggage", label: "Baggage" },
-  { id: "C-Origin", label: "Origin airport" },
-  { id: "C-Destination", label: "Destination airport" },
-  { id: "C-Seat", label: "Seat assignment" },
+  { id: "apmwg:C-Flight", label: "Flight" },
+  { id: "apmwg:C-PriorityBoarding", label: "Priority boarding" },
+  { id: "apmwg:C-Baggage", label: "Baggage" },
+  { id: "apmwg:C-Origin", label: "Origin airport" },
+  { id: "apmwg:C-Destination", label: "Destination airport" },
+  { id: "apmwg:C-Seat", label: "Seat assignment" },
 ];
 
 export const CONCEPT_SCHEMES: ConceptScheme[] = [
-  { id: "SCH-Airline", label: "Airline Services", topConcepts: ["C-Flight", "C-Baggage", "C-Seat"] },
+  { id: "apmwg:SCH-Airline", label: "Airline Services", topConcepts: ["apmwg:C-Flight", "apmwg:C-Baggage", "apmwg:C-Seat"] },
 ];
 
 export const COLLECTIONS: Collection[] = [
-  { id: "COL-Ancillaries", label: "Ancillary Services", members: ["C-PriorityBoarding", "C-Seat"] },
+  { id: "apmwg:COL-Ancillaries", label: "Ancillary Services", members: ["apmwg:C-PriorityBoarding", "apmwg:C-Seat"] },
 ];
 
 export const SCHEMA_CATEGORIES: SchemaCategory[] = [
@@ -429,6 +488,86 @@ export const schemaCategoryLabel = (category: SchemaCategory) =>
   category.charAt(0).toUpperCase() + category.slice(1);
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
+
+const capabilitySet = new Set<IdentityCapability>(IDENTITY_CAPABILITIES);
+const isCapability = (value: unknown): value is IdentityCapability =>
+  typeof value === "string" && capabilitySet.has(value as IdentityCapability);
+
+const sanitizeCapabilities = (
+  value: unknown,
+  fallback: IdentityCapability[]
+): IdentityCapability[] => {
+  if (!Array.isArray(value)) return fallback;
+  const filtered = value.filter(isCapability);
+  return filtered.length ? filtered : fallback;
+};
+
+const isProtocol = (value: unknown): value is ExchangeProtocol =>
+  typeof value === "string" && (EXCHANGE_PROTOCOLS as readonly string[]).includes(value);
+
+const randomInstanceId = () => `apmwg-node-${uid()}`;
+
+export const createDefaultIdentity = (): AppIdentity => ({
+  instanceId: randomInstanceId(),
+  displayName: "Workbench Instance",
+  organization: "",
+  contactEmail: "",
+  description: "Local sandbox for exchanging product data.",
+  endpointUrl: "",
+  capabilities: ["product-updates", "schema-updates", "taxonomy-updates"] as IdentityCapability[],
+});
+
+export const createDefaultSettings = (): AppSettings => ({
+  identity: createDefaultIdentity(),
+  channel: {
+    protocol: "webhook",
+    destinationUrl: "",
+    authToken: "",
+    requireAcknowledgement: true,
+    notes: "",
+  },
+  inboundProcessingMode: "manual",
+  updatedAt: new Date().toISOString(),
+});
+
+export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSettings => {
+  const defaults = createDefaultSettings();
+  const identityInput = input?.identity;
+  const channelInput = input?.channel;
+
+  return {
+    identity: {
+      ...defaults.identity,
+      ...identityInput,
+      instanceId: typeof identityInput?.instanceId === "string" && identityInput.instanceId.trim()
+        ? identityInput.instanceId
+        : defaults.identity.instanceId,
+      displayName: typeof identityInput?.displayName === "string" ? identityInput.displayName : defaults.identity.displayName,
+      organization: typeof identityInput?.organization === "string" ? identityInput.organization : defaults.identity.organization,
+      contactEmail: typeof identityInput?.contactEmail === "string" ? identityInput.contactEmail : defaults.identity.contactEmail,
+      description: typeof identityInput?.description === "string" ? identityInput.description : defaults.identity.description,
+      endpointUrl: typeof identityInput?.endpointUrl === "string" ? identityInput.endpointUrl : defaults.identity.endpointUrl,
+      capabilities: sanitizeCapabilities(identityInput?.capabilities, defaults.identity.capabilities),
+    },
+    channel: {
+      ...defaults.channel,
+      ...channelInput,
+      protocol: isProtocol(channelInput?.protocol) ? (channelInput?.protocol as ExchangeProtocol) : defaults.channel.protocol,
+      destinationUrl:
+        typeof channelInput?.destinationUrl === "string" ? channelInput.destinationUrl : defaults.channel.destinationUrl,
+      authToken: typeof channelInput?.authToken === "string" ? channelInput.authToken : defaults.channel.authToken,
+      requireAcknowledgement:
+        typeof channelInput?.requireAcknowledgement === "boolean"
+          ? channelInput.requireAcknowledgement
+          : defaults.channel.requireAcknowledgement,
+      notes: typeof channelInput?.notes === "string" ? channelInput.notes : defaults.channel.notes,
+    },
+    inboundProcessingMode: INBOUND_PROCESSING_MODES.includes(input?.inboundProcessingMode as InboundProcessingMode)
+      ? (input?.inboundProcessingMode as InboundProcessingMode)
+      : defaults.inboundProcessingMode,
+    updatedAt: input?.updatedAt ?? defaults.updatedAt,
+  };
+};
 
 export const cloneFeatureValue = (value: FeatureValue): FeatureValue => {
   if (value.kind === "SingleValue") return { ...value };
@@ -496,6 +635,7 @@ export const defaultScopeDefinition = (): ScopeDefinition => ({
 });
 
 export const createRule = (name = "New Rule"): Rule => {
+  const timestamp = new Date().toISOString();
   const ruleId = `R-${randomSuffix()}`;
   return {
     id: uid(),
@@ -521,71 +661,200 @@ export const createRule = (name = "New Rule"): Rule => {
       description: "",
       definition: defaultScopeDefinition(),
     },
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
 };
 
-export const createIndianMealRule = (): Rule => ({
-  id: uid(),
-  ruleId: "R-INDIAN-001",
-  name: "Indian meal blackout on EU→NA transports",
-  description: "Disable Indian cuisine selections for EU→NA transports during the blackout window.",
-  type: "AvailabilityConstraint",
-  priority: 10,
-  context: {
-    contextId: "CTX-1",
-    bindings: {
-      transport: "CDG-JFK transport segment",
-      order: "ORD-9876 travel order",
+export const createRuleLink = (ruleRef: string, kind: RuleLinkKind): RuleLink => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleRef,
+    kind,
+    targetId: kind === "Global" ? undefined : "",
+    description: "",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createIndianMealRule = (): Rule => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleId: "R-INDIAN-001",
+    name: "Indian meal blackout on EU→NA transports",
+    description: "Disable Indian cuisine selections for EU→NA transports during the blackout window.",
+    type: "AvailabilityConstraint",
+    priority: 10,
+    context: {
+      contextId: "CTX-1",
+      bindings: {
+        transport: "CDG-JFK transport segment",
+        offer: "OFF-9876 offer snapshot",
+      },
     },
-  },
-  expression: {
-    kind: "Compound",
-    expressionId: "EXP-INDIAN-ROOT",
-    operator: "AND",
-    description: "Transport in EU→NA AND date in blackout window",
-    children: [
+    expression: {
+      kind: "Compound",
+      expressionId: "EXP-INDIAN-ROOT",
+      operator: "AND",
+      description: "Transport touches Europe and North America AND date in blackout window",
+      children: [
+        {
+          kind: "Compound",
+          expressionId: "EXP-INDIAN-ROUTE",
+          operator: "AND",
+          description: "Transport tagged with both Europe and North America regions",
+          children: [
+            {
+              kind: "Taxonomy",
+              expressionId: "EXP-INDIAN-ROUTE-EU",
+              taxonomyConceptId: "apmwg:1HJT7649KP",
+              taxonomyScheme: "apmwg:product_taxonomy_scheme",
+              subjectRef: "transport",
+              selectionScope: "ANY_SELECTED",
+              description: "Transport segment tagged with Europe",
+            },
+            {
+              kind: "Taxonomy",
+              expressionId: "EXP-INDIAN-ROUTE-NA",
+              taxonomyConceptId: "apmwg:OSHGFC67",
+              taxonomyScheme: "apmwg:product_taxonomy_scheme",
+              subjectRef: "transport",
+              selectionScope: "ANY_SELECTED",
+              description: "Transport segment tagged with North America",
+            },
+          ],
+        },
+        {
+          kind: "Taxonomy",
+          expressionId: "EXP-INDIAN-CUISINE",
+          taxonomyConceptId: "apmwg:66B0BOM6",
+          taxonomyScheme: "apmwg:product_taxonomy_scheme",
+          subjectRef: "currentProduct",
+          selectionScope: "ANY_SELECTED",
+          description: "Product tagged as Indian cuisine",
+        },
+        {
+          kind: "DateTime",
+          expressionId: "EXP-INDIAN-DATE",
+          subjectRef: "offer",
+          operator: "IN",
+          value: "2025-10-01/2025-12-31",
+          description: "Travel/service date within blackout period",
+        },
+      ],
+    },
+    targets: [
       {
         kind: "Taxonomy",
-        expressionId: "EXP-INDIAN-MARKET",
-        taxonomyConceptId: "region:EU-NA",
-        taxonomyScheme: "apmwg:market_taxonomy_scheme",
-        subjectRef: "transport",
-        selectionScope: "ANY_SELECTED",
-        description: "At least one selected transport is tagged EU→NA",
-      },
-      {
-        kind: "DateTime",
-        expressionId: "EXP-INDIAN-DATE",
-        subjectRef: "order",
-        operator: "IN",
-        value: "2025-10-01/2025-12-31",
-        description: "Travel/service date within blackout period",
+        targetId: "TARGET-INDIAN-DISABLE",
+        action: "DISABLE",
+        conceptId: "apmwg:66B0BOM6",
+        description: "Disable all products tagged as Indian cuisine",
       },
     ],
-  },
-  targets: [
-    {
-      kind: "Taxonomy",
-      targetId: "TARGET-INDIAN-DISABLE",
-      action: "DISABLE",
-      conceptId: "apmwg:66B0BOM6",
-      description: "Disable all products tagged as Indian cuisine",
+    scope: {
+      scopeId: "SCOPE-INDIAN",
+      description: "EU→NA blackout period",
+      definition: {
+        channels: [],
+        markets: ["region:EU-NA"],
+        customerSegments: [],
+        effectiveFrom: "2025-10-01",
+        effectiveTo: "2025-12-31",
+      },
     },
-  ],
-  scope: {
-    scopeId: "SCOPE-INDIAN",
-    description: "EU→NA blackout period",
-    definition: {
-      channels: [],
-      markets: ["region:EU-NA"],
-      customerSegments: [],
-      effectiveFrom: "2025-10-01",
-      effectiveTo: "2025-12-31",
-    },
-  },
-});
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createIndianMealRuleBundle = () => {
+  const rule = createIndianMealRule();
+  const link = {
+    ...createRuleLink(rule.id, "Global"),
+    description: "Applies to all offers during the EU↔NA blackout window",
+    effectiveFrom: "2025-10-01",
+    effectiveTo: "2025-12-31",
+  };
+  return { rule, links: [link] };
+};
 
 export const updateTimestamp = <T extends { updatedAt: string }>(item: T): T => ({
   ...item,
   updatedAt: new Date().toISOString(),
 });
+export const createBurgerMealRule = (): Rule => {
+  const timestamp = new Date().toISOString();
+  return {
+    id: uid(),
+    ruleId: "R-BURGER-001",
+    name: "Burger meal allowed only on CDG-JFK",
+    description: "American burger meals may only be selected on the CDG→JFK transport product.",
+    type: "AvailabilityConstraint",
+    priority: 5,
+    context: {
+      contextId: "CTX-BURGER",
+      bindings: {
+        transport: "CDG-JFK transport segment",
+        currentProduct: "Burger meal product",
+      },
+    },
+    expression: {
+      kind: "Compound",
+      expressionId: "EXP-BURGER-ROOT",
+      operator: "AND",
+      description: "Transport equals CDG-JFK AND product tagged American cuisine",
+      children: [
+        {
+          kind: "Product",
+          expressionId: "EXP-BURGER-ROUTE",
+          subjectRef: "transport",
+          productId: "CDG-JFK",
+          operator: "EQUALS",
+          description: "Transport corresponds to CDG-JFK",
+        },
+        {
+          kind: "Taxonomy",
+          expressionId: "EXP-BURGER-AMERICAN",
+          taxonomyConceptId: "apmwg:1PIZRPAA",
+          taxonomyScheme: "apmwg:product_taxonomy_scheme",
+          subjectRef: "currentProduct",
+          description: "Product tagged with American cuisine",
+        },
+      ],
+    },
+    targets: [
+      {
+        kind: "Product",
+        targetId: "TARGET-BURGER-ALLOW",
+        action: "ENABLE",
+        productId: "BURGER-MEAL",
+        description: "Enable burger meal product when rule matches",
+      },
+    ],
+    scope: {
+      scopeId: "SCOPE-BURGER",
+      description: "Limited to CDG-JFK transport product",
+      definition: {
+        channels: [],
+        markets: [],
+        customerSegments: [],
+      },
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+export const createBurgerMealRuleBundle = () => {
+  const rule = createBurgerMealRule();
+  const link = {
+    ...createRuleLink(rule.id, "Product"),
+    targetId: "CDG-JFK",
+    description: "Burger meal restricted to CDG-JFK specified product",
+  };
+  return { rule, links: [link] };
+};

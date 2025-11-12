@@ -1,10 +1,22 @@
-import type { Partner, PartnerProductMap, ProductInstance, ProductSchema, ReferenceSystem } from "./domain";
+import type {
+  AppSettings,
+  Partner,
+  PartnerProductMap,
+  ProductInstance,
+  ProductSchema,
+  ReferenceSystem,
+  Rule,
+  RuleLink,
+} from "./domain";
 
 const SCHEMA_KEY = "apmwg:schemas";
 const INSTANCE_KEY = "apmwg:instances";
 const PARTNER_KEY = "apmwg:partners";
 const PARTNER_PRODUCT_KEY = "apmwg:partner-products";
 const REFERENCE_SYSTEM_KEY = "apmwg:reference-systems";
+const RULES_KEY = "apmwg:rules";
+const RULE_LINKS_KEY = "apmwg:rule-links";
+const SETTINGS_KEY = "apmwg:settings";
 
 const hasStorage = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
@@ -43,3 +55,12 @@ export const persistPartnerProducts = (associations: PartnerProductMap) => write
 
 export const loadReferenceSystems = () => read<ReferenceSystem[]>(REFERENCE_SYSTEM_KEY, []);
 export const persistReferenceSystems = (referenceSystems: ReferenceSystem[]) => write(REFERENCE_SYSTEM_KEY, referenceSystems);
+
+export const loadRules = () => read<Rule[]>(RULES_KEY, []);
+export const persistRules = (rules: Rule[]) => write(RULES_KEY, rules);
+
+export const loadRuleLinks = () => read<RuleLink[]>(RULE_LINKS_KEY, []);
+export const persistRuleLinks = (links: RuleLink[]) => write(RULE_LINKS_KEY, links);
+
+export const loadSettings = () => read<AppSettings | null>(SETTINGS_KEY, null);
+export const persistSettings = (settings: AppSettings) => write(SETTINGS_KEY, settings);

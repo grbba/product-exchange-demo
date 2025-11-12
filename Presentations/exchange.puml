@@ -1,0 +1,190 @@
+@startjson
+{
+  "kind": "product-update",
+  "issuedAt": "2025-11-09T16:56:29.486Z",
+  "identity": {
+    "instanceId": "apmwg-node-iium7ddj",
+    "displayName": "Supplier Workbench",
+    "organization": "GBair",
+    "contactEmail": "",
+    "description": "Local sandbox for exchanging product data.",
+    "endpointUrl": "",
+    "capabilities": [
+      "product-updates",
+      "schema-updates",
+      "taxonomy-updates"
+    ]
+  },
+  "products": [
+    {
+      "instanceId": "rc8jblsq",
+      "schema": {
+        "id": "xaomp9hk",
+        "name": "APM AIR Transport",
+        "version": "2025-11-09T16:56:29.486Z",
+        "updatedAt": "2025-11-09T16:56:29.486Z"
+      },
+      "product": {
+        "id": "98o80myv",
+        "name": "CDG - MUC",
+        "type": "Transport",
+        "lifecycleStatus": "Draft",
+        "features": [
+          {
+            "id": "4ajn0yei",
+            "name": "DepartureLocation",
+            "description": "The location where the transport starts. The reference system is preconfigured to IATA airport codes ",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "CDG",
+                "referenceSystemId": "0fx5kolp"
+              }
+            ],
+            "tags": [
+              "1HJT7649KP"
+            ]
+          },
+          {
+            "id": "xstbl7sk",
+            "name": "Delivery Provider",
+            "description": "Delivery Provider of the transport",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "KLM"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "34rg8082",
+            "name": "Mode of Transport",
+            "description": "Choose one of { Air, Sea, Land, Rail } As we only specify air transport the value is set to 'Air' as per the list. This list needs to be validated as a Reference System containing the allowed values here. ( The reference system shall be able to leverage the taxonomy to obtain its values )",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "ESYO2YSV",
+                "referenceSystemId": "gfkmaogn"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "2fjvyyl3",
+            "name": "ArrivalLocation",
+            "description": "The location where the transport ends. the reference system is preconfigured to IATA airport codes ",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "MUC",
+                "referenceSystemId": "0fx5kolp"
+              }
+            ],
+            "tags": [
+              "1HJT7649KP"
+            ]
+          },
+          {
+            "id": "deia5x0o",
+            "name": "Intermediate Stops",
+            "description": "",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "values": [],
+                "referenceSystemId": "0fx5kolp"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "6fwfnjty",
+            "name": "Service Topology",
+            "description": "//TODO// Reference system should be defined and fixed here so that i can only select the right one in the specified product level",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "values": []
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "9e9avo0t",
+            "name": "Nominal Duration",
+            "description": "Standard duration for the fullfilment of the product. \n//TODO// Referenec System for duration based on ISO date/time standard  ",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": ""
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "c2jdf7rm",
+            "name": "Operational Vehicle Type",
+            "description": "Type of vehicle used.\n//TODO// what std list to use for AC types / denomintations",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "values": []
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "hdw2kf9n",
+            "name": "Operational Days of Week",
+            "description": "// TODO // reference system for weekdays, idem taxonomy driven",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "values": []
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "6hmu3ytr",
+            "name": "Departure Time Range",
+            "description": "",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "values": [
+                  "{10:00 .. 12:00}",
+                  "{16:00 .. 23:00}"
+                ]
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "dynszw6l",
+            "name": "Supplier",
+            "description": "Supplier of the product which may or may not be the same as the Delivery Provider. e.g. in case of a Wetlease the supplier and the delivery provide can be two different airlines. ",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "KLM"
+              }
+            ],
+            "tags": []
+          }
+        ],
+        "tags": [
+          "MM686ASI",
+          "ESYO2YSV",
+          "M3BMDY3J",
+          "IIXB0MPA",
+          "KJ0K3YN4",
+          "1HJT7649KP"
+        ],
+        "additionalInfo": {}
+      }
+    }
+  ]
+}
+@endjson
