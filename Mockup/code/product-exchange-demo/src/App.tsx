@@ -538,6 +538,64 @@ const App: React.FC = () => {
     metadata: taxonomyMetadata,
   } = taxonomy;
 
+  const conceptExchangeLookup = useMemo(() => {
+    const lookup = new Map<string, Concept>();
+    concepts.forEach((concept) => {
+      lookup.set(concept.id, concept);
+      if (concept.qualifiedId) {
+        lookup.set(concept.qualifiedId, concept);
+      }
+    });
+    return lookup;
+  }, [concepts]);
+
+  const taxonomyNamespaces = useMemo(() => {
+    const entries = new Map<string, string>();
+    concepts.forEach((concept) => {
+      if (concept.namespace && concept.namespacePrefix) {
+        entries.set(concept.namespacePrefix, concept.namespace);
+      }
+    });
+    if (!entries.size && taxonomyMetadata?.namespace && taxonomyMetadata?.namespacePrefix) {
+      entries.set(taxonomyMetadata.namespacePrefix, taxonomyMetadata.namespace);
+    }
+    return Array.from(entries.entries()).map(([prefix, namespace]) => ({ prefix, namespace }));
+  }, [concepts, taxonomyMetadata]);
+
+  const formatTagForExchange = useCallback(
+    (tag: string) => {
+      if (!tag) return tag;
+      const concept = conceptExchangeLookup.get(tag);
+      if (concept?.qualifiedId) {
+        return concept.qualifiedId;
+      }
+      if (concept?.namespacePrefix) {
+        const local =
+          concept.id.startsWith(`${concept.namespacePrefix}:`)
+            ? concept.id.slice(concept.namespacePrefix.length + 1)
+            : concept.id;
+        return `${concept.namespacePrefix}:${local}`;
+      }
+      if (taxonomyMetadata?.namespacePrefix && !tag.includes(":")) {
+        return `${taxonomyMetadata.namespacePrefix}:${tag}`;
+      }
+      return tag;
+    },
+    [conceptExchangeLookup, taxonomyMetadata]
+  );
+
+  const translateProductForExchange = useCallback(
+    (product: Product): Product => ({
+      ...product,
+      tags: product.tags.map((tag) => formatTagForExchange(tag)),
+      features: product.features.map((feature) => ({
+        ...feature,
+        tags: feature.tags.map((tag) => formatTagForExchange(tag)),
+      })),
+    }),
+    [formatTagForExchange]
+  );
+
   const retailerPartners = useMemo(
     () => partners.filter((partner) => partner.roles.includes("retailer")),
     [partners]
@@ -1220,14 +1278,15 @@ const App: React.FC = () => {
         kind: "product-update" as const,
         issuedAt: new Date().toISOString(),
         identity: settings.identity,
+        namespaces: taxonomyNamespaces,
         products: instancesToSend.map((instance) => ({
           instanceId: instance.id,
           schema: resolveSchemaSummary(instance.schemaId),
-          product: instance.product,
+          product: translateProductForExchange(instance.product),
         })),
       };
     },
-    [resolveSchemaSummary, settings.identity]
+    [resolveSchemaSummary, settings.identity, taxonomyNamespaces, translateProductForExchange]
   );
 
   const buildSchemaEnvelope = useCallback(

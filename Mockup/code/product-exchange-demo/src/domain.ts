@@ -208,6 +208,10 @@ export type Concept = {
   topConceptOf?: string[];
   inSchemes?: string[];
   linkedSsrs?: LinkedSsr[];
+  namespace?: string;
+  namespacePrefix?: string;
+  qualifiedId?: string;
+  iri?: string;
 };
 export type ConceptScheme = { id: string; label: string; topConcepts: string[] };
 export type Collection = { id: string; label: string; members: string[] };
