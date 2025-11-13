@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Collection, Concept, LinkedSsr } from "./domain";
-
-const TAXONOMY_URL = "../../../../Taxonomy/export12.ttl";
 
 type Literal = { value: string; lang?: string };
 
@@ -19,6 +17,33 @@ export type TaxonomyParseResult = {
   collections: Collection[];
   metadata?: TaxonomyMetadata;
 };
+
+export type TaxonomySource = {
+  id: string;
+  label: string;
+  description?: string;
+  url: string;
+};
+
+const assetUrl = (relativePath: string) => new URL(relativePath, import.meta.url).href;
+
+export const TAXONOMY_SOURCES: TaxonomySource[] = [
+  {
+    id: "export12",
+    label: "APMWG export 12",
+    description: "Baseline reference taxonomy from the working group export.",
+    url: assetUrl("./assets/export12.ttl"),
+  },
+  {
+    id: "export13",
+    label: "APMWG export 13",
+    description: "Latest working draft with experimental concepts.",
+    url: assetUrl("./assets/export13.ttl"),
+  },
+];
+
+export const findTaxonomySource = (id?: string | null) =>
+  id ? TAXONOMY_SOURCES.find((source) => source.id === id) ?? null : null;
 
 const pickLiteralValue = (entries: Literal[], preferredLang = "en") => {
   if (!entries.length) return undefined;
@@ -584,21 +609,24 @@ export const parseTtl = (ttl: string): TaxonomyParseResult => {
   };
 };
 
-export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Collection[]) => {
+export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Collection[], sourceId?: string | null) => {
   const [concepts, setConcepts] = useState<Concept[]>(initialConcepts);
   const [collections, setCollections] = useState<Collection[]>(initialCollections);
   const [metadata, setMetadata] = useState<TaxonomyMetadata | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const source = useMemo(() => findTaxonomySource(sourceId), [sourceId]);
 
   useEffect(() => {
+    if (!source) return;
     let active = true;
     (async () => {
       try {
-        const url = new URL(TAXONOMY_URL, import.meta.url);
-        const response = await fetch(url);
-        if (!response.ok) return;
+        const response = await fetch(source.url);
+        if (!response.ok) throw new Error(`Unexpected response ${response.status}`);
         const text = await response.text();
         const parsed = parseTtl(text);
-        if (parsed.concepts.length && active) {
+        if (!active) return;
+        if (parsed.concepts.length) {
           setConcepts(parsed.concepts);
           if (parsed.collections.length) {
             setCollections(parsed.collections);
@@ -606,13 +634,13 @@ export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Coll
           setMetadata(parsed.metadata ?? null);
         }
       } catch (error) {
-        console.warn("Failed to load taxonomy export.", error);
+        console.warn(`Failed to load taxonomy source "${source.id}".`, error);
       }
     })();
     return () => {
       active = false;
     };
-  }, []);
+  }, [source, reloadToken]);
 
   const conceptLabel = useMemo(
     () => (id: string) => concepts.find((concept) => concept.id === id)?.label ?? id,
@@ -624,5 +652,22 @@ export const useTaxonomy = (initialConcepts: Concept[], initialCollections: Coll
     [concepts]
   );
 
-  return { concepts, setConcepts, collections, setCollections, metadata, setMetadata, conceptLabel, orderedConcepts };
+  const reloadFromSource = useCallback(() => {
+    if (!source) return false;
+    setReloadToken((token) => token + 1);
+    return true;
+  }, [source]);
+
+  return {
+    concepts,
+    setConcepts,
+    collections,
+    setCollections,
+    metadata,
+    setMetadata,
+    conceptLabel,
+    orderedConcepts,
+    reloadFromSource,
+    source,
+  };
 };

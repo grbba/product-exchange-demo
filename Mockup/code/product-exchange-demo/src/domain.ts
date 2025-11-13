@@ -82,6 +82,7 @@ export type AppSettings = {
   identity: AppIdentity;
   channel: ChannelConfiguration;
   inboundProcessingMode: InboundProcessingMode;
+  defaultTaxonomyId: string | null;
   updatedAt: string;
 };
 
@@ -528,6 +529,7 @@ export const createDefaultSettings = (): AppSettings => ({
     notes: "",
   },
   inboundProcessingMode: "manual",
+  defaultTaxonomyId: null,
   updatedAt: new Date().toISOString(),
 });
 
@@ -566,6 +568,10 @@ export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSe
     inboundProcessingMode: INBOUND_PROCESSING_MODES.includes(input?.inboundProcessingMode as InboundProcessingMode)
       ? (input?.inboundProcessingMode as InboundProcessingMode)
       : defaults.inboundProcessingMode,
+    defaultTaxonomyId:
+      typeof input?.defaultTaxonomyId === "string" && input.defaultTaxonomyId.trim()
+        ? input.defaultTaxonomyId.trim()
+        : null,
     updatedAt: input?.updatedAt ?? defaults.updatedAt,
   };
 };

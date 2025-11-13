@@ -642,7 +642,9 @@ const App: React.FC = () => {
   const [referenceSystemSendMode, setReferenceSystemSendMode] = useState<SendScopeMode>("all");
   const [selectedReferenceSystemIds, setSelectedReferenceSystemIds] = useState<string[]>([]);
 
-  const taxonomy = useTaxonomy(DEFAULT_CONCEPTS, COLLECTIONS);
+  const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
+
+  const taxonomy = useTaxonomy(DEFAULT_CONCEPTS, COLLECTIONS, settings.defaultTaxonomyId);
   const {
     concepts,
     collections,
@@ -652,6 +654,8 @@ const App: React.FC = () => {
     setCollections: setTaxonomyCollections,
     setMetadata: setTaxonomyMetadata,
     metadata: taxonomyMetadata,
+    reloadFromSource: reloadTaxonomyFromSource,
+    source: defaultTaxonomySource,
   } = taxonomy;
 
   const conceptExchangeLookup = useMemo(() => {
@@ -741,7 +745,6 @@ const App: React.FC = () => {
     ruleCatalogue.rules[0]?.id ?? null
   );
   const [ruleLinks, setRuleLinks] = useState<RuleLink[]>(ruleCatalogue.links);
-  const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
   const [webhookDestination, setWebhookDestination] = useState(settings.channel.destinationUrl);
   const webhookDestinationRef = useRef(webhookDestination);
   const [webhookLogs, setWebhookLogs] = useState<WebhookDispatchLog[]>([]);
@@ -1783,11 +1786,24 @@ const App: React.FC = () => {
   }, [notify]);
 
   const handleResetTaxonomy = useCallback(() => {
+    const reloaded = reloadTaxonomyFromSource();
+    if (reloaded) {
+      const label = defaultTaxonomySource?.label ?? "configured taxonomy";
+      notify(`Reloaded ${label}`, "info");
+      return;
+    }
     setTaxonomyConcepts(DEFAULT_CONCEPTS);
     setTaxonomyCollections(COLLECTIONS);
     setTaxonomyMetadata(null);
     notify("Taxonomy reset", "info");
-  }, [notify, setTaxonomyCollections, setTaxonomyConcepts, setTaxonomyMetadata]);
+  }, [
+    defaultTaxonomySource?.label,
+    notify,
+    reloadTaxonomyFromSource,
+    setTaxonomyCollections,
+    setTaxonomyConcepts,
+    setTaxonomyMetadata,
+  ]);
 
   const handleResetReferenceSystems = useCallback(() => {
     const defaults = defaultReferenceSystems().map((item) => normalizeReferenceSystem(item));

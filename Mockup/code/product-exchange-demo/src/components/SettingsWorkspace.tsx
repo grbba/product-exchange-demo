@@ -36,6 +36,7 @@ import {
   normalizeAppSettings,
   uid,
 } from "../domain";
+import { TAXONOMY_SOURCES } from "../taxonomy";
 
 type ResetAction = {
   key: string;
@@ -130,6 +131,13 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
         },
       };
     });
+  };
+
+  const setDefaultTaxonomy = (value: string | null) => {
+    setDraft((current) => ({
+      ...current,
+      defaultTaxonomyId: value,
+    }));
   };
 
   const regenerateInstanceId = () => {
@@ -321,6 +329,45 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
               </Typography>
             </FormControl>
           </Stack>
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+        <CardHeader
+          title="Taxonomy defaults"
+          subheader="Choose which bundled taxonomy export loads automatically when the workspace opens."
+        />
+        <CardContent>
+          <FormControl fullWidth>
+            <InputLabel id="default-taxonomy-label">Default taxonomy</InputLabel>
+            <Select
+              labelId="default-taxonomy-label"
+              label="Default taxonomy"
+              value={draft.defaultTaxonomyId ?? ""}
+              onChange={(event) => {
+                const value = event.target.value;
+                setDefaultTaxonomy(typeof value === "string" && value ? value : null);
+              }}
+            >
+              <MenuItem value="">
+                <em>Use starter concepts</em>
+              </MenuItem>
+              {TAXONOMY_SOURCES.map((source) => (
+                <MenuItem key={source.id} value={source.id}>
+                  {source.label}
+                </MenuItem>
+              ))}
+            </Select>
+            <Typography variant="caption" color="text.secondary">
+              Leave blank to keep the lightweight demo taxonomy. The selected export loads automatically on restart.
+            </Typography>
+            {draft.defaultTaxonomyId ? (
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                {TAXONOMY_SOURCES.find((source) => source.id === draft.defaultTaxonomyId)?.description ??
+                  "Load the configured taxonomy via Settings → Reset controls to preview it immediately."}
+              </Typography>
+            ) : null}
+          </FormControl>
         </CardContent>
       </Card>
 
