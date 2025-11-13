@@ -10,6 +10,8 @@ import {
   Checkbox,
   Chip,
   Divider,
+  Drawer,
+  IconButton,
   FormControl,
   FormControlLabel,
   FormGroup,
@@ -36,6 +38,7 @@ import UploadIcon from "@mui/icons-material/Upload";
 import AddIcon from "@mui/icons-material/Add";
 import SendIcon from "@mui/icons-material/Send";
 import CachedIcon from "@mui/icons-material/Cached";
+import CloseIcon from "@mui/icons-material/Close";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
 const CONFIGURED_API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") ?? null;
@@ -53,9 +56,8 @@ import {
   DEFAULT_CONCEPTS,
   REFERENCE_SYSTEM_TYPES,
   SCHEMA_CATEGORIES,
-  createRule,
   createExternalReferenceSource,
-  createIndianMealRuleBundle,
+  createRule,
   createTaxonomyReferenceSource,
   defaultReferenceSystems,
   defaultSchemaTemplate,
@@ -357,7 +359,8 @@ const evaluateFeatureExpression = (
   expression: FeatureExpression,
   product: Product,
   details: string[],
-  depth: number
+  depth: number,
+  conceptLabelFn: (id: string) => string
 ): RuleEvaluationStatus => {
   const feature = findFeatureByIdentifier(product, expression.featureId);
   if (!feature) {
@@ -370,57 +373,82 @@ const evaluateFeatureExpression = (
   const log = (passed: boolean, message: string) =>
     addDetail(details, depth, `${passed ? "✓" : "✗"} ${message}`);
 
-  switch (expression.operator) {
-    case "EQUALS": {
-      if (!expression.value) {
-        addDetail(details, depth, "? No comparison value provided for feature condition");
-        return "unknown";
-      }
-      const result = values.some((value) => value === targetValue);
-      log(result, `${featureLabel} equals '${targetValue}'`);
-      return result ? "pass" : "fail";
-    }
-    case "NOT_EQUALS": {
-      if (!expression.value) {
-        addDetail(details, depth, "? No comparison value provided for feature condition");
-        return "unknown";
-      }
-      const result = values.every((value) => value !== targetValue);
-      log(result, `${featureLabel} not equal to '${targetValue}'`);
-      return result ? "pass" : "fail";
-    }
-    case "EXISTS": {
-      const result = values.length > 0;
-      log(result, `${featureLabel} has at least one value`);
-      return result ? "pass" : "fail";
-    }
-    case "NOT_EXISTS": {
-      const result = values.length === 0;
-      log(result, `${featureLabel} has no values`);
-      return result ? "pass" : "fail";
-    }
-    case "CONTAINS": {
-      if (!expression.value) {
-        addDetail(details, depth, "? No comparison value provided for feature condition");
-        return "unknown";
-      }
-      const result = values.some((value) => value.includes(targetValue));
-      log(result, `${featureLabel} contains '${targetValue}'`);
-      return result ? "pass" : "fail";
-    }
-    case "NOT_CONTAINS": {
-      if (!expression.value) {
-        addDetail(details, depth, "? No comparison value provided for feature condition");
-        return "unknown";
-      }
-      const result = values.every((value) => !value.includes(targetValue));
-      log(result, `${featureLabel} does not contain '${targetValue}'`);
-      return result ? "pass" : "fail";
-    }
-    default:
-      addDetail(details, depth, `? Operator '${expression.operator}' not supported for feature conditions`);
+  let result: RuleEvaluationStatus = "pass";
+  const needsValue =
+    expression.operator === "EQUALS" ||
+    expression.operator === "NOT_EQUALS" ||
+    expression.operator === "LESS_THAN" ||
+    expression.operator === "LESS_THAN_OR_EQUAL" ||
+    expression.operator === "GREATER_THAN" ||
+    expression.operator === "GREATER_THAN_OR_EQUAL" ||
+    expression.operator === "IN" ||
+    expression.operator === "NOT_IN" ||
+    expression.operator === "CONTAINS" ||
+    expression.operator === "NOT_CONTAINS" ||
+    expression.operator === "STARTS_WITH" ||
+    expression.operator === "ENDS_WITH" ||
+    expression.operator === "MATCHES_PATTERN";
+
+  if (needsValue && !expression.value) {
+    if (!expression.featureTagId) {
+      addDetail(details, depth, "? Provide a value or require a taxonomy tag for this feature");
       return "unknown";
+    }
+    addDetail(details, depth, `⚠ Skipping value comparison for ${featureLabel} (no value provided)`);
+  } else {
+    switch (expression.operator) {
+      case "EQUALS": {
+        const passes = values.some((value) => value === targetValue);
+        log(passes, `${featureLabel} equals '${targetValue}'`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      case "NOT_EQUALS": {
+        const passes = values.every((value) => value !== targetValue);
+        log(passes, `${featureLabel} not equal to '${targetValue}'`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      case "EXISTS": {
+        const passes = values.length > 0;
+        log(passes, `${featureLabel} has at least one value`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      case "NOT_EXISTS": {
+        const passes = values.length === 0;
+        log(passes, `${featureLabel} has no values`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      case "CONTAINS": {
+        const passes = values.some((value) => value.includes(targetValue));
+        log(passes, `${featureLabel} contains '${targetValue}'`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      case "NOT_CONTAINS": {
+        const passes = values.every((value) => !value.includes(targetValue));
+        log(passes, `${featureLabel} does not contain '${targetValue}'`);
+        result = passes ? "pass" : "fail";
+        break;
+      }
+      default:
+        addDetail(details, depth, `? Operator '${expression.operator}' not supported for feature conditions`);
+        return "unknown";
+    }
   }
+
+  if (expression.featureTagId) {
+    const hasTag = feature.tags.includes(expression.featureTagId);
+    const tagLabel = conceptLabelFn(expression.featureTagId) || expression.featureTagId;
+    log(hasTag, `${featureLabel} tagged with '${tagLabel}'`);
+    if (!hasTag) {
+      return "fail";
+    }
+  }
+
+  return result;
 };
 
 const evaluateLogicalExpression = (
@@ -475,7 +503,7 @@ const evaluateLogicalExpression = (
   }
 
   if (expression.kind === "Feature") {
-    return evaluateFeatureExpression(expression, product, details, depth);
+    return evaluateFeatureExpression(expression, product, details, depth, conceptLabelFn);
   }
 
   if (expression.kind === "Product") {
@@ -609,6 +637,8 @@ const App: React.FC = () => {
   const [selectedSchemaIds, setSelectedSchemaIds] = useState<string[]>([]);
   const [ruleSendMode, setRuleSendMode] = useState<SendScopeMode>("all");
   const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
+  const [runDrawerOpen, setRunDrawerOpen] = useState(false);
+  const [runDrawerFilterRuleId, setRunDrawerFilterRuleId] = useState<string | null>(null);
   const [referenceSystemSendMode, setReferenceSystemSendMode] = useState<SendScopeMode>("all");
   const [selectedReferenceSystemIds, setSelectedReferenceSystemIds] = useState<string[]>([]);
 
@@ -701,8 +731,9 @@ const App: React.FC = () => {
         .filter((link) => validRuleRefs.has(link.ruleRef));
       return { rules: normalizedRules, links: normalizedLinks };
     }
-    const indian = createIndianMealRuleBundle();
-    return { rules: [indian.rule], links: [...indian.links] };
+    const starterRule = createRule("Sample availability rule");
+    starterRule.description = "Use the Add Condition wizard to build your first rule.";
+    return { rules: [starterRule], links: [] };
   }, []);
 
   const [rules, setRules] = useState<Rule[]>(ruleCatalogue.rules);
@@ -1335,10 +1366,19 @@ const App: React.FC = () => {
     });
   }, [activeProduct, evaluationCatalogue]);
 
-  const contextEditableRules = useMemo(
-    () => (selectedRuleId ? rules.filter((rule) => rule.id === selectedRuleId) : rules),
-    [rules, selectedRuleId]
-  );
+  const drawerContextRules = useMemo(() => {
+    if (runDrawerFilterRuleId) {
+      return rules.filter((rule) => rule.id === runDrawerFilterRuleId);
+    }
+    return rules;
+  }, [rules, runDrawerFilterRuleId]);
+
+  const drawerRuleResults = useMemo(() => {
+    if (runDrawerFilterRuleId) {
+      return ruleResults.filter((result) => result.internalId === runDrawerFilterRuleId);
+    }
+    return ruleResults;
+  }, [ruleResults, runDrawerFilterRuleId]);
 
   const resolveSchemaSummary = useCallback(
     (schemaId: string) => {
@@ -1756,10 +1796,11 @@ const App: React.FC = () => {
   }, [notify]);
 
   const handleResetRules = useCallback(() => {
-    const indian = createIndianMealRuleBundle();
-    setRules([indian.rule]);
-    setRuleLinks(indian.links);
-    setSelectedRuleId(indian.rule.id);
+    const starter = createRule("Sample availability rule");
+    starter.description = "Use the Add Condition wizard to build your first rule.";
+    setRules([starter]);
+    setRuleLinks([]);
+    setSelectedRuleId(starter.id);
     notify("Rules reset", "info");
   }, [notify]);
 
@@ -1792,7 +1833,7 @@ const App: React.FC = () => {
       {
         key: "rules",
         label: "Rules",
-        description: "Restore the sample Indian meal and burger rule bundles.",
+        description: "Clear all custom rules and start with a single empty rule.",
         onReset: handleResetRules,
       },
     ],
@@ -1959,183 +2000,47 @@ const App: React.FC = () => {
       {tab === 4 && (
         <Box sx={{ p: 2 }}>
           <Suspense fallback={<WorkspaceFallback label="rules" />}>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Box sx={{ flex: 1 }}>
-                <RulesWorkspace
-                  rules={rules}
-                  selectedRuleId={selectedRuleId}
-                  onSelectRule={(ruleId) => setSelectedRuleId(ruleId)}
-                  onCreateRule={handleCreateRule}
-                  onChange={setRules}
-                  ruleLinks={ruleLinks}
-                  onChangeRuleLinks={setRuleLinks}
-                  schemas={schemas}
-                  instances={instances}
-                  conceptLabel={conceptLabel}
-                  concepts={concepts}
-                />
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Card variant="outlined" sx={{ borderRadius: 3 }}>
-                  <CardHeader
-                    title="Run Rules"
-                    action={
-                      <Button startIcon={<PlayArrowIcon />} onClick={() => notify("Rules evaluated")}>
-                        Run
-                      </Button>
-                    }
-                  />
-                  <CardContent>
-                    <Stack spacing={3}>
-                      <Box>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Evaluation context
-                        </Typography>
-                        <Stack spacing={2}>
-                          {contextEditableRules.map((rule) => {
-                            const bindingEntries = Object.entries(rule.context.bindings) as [ContextRef, string][];
-                            const availableRefs = CONTEXT_REFS.filter(
-                              (ref) => !bindingEntries.some(([current]) => current === ref)
-                            );
-                            return (
-                              <Box
-                                key={`${rule.id}-context`}
-                                sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
-                              >
-                                <Stack spacing={1.5}>
-                                  <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                    <Box>
-                                      <Typography variant="subtitle2">{rule.name}</Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {rule.ruleId}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-                                  <TextField
-                                    size="small"
-                                    label="Context ID"
-                                    value={rule.context.contextId}
-                                    onChange={(event) => handleChangeContextId(rule.id, event.target.value)}
-                                  />
-                                  <Stack spacing={1}>
-                                    {bindingEntries.map(([ref, value]) => (
-                                      <Stack
-                                        key={`${rule.id}-${ref}`}
-                                        direction={{ xs: "column", sm: "row" }}
-                                        spacing={1}
-                                        alignItems={{ xs: "stretch", sm: "center" }}
-                                      >
-                                        <FormControl size="small" sx={{ minWidth: 160 }}>
-                                          <InputLabel>Reference</InputLabel>
-                                          <Select
-                                            label="Reference"
-                                            value={ref}
-                                            onChange={(event) =>
-                                              handleChangeBindingReference(
-                                                rule.id,
-                                                ref,
-                                                event.target.value as ContextRef
-                                              )
-                                            }
-                                          >
-                                            {CONTEXT_REFS.map((candidate) => (
-                                              <MenuItem
-                                                key={candidate}
-                                                value={candidate}
-                                                disabled={
-                                                  candidate !== ref &&
-                                                  rule.context.bindings[candidate] !== undefined
-                                                }
-                                              >
-                                                {candidate}
-                                              </MenuItem>
-                                            ))}
-                                          </Select>
-                                        </FormControl>
-                                        <TextField
-                                          fullWidth
-                                          size="small"
-                                          label="Binding description"
-                                          value={value}
-                                          onChange={(event) =>
-                                            handleChangeBindingValue(rule.id, ref, event.target.value)
-                                          }
-                                        />
-                                        <Button
-                                          size="small"
-                                          color="error"
-                                          onClick={() => handleRemoveContextBinding(rule.id, ref)}
-                                        >
-                                          Remove
-                                        </Button>
-                                      </Stack>
-                                    ))}
-                                    <Button
-                                      size="small"
-                                      startIcon={<AddIcon fontSize="small" />}
-                                      disabled={!availableRefs.length}
-                                      onClick={() => handleAddContextBinding(rule.id)}
-                                    >
-                                      Add binding
-                                    </Button>
-                                  </Stack>
-                                </Stack>
-                              </Box>
-                            );
-                          })}
-                          {contextEditableRules.length === 0 && rules.length > 0 && (
-                            <Typography variant="body2" color="text.secondary">
-                              Select a rule to configure its context.
-                            </Typography>
-                          )}
-                          {rules.length === 0 && (
-                            <Typography variant="body2" color="text.secondary">
-                              No rules available. Create one to configure evaluation context.
-                            </Typography>
-                          )}
-                        </Stack>
-                      </Box>
-                      <Divider />
-                      <Box>
-                        {ruleResults.map((result) => (
-                          <Card key={result.internalId} variant="outlined" sx={{ borderRadius: 2, p: 2, mb: 2 }}>
-                            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                              <Box>
-                                <Typography variant="subtitle1">{result.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {result.ruleId}
-                                </Typography>
-                              </Box>
-                              <Chip
-                                label={result.status.toUpperCase()}
-                                color={
-                                  result.status === "pass" ? "success" : result.status === "fail" ? "error" : "default"
-                                }
-                                variant={result.status === "unknown" ? "outlined" : "filled"}
-                              />
-                            </Stack>
-                            <Divider sx={{ my: 1 }} />
-                            <Stack spacing={0.5}>
-                              {result.details.map((detail, index) => (
-                                <Typography key={index} variant="body2">
-                                  {detail}
-                                </Typography>
-                              ))}
-                            </Stack>
-                          </Card>
-                        ))}
-                        {ruleResults.length === 0 && (
-                          <Box sx={{ textAlign: "center", py: 4 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No rules to evaluate.
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Box>
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1}
+                alignItems={{ md: "center" }}
+                justifyContent="space-between"
+              >
+                <Typography variant="h6">Rules management</Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button variant="outlined" startIcon={<AddIcon />} onClick={handleCreateRule}>
+                    New rule
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<PlayArrowIcon />}
+                    onClick={() => {
+                      setRunDrawerFilterRuleId(null);
+                      setRunDrawerOpen(true);
+                    }}
+                  >
+                    Run rules
+                  </Button>
+                </Stack>
+              </Stack>
+              <RulesWorkspace
+                rules={rules}
+                selectedRuleId={selectedRuleId}
+                onSelectRule={(ruleId) => setSelectedRuleId(ruleId)}
+                onCreateRule={handleCreateRule}
+                onChange={setRules}
+                ruleLinks={ruleLinks}
+                onChangeRuleLinks={setRuleLinks}
+                schemas={schemas}
+                instances={instances}
+                conceptLabel={conceptLabel}
+                concepts={concepts}
+                onRunRule={(ruleId) => {
+                  setRunDrawerFilterRuleId(ruleId);
+                  setRunDrawerOpen(true);
+                }}
+              />
             </Stack>
           </Suspense>
         </Box>
@@ -2883,6 +2788,161 @@ const App: React.FC = () => {
           </Suspense>
         </Box>
       )}
+
+      <Drawer
+        anchor="right"
+        open={runDrawerOpen}
+        onClose={() => {
+          setRunDrawerOpen(false);
+          setRunDrawerFilterRuleId(null);
+        }}
+      >
+        <Box sx={{ width: { xs: "100vw", sm: 420 }, maxWidth: "100vw", p: 2 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="h6">Run rules</Typography>
+              <IconButton aria-label="Close run rules panel" onClick={() => setRunDrawerOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Configure contexts and preview how the currently selected products behave before sharing changes.
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<PlayArrowIcon />}
+              onClick={() => notify("Rules evaluated")}
+            >
+              Run now
+            </Button>
+            <Divider />
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Evaluation context
+              </Typography>
+              <Stack spacing={2}>
+                          {drawerContextRules.map((rule) => {
+                  const bindingEntries = Object.entries(rule.context.bindings) as [ContextRef, string][];
+                  const availableRefs = CONTEXT_REFS.filter(
+                    (ref) => !bindingEntries.some(([current]) => current === ref)
+                  );
+                  return (
+                    <Box
+                      key={`${rule.id}-context`}
+                      sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
+                    >
+                      <Stack spacing={1.5}>
+                        <Stack direction="row" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <Typography variant="subtitle2">{rule.name}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {rule.ruleId}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                        <TextField
+                          size="small"
+                          label="Context ID"
+                          value={rule.context.contextId}
+                          onChange={(event) => handleChangeContextId(rule.id, event.target.value)}
+                        />
+                        <Stack spacing={1}>
+                          {bindingEntries.map(([ref, value]) => (
+                            <Stack
+                              key={`${rule.id}-${ref}`}
+                              direction={{ xs: "column", sm: "row" }}
+                              spacing={1}
+                              alignItems={{ xs: "stretch", sm: "center" }}
+                            >
+                              <FormControl size="small" sx={{ minWidth: 160 }}>
+                                <InputLabel>Reference</InputLabel>
+                                <Select
+                                  label="Reference"
+                                  value={ref}
+                                  onChange={(event) =>
+                                    handleChangeBindingReference(rule.id, ref, event.target.value as ContextRef)
+                                  }
+                                >
+                                  {CONTEXT_REFS.map((candidate) => (
+                                    <MenuItem
+                                      key={candidate}
+                                      value={candidate}
+                                      disabled={candidate !== ref && rule.context.bindings[candidate] !== undefined}
+                                    >
+                                      {candidate}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label="Binding description"
+                                value={value}
+                                onChange={(event) => handleChangeBindingValue(rule.id, ref, event.target.value)}
+                              />
+                              <Button size="small" color="error" onClick={() => handleRemoveContextBinding(rule.id, ref)}>
+                                Remove
+                              </Button>
+                            </Stack>
+                          ))}
+                          <Button
+                            size="small"
+                            startIcon={<AddIcon fontSize="small" />}
+                            disabled={!availableRefs.length}
+                            onClick={() => handleAddContextBinding(rule.id)}
+                          >
+                            Add binding
+                          </Button>
+                        </Stack>
+                      </Stack>
+                    </Box>
+                  );
+                })}
+                          {drawerContextRules.length === 0 && rules.length > 0 && (
+                            <Typography variant="body2" color="text.secondary">
+                              {runDrawerFilterRuleId
+                                ? "Selected rule is no longer available."
+                                : "Select a rule to configure its evaluation context."}
+                            </Typography>
+                          )}
+              </Stack>
+            </Box>
+            <Divider />
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Evaluation results
+              </Typography>
+              <Stack spacing={1}>
+                {!activeProduct && (
+                  <Alert severity="warning">Create or select a product to evaluate rules.</Alert>
+                )}
+                {drawerRuleResults.map((result) => (
+                  <Card key={result.internalId} variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardHeader title={result.name || result.ruleId} subheader={`Status: ${result.status.toUpperCase()}`} />
+                    <CardContent>
+                      <Stack spacing={0.5}>
+                        {result.details.map((line, index) => (
+                          <Typography
+                            key={`${result.internalId}-${index}`}
+                            variant="body2"
+                            color={line.startsWith("✗") ? "error.main" : "text.secondary"}
+                          >
+                            {line}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+                {drawerRuleResults.length === 0 && (
+                  <Alert severity="info">No applicable rules for the current selection.</Alert>
+                )}
+              </Stack>
+            </Box>
+          </Stack>
+        </Box>
+      </Drawer>
 
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((previous) => ({ ...previous, open: false }))}>
         <Alert severity={snack.severity} variant="filled">

@@ -1,37 +1,55 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardContent,
   CardHeader,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   MenuItem,
   Select,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
-import type { SelectChangeEvent } from "@mui/material/Select";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
   CONTEXT_REFS,
   LOGICAL_OPERATORS,
   RULE_TYPES,
   SELECTION_SCOPES,
+  TARGET_ACTIONS,
   VALUE_OPERATORS,
   createRuleLink,
   defaultScopeDefinition,
   updateTimestamp,
   type CompoundExpression,
   type DateTimeExpression,
+  type Feature,
   type FeatureExpression,
   type LogicalExpression,
+  type Product,
   type ProductExpression,
   type QuantityExpression,
   type SelectionScope,
@@ -42,6 +60,7 @@ import {
   type RuleLink,
   type RuleLinkKind,
   type Concept,
+  type ValueOperator,
   uid,
 } from "../domain";
 
@@ -57,6 +76,7 @@ type RulesWorkspaceProps = {
   instances: ProductInstance[];
   conceptLabel: (id: string) => string;
   concepts: Concept[];
+  onRunRule?: (ruleId: string) => void;
 };
 
 type ExpressionEditorProps = {
@@ -65,11 +85,35 @@ type ExpressionEditorProps = {
   onRemove?: () => void;
   conceptLabel: (id: string) => string;
   concepts: Concept[];
+  featureOptions: FeatureOption[];
+  productOptions: ProductOption[];
+  quantityOptions: QuantityOption[];
+  diagnostics: Map<string, ExpressionDiagnostic>;
 };
 
 type ConditionKind = "Taxonomy" | "DateTime" | "Feature" | "Product" | "Quantity";
 
 const nextExpressionId = () => `EXP-${uid().toUpperCase()}`;
+
+type FeatureOption = {
+  id: string;
+  name: string;
+  identifier: string;
+  source: "schema" | "product";
+  originId: string;
+  originLabel: string;
+  values: Feature["values"];
+  tags: string[];
+};
+
+type ProductOption = { id: string; label: string };
+
+type QuantityOption = { id: string; label: string };
+
+type ExpressionDiagnostic = {
+  status: "ok" | "warning" | "error";
+  message?: string;
+};
 
 const isCompound = (expression: LogicalExpression): expression is CompoundExpression =>
   expression.kind === "Compound";
@@ -84,81 +128,312 @@ const isProductExpression = (expression: LogicalExpression): expression is Produ
 const isQuantityExpression = (expression: LogicalExpression): expression is QuantityExpression =>
   expression.kind === "Quantity";
 
+type OutlineNode = {
+  expressionId: string;
+  label: string;
+  depth: number;
+  diagnostic: ExpressionDiagnostic;
+};
+
+const VALUE_REQUIRED_OPERATORS: ValueOperator[] = [
+  "EQUALS",
+  "NOT_EQUALS",
+  "LESS_THAN",
+  "LESS_THAN_OR_EQUAL",
+  "GREATER_THAN",
+  "GREATER_THAN_OR_EQUAL",
+  "IN",
+  "NOT_IN",
+  "CONTAINS",
+  "NOT_CONTAINS",
+  "STARTS_WITH",
+  "ENDS_WITH",
+  "MATCHES_PATTERN",
+];
+
+const gatherFeatureOptions = (
+  schemas: ProductSchema[],
+  products: Product[]
+): FeatureOption[] => {
+  const options: FeatureOption[] = [];
+  for (const schema of schemas) {
+    for (const feature of schema.featureTemplates) {
+      const identifier = feature.name?.trim() || feature.id;
+      if (!identifier) continue;
+      options.push({
+        id: feature.id || feature.name,
+        name: feature.name || feature.id,
+        identifier,
+        source: "schema",
+        originId: schema.id,
+        originLabel: schema.name,
+        values: feature.values,
+        tags: feature.tags,
+      });
+    }
+  }
+  for (const product of products) {
+    for (const feature of product.features) {
+      const identifier = feature.name?.trim() || feature.id;
+      if (!identifier) continue;
+      options.push({
+        id: feature.id || feature.name,
+        name: feature.name || feature.id,
+        identifier,
+        source: "product",
+        originId: product.id,
+        originLabel: product.name,
+        values: feature.values,
+        tags: feature.tags,
+      });
+    }
+  }
+  const seen = new Map<string, FeatureOption>();
+  for (const option of options) {
+    if (!option.identifier) continue;
+    if (!seen.has(option.identifier)) {
+      seen.set(option.identifier, option);
+      continue;
+    }
+    const existing = seen.get(option.identifier)!;
+    if (existing.source === "schema" && option.source === "product") {
+      // keep schema definition as canonical but merge tags
+      existing.tags = Array.from(new Set([...existing.tags, ...option.tags]));
+    }
+  }
+  return Array.from(seen.values());
+};
+
+const findProductFeature = (product: Product | undefined, featureId: string) =>
+  product?.features.find((feature) => feature.id === featureId || feature.name === featureId);
+
+const collectExpressionDiagnostics = (
+  expression: LogicalExpression,
+  helpers: {
+    featureOptions: FeatureOption[];
+    productOptions: ProductOption[];
+    conceptLabel: (id: string) => string;
+    simulationProduct?: Product;
+  }
+) => {
+  const diagnostics = new Map<string, ExpressionDiagnostic>();
+  const visit = (node: LogicalExpression) => {
+    let diagnostic: ExpressionDiagnostic = { status: "ok" };
+    if (isCompound(node)) {
+      if (!node.children.length) {
+        diagnostic = { status: "warning", message: "Add at least one child condition" };
+      }
+    } else if (isTaxonomy(node)) {
+      if (!node.taxonomyConceptId) {
+        diagnostic = { status: "error", message: "Select a taxonomy concept" };
+      }
+    } else if (isFeatureExpression(node)) {
+      if (!node.featureId) {
+        diagnostic = { status: "error", message: "Select a feature" };
+      } else {
+        const feature = helpers.featureOptions.find(
+          (option) =>
+            option.identifier === node.featureId ||
+            option.id === node.featureId ||
+            option.name === node.featureId
+        );
+        if (!feature) {
+          diagnostic = { status: "warning", message: "Feature not available in current assignments" };
+        } else if (VALUE_REQUIRED_OPERATORS.includes(node.operator) && !node.value && !node.featureTagId) {
+          diagnostic = { status: "warning", message: "Provide a comparison value or add a taxonomy tag" };
+        } else if (helpers.simulationProduct && !findProductFeature(helpers.simulationProduct, node.featureId)) {
+          diagnostic = { status: "warning", message: "Preview product lacks this feature" };
+        }
+      }
+    } else if (isProductExpression(node)) {
+      if (!node.productId) {
+        diagnostic = { status: "error", message: "Select a product to reference" };
+      } else if (!helpers.productOptions.some((option) => option.id === node.productId)) {
+        diagnostic = { status: "warning", message: "Product not linked to this rule" };
+      }
+    } else if (isQuantityExpression(node)) {
+      if (!node.itemId) {
+        diagnostic = { status: "warning", message: "Specify an item identifier" };
+      }
+      if (VALUE_REQUIRED_OPERATORS.includes(node.operator) && typeof node.quantity !== "number") {
+        diagnostic = { status: "warning", message: "Provide a numeric quantity" };
+      }
+    } else if (isDateTime(node)) {
+      if (!node.value) {
+        diagnostic = { status: "warning", message: "Provide a date or range" };
+      }
+    }
+    diagnostics.set(node.expressionId, diagnostic);
+    if (isCompound(node)) {
+      node.children.forEach(visit);
+    }
+  };
+  visit(expression);
+  return diagnostics;
+};
+
+const describeExpressionLabel = (expression: LogicalExpression, conceptLabel: (id: string) => string): string => {
+  if (isCompound(expression)) {
+    return `Compound ${expression.operator}`;
+  }
+  if (isTaxonomy(expression)) {
+    return `Taxonomy · ${conceptLabel(expression.taxonomyConceptId) || expression.taxonomyConceptId || "Unassigned"}`;
+  }
+  if (isFeatureExpression(expression)) {
+    return `Feature · ${expression.featureId || "Unassigned"}`;
+  }
+  if (isProductExpression(expression)) {
+    return `Product · ${expression.productId || "Unassigned"}`;
+  }
+  if (isQuantityExpression(expression)) {
+    return `Quantity · ${expression.itemId || "Unassigned"}`;
+  }
+  if (isDateTime(expression)) {
+    return `Date/Time · ${expression.operator}`;
+  }
+  return "Unsupported expression";
+};
+
+const buildExpressionOutline = (
+  expression: LogicalExpression,
+  diagnostics: Map<string, ExpressionDiagnostic>,
+  conceptLabel: (id: string) => string
+): OutlineNode[] => {
+  const nodes: OutlineNode[] = [];
+  const visit = (node: LogicalExpression, depth: number) => {
+    nodes.push({
+      expressionId: node.expressionId,
+      label: describeExpressionLabel(node, conceptLabel),
+      depth,
+      diagnostic: diagnostics.get(node.expressionId) ?? { status: "ok" },
+    });
+    if (isCompound(node)) {
+      node.children.forEach((child) => visit(child, depth + 1));
+    }
+  };
+  visit(expression, 0);
+  return nodes;
+};
+
+const collectValueSuggestions = (feature?: FeatureOption) => {
+  if (!feature) return [];
+  const suggestions = new Set<string>();
+  for (const value of feature.values) {
+    if (!value) continue;
+    if (value.kind === "SingleValue") {
+      suggestions.add(String(value.value));
+    } else if (value.kind === "DiscreteSet") {
+      value.values.forEach((entry) => suggestions.add(String(entry)));
+    } else if (value.kind === "ValueRange") {
+      suggestions.add(`${value.min}-${value.max}`);
+    }
+  }
+  return Array.from(suggestions).filter(Boolean);
+};
+
+const outlineStatusIcon = (status: ExpressionDiagnostic["status"]) => {
+  if (status === "error") return <ErrorOutlineIcon color="error" fontSize="small" />;
+  if (status === "warning") return <WarningAmberIcon color="warning" fontSize="small" />;
+  return <CheckCircleOutlineIcon color="success" fontSize="small" />;
+};
+
 const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   expression,
   onChange,
   onRemove,
   conceptLabel,
   concepts,
+  featureOptions,
+  productOptions,
+  quantityOptions,
+  diagnostics,
 }) => {
-  const [conditionKind, setConditionKind] = useState<ConditionKind>("Taxonomy");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const diagnostic = diagnostics.get(expression.expressionId);
+
+  const diagnosticBanner =
+    diagnostic && diagnostic.status !== "ok" ? (
+      <Alert
+        severity={diagnostic.status === "error" ? "error" : "warning"}
+        variant="outlined"
+        sx={{ borderRadius: 2 }}
+      >
+        {diagnostic.message}
+      </Alert>
+    ) : null;
 
   if (isCompound(expression)) {
-    const handleChildUpdate = (index: number, updated: LogicalExpression) => {
-      onChange({
-        ...expression,
-        children: expression.children.map((child, idx) => (idx === index ? updated : child)),
-      });
+    const appendChild = (child: LogicalExpression) => {
+      onChange({ ...expression, children: [...expression.children, child] });
     };
 
     const handleAddChild = (kind: ConditionKind | "Compound") => {
       if (kind === "Taxonomy") {
-        const next: TaxonomyExpression = {
+        appendChild({
           kind: "Taxonomy",
           expressionId: nextExpressionId(),
           subjectRef: "currentProduct",
           taxonomyConceptId: "",
           taxonomyScheme: "apmwg:product_taxonomy_scheme",
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
-      } else if (kind === "DateTime") {
-        const next: DateTimeExpression = {
+        });
+        return;
+      }
+      if (kind === "DateTime") {
+        appendChild({
           kind: "DateTime",
           expressionId: nextExpressionId(),
           subjectRef: "offer",
           operator: "IN",
           value: "",
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
-      } else if (kind === "Feature") {
-        const next: FeatureExpression = {
-          kind: "Feature",
-          expressionId: nextExpressionId(),
-          subjectRef: "currentProduct",
-          featureId: "",
-          operator: "EQUALS",
-          value: "",
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
-      } else if (kind === "Product") {
-        const next: ProductExpression = {
+        });
+        return;
+      }
+      if (kind === "Feature") {
+      appendChild({
+        kind: "Feature",
+        expressionId: nextExpressionId(),
+        subjectRef: "currentProduct",
+        featureId: "",
+        operator: "EQUALS",
+        value: "",
+        featureTagId: undefined,
+      });
+        return;
+      }
+      if (kind === "Product") {
+        appendChild({
           kind: "Product",
           expressionId: nextExpressionId(),
           subjectRef: "currentProduct",
           productId: "",
           operator: "EQUALS",
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
-      } else if (kind === "Quantity") {
-        const next: QuantityExpression = {
+        });
+        return;
+      }
+      if (kind === "Quantity") {
+        appendChild({
           kind: "Quantity",
           expressionId: nextExpressionId(),
           subjectRef: "currentProduct",
           itemId: "",
           quantity: 0,
           operator: "EQUALS",
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
-      } else {
-        const next: CompoundExpression = {
-          kind: "Compound",
-          expressionId: nextExpressionId(),
-          operator: "AND",
-          description: "",
-          children: [],
-        };
-        onChange({ ...expression, children: [...expression.children, next] });
+        });
+        return;
       }
+      appendChild({
+        kind: "Compound",
+        expressionId: nextExpressionId(),
+        operator: "AND",
+        description: "",
+        children: [],
+      });
+    };
+    const handleChildUpdate = (index: number, updated: LogicalExpression) => {
+      onChange({
+        ...expression,
+        children: expression.children.map((child, idx) => (idx === index ? updated : child)),
+      });
     };
 
     const handleRemoveChild = (index: number) => {
@@ -170,7 +445,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
 
     return (
       <Stack spacing={2} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} alignItems="center">
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
@@ -200,6 +475,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
+        {diagnosticBanner}
         <Stack spacing={2}>
           {expression.children.map((child, index) => (
             <ExpressionEditor
@@ -209,44 +485,54 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
               onRemove={() => handleRemoveChild(index)}
               conceptLabel={conceptLabel}
               concepts={concepts}
+              featureOptions={featureOptions}
+              productOptions={productOptions}
+              quantityOptions={quantityOptions}
+              diagnostics={diagnostics}
             />
           ))}
         </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Condition type</InputLabel>
-            <Select
-              label="Condition type"
-              value={conditionKind}
-              onChange={(event) => setConditionKind(event.target.value as ConditionKind)}
-            >
-              <MenuItem value="Taxonomy">Taxonomy condition</MenuItem>
-              <MenuItem value="DateTime">Date/time condition</MenuItem>
-              <MenuItem value="Feature">Feature condition</MenuItem>
-              <MenuItem value="Product">Product condition</MenuItem>
-              <MenuItem value="Quantity">Quantity condition</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<AddIcon fontSize="small" />}
-            onClick={() => handleAddChild(conditionKind)}
-          >
+          <Button size="small" variant="outlined" startIcon={<AddIcon fontSize="small" />} onClick={() => setWizardOpen(true)}>
             Add condition
           </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<AddIcon fontSize="small" />}
-            onClick={() => handleAddChild("Compound")}
-          >
+          <Button size="small" variant="outlined" startIcon={<AddIcon fontSize="small" />} onClick={() => handleAddChild("Compound")}>
             Add nested group
           </Button>
         </Stack>
+        <ConditionWizard
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          onSelect={(kind) => {
+            setWizardOpen(false);
+            handleAddChild(kind);
+          }}
+        />
       </Stack>
     );
   }
+
+  const renderSubjectPicker = () => (
+    <FormControl size="small" sx={{ minWidth: 160 }}>
+      <InputLabel>Subject</InputLabel>
+      <Select
+        label="Subject"
+        value={(expression as TaxonomyExpression | FeatureExpression | ProductExpression | QuantityExpression | DateTimeExpression).subjectRef}
+        onChange={(event) =>
+          onChange({
+            ...expression,
+            subjectRef: event.target.value as (typeof CONTEXT_REFS)[number],
+          } as LogicalExpression)
+        }
+      >
+        {CONTEXT_REFS.map((ref) => (
+          <MenuItem key={ref} value={ref}>
+            {ref}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
 
   if (isTaxonomy(expression)) {
     const label = expression.taxonomyConceptId ? conceptLabel(expression.taxonomyConceptId) : "";
@@ -262,27 +548,15 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Subject</InputLabel>
-            <Select
-              label="Subject"
-              value={expression.subjectRef}
-              onChange={(event) =>
-                onChange({ ...expression, subjectRef: event.target.value as typeof expression.subjectRef })
-              }
-            >
-              {CONTEXT_REFS.map((ref) => (
-                <MenuItem key={ref} value={ref}>
-                  {ref}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        {diagnosticBanner}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="flex-start">
+          {renderSubjectPicker()}
           <Autocomplete<Concept, false, false, true>
             freeSolo
             size="small"
             options={concepts}
+            sx={{ flex: 1 }}
+            ListboxProps={{ style: { maxHeight: 320, minWidth: 320 } }}
             value={
               concepts.find((concept) => concept.id === expression.taxonomyConceptId) ??
               (expression.taxonomyConceptId ? expression.taxonomyConceptId : null)
@@ -302,46 +576,30 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             getOptionLabel={(option) => (typeof option === "string" ? option : option.label || option.id)}
             renderOption={(props, option) => (
               <li {...props} key={option.id}>
-                <Stack spacing={0}>
-                  <Typography variant="body2">{option.label || option.id}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {option.id}
-                  </Typography>
-                </Stack>
+                <Typography variant="body2">{option.label || option.id}</Typography>
               </li>
             )}
             renderInput={(params) => (
-              <TextField {...params} label="Taxonomy concept" placeholder="Search by label or ID" />
+              <TextField {...params} label="Taxonomy concept" placeholder="Search by label or ID" fullWidth />
             )}
           />
-          <TextField
-            size="small"
-            label="Taxonomy scheme"
-            value={expression.taxonomyScheme}
-            onChange={(event) => onChange({ ...expression, taxonomyScheme: event.target.value })}
-          />
         </Stack>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Selection scope</InputLabel>
-            <Select
-              label="Selection scope"
-              value={expression.selectionScope ?? ""}
-              onChange={(event: SelectChangeEvent<string>) => {
-                const scope = event.target.value as SelectionScope | "";
-                onChange({ ...expression, selectionScope: scope || undefined });
-              }}
-            >
-              <MenuItem value="">
-                <em>Not specified</em>
-              </MenuItem>
-              {SELECTION_SCOPES.map((scope) => (
-                <MenuItem key={scope} value={scope}>
-                  {scope}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+          <ToggleButtonGroup
+            size="small"
+            value={expression.selectionScope ?? ""}
+            exclusive
+            onChange={(_, value) =>
+              onChange({ ...expression, selectionScope: (value as SelectionScope) || undefined })
+            }
+          >
+            <ToggleButton value="">Default</ToggleButton>
+            {SELECTION_SCOPES.map((scope) => (
+              <ToggleButton key={scope} value={scope}>
+                {scope.replace("_", " ")}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
           <TextField
             fullWidth
             size="small"
@@ -350,11 +608,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             onChange={(event) => onChange({ ...expression, description: event.target.value })}
           />
         </Stack>
-        {label && (
-          <Typography variant="caption" color="text.secondary">
-            Concept label: {label}
-          </Typography>
-        )}
+        {label && <Chip label={label} size="small" variant="outlined" sx={{ alignSelf: "flex-start" }} />}
       </Stack>
     );
   }
@@ -372,23 +626,9 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
+        {diagnosticBanner}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Subject</InputLabel>
-            <Select
-              label="Subject"
-              value={expression.subjectRef}
-              onChange={(event) =>
-                onChange({ ...expression, subjectRef: event.target.value as typeof expression.subjectRef })
-              }
-            >
-              {CONTEXT_REFS.map((ref) => (
-                <MenuItem key={ref} value={ref}>
-                  {ref}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {renderSubjectPicker()}
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
@@ -411,6 +651,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             placeholder="e.g. 2025-10-01/2025-12-31"
             value={expression.value}
             onChange={(event) => onChange({ ...expression, value: event.target.value })}
+            helperText="Use ISO date or range"
           />
         </Stack>
         <TextField
@@ -425,6 +666,13 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   }
 
   if (isFeatureExpression(expression)) {
+    const selectedFeature = featureOptions.find(
+      (option) =>
+        option.identifier === expression.featureId ||
+        option.id === expression.featureId ||
+        option.name === expression.featureId
+    );
+    const valueSuggestions = collectValueSuggestions(selectedFeature);
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -437,35 +685,38 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
+        {diagnosticBanner}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Subject</InputLabel>
-            <Select
-              label="Subject"
-              value={expression.subjectRef}
-              onChange={(event) =>
-                onChange({ ...expression, subjectRef: event.target.value as typeof expression.subjectRef })
-              }
-            >
-              {CONTEXT_REFS.map((ref) => (
-                <MenuItem key={ref} value={ref}>
-                  {ref}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
+          {renderSubjectPicker()}
+          <Autocomplete<FeatureOption, false, false, true>
+            freeSolo
             size="small"
-            label="Feature name or ID"
-            value={expression.featureId}
-            onChange={(event) => onChange({ ...expression, featureId: event.target.value })}
+            options={featureOptions}
+            sx={{ flex: 1 }}
+            ListboxProps={{ style: { maxHeight: 320, minWidth: 320 } }}
+            value={selectedFeature ?? (expression.featureId ? expression.featureId : null)}
+            onChange={(_, newValue) => {
+              if (!newValue) {
+                onChange({ ...expression, featureId: "" });
+              } else if (typeof newValue === "string") {
+                onChange({ ...expression, featureId: newValue });
+              } else {
+                onChange({ ...expression, featureId: newValue.identifier });
+              }
+            }}
+            getOptionLabel={(option) =>
+              typeof option === "string" ? option : `${option.name} (${option.source === "schema" ? "Schema" : "Product"})`
+            }
+            renderInput={(params) => <TextField {...params} label="Feature" placeholder="Search feature" fullWidth />}
           />
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
             <Select
               label="Operator"
               value={expression.operator}
-              onChange={(event) => onChange({ ...expression, operator: event.target.value as typeof expression.operator })}
+              onChange={(event) =>
+                onChange({ ...expression, operator: event.target.value as typeof expression.operator })
+              }
             >
               {VALUE_OPERATORS.map((operator) => (
                 <MenuItem key={operator} value={operator}>
@@ -474,13 +725,57 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
               ))}
             </Select>
           </FormControl>
-          <TextField
-            size="small"
-            label="Value"
-            value={expression.value ?? ""}
-            onChange={(event) => onChange({ ...expression, value: event.target.value })}
-          />
         </Stack>
+        <Autocomplete<string, false, false, true>
+          freeSolo
+          options={valueSuggestions}
+          value={expression.value ?? ""}
+          onChange={(_, newValue) => onChange({ ...expression, value: newValue ?? "" })}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              size="small"
+              label="Comparison value"
+              placeholder={valueSuggestions.length ? "Select or type" : "Type a value"}
+            />
+          )}
+        />
+        <Autocomplete<Concept, false, false, true>
+          freeSolo
+          size="small"
+          options={concepts}
+          value={
+            expression.featureTagId
+              ? concepts.find((concept) => concept.id === expression.featureTagId) ?? expression.featureTagId
+              : null
+          }
+          onChange={(_, newValue) => {
+            if (!newValue) {
+              onChange({ ...expression, featureTagId: undefined });
+            } else if (typeof newValue === "string") {
+              onChange({ ...expression, featureTagId: newValue });
+            } else {
+              onChange({ ...expression, featureTagId: newValue.id });
+            }
+          }}
+          isOptionEqualToValue={(option, value) =>
+            typeof value === "string" ? option.id === value : option.id === value.id
+          }
+          getOptionLabel={(option) => (typeof option === "string" ? option : option.label || option.id)}
+          ListboxProps={{ style: { maxHeight: 320, minWidth: 320 } }}
+          renderOption={(props, option) => (
+            <li {...props} key={option.id}>
+              <Typography variant="body2">{option.label || option.id}</Typography>
+            </li>
+          )}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Required taxonomy tag"
+              placeholder="Optional – ensure feature carries tag"
+            />
+          )}
+        />
         <TextField
           fullWidth
           size="small"
@@ -488,11 +783,19 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
           value={expression.description ?? ""}
           onChange={(event) => onChange({ ...expression, description: event.target.value })}
         />
+        {selectedFeature?.tags?.length ? (
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            {selectedFeature.tags.map((tag) => (
+              <Chip key={tag} label={conceptLabel(tag) || tag} size="small" variant="outlined" />
+            ))}
+          </Stack>
+        ) : null}
       </Stack>
     );
   }
 
   if (isProductExpression(expression)) {
+    const selectedProduct = productOptions.find((option) => option.id === expression.productId);
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -505,28 +808,25 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
+        {diagnosticBanner}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Subject</InputLabel>
-            <Select
-              label="Subject"
-              value={expression.subjectRef}
-              onChange={(event) =>
-                onChange({ ...expression, subjectRef: event.target.value as typeof expression.subjectRef })
-              }
-            >
-              {CONTEXT_REFS.map((ref) => (
-                <MenuItem key={ref} value={ref}>
-                  {ref}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
+          {renderSubjectPicker()}
+          <Autocomplete<ProductOption, false, false, true>
+            freeSolo
             size="small"
-            label="Product ID"
-            value={expression.productId}
-            onChange={(event) => onChange({ ...expression, productId: event.target.value })}
+            options={productOptions}
+            value={selectedProduct ?? (expression.productId ? expression.productId : null)}
+            onChange={(_, newValue) => {
+              if (!newValue) {
+                onChange({ ...expression, productId: "" });
+              } else if (typeof newValue === "string") {
+                onChange({ ...expression, productId: newValue });
+              } else {
+                onChange({ ...expression, productId: newValue.id });
+              }
+            }}
+            getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
+            renderInput={(params) => <TextField {...params} label="Product" placeholder="Search product" />}
           />
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
@@ -557,6 +857,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   }
 
   if (isQuantityExpression(expression)) {
+    const selectedItem = quantityOptions.find((option) => option.id === expression.itemId);
     return (
       <Stack spacing={2} sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -569,37 +870,32 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
             </IconButton>
           )}
         </Stack>
+        {diagnosticBanner}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>Subject</InputLabel>
-            <Select
-              label="Subject"
-              value={expression.subjectRef}
-              onChange={(event) =>
-                onChange({ ...expression, subjectRef: event.target.value as typeof expression.subjectRef })
-              }
-            >
-              {CONTEXT_REFS.map((ref) => (
-                <MenuItem key={ref} value={ref}>
-                  {ref}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
+          {renderSubjectPicker()}
+          <Autocomplete<QuantityOption, false, false, true>
+            freeSolo
             size="small"
-            label="Item ID"
-            value={expression.itemId}
-            onChange={(event) => onChange({ ...expression, itemId: event.target.value })}
+            options={quantityOptions}
+            value={selectedItem ?? (expression.itemId ? expression.itemId : null)}
+            onChange={(_, newValue) => {
+              if (!newValue) {
+                onChange({ ...expression, itemId: "" });
+              } else if (typeof newValue === "string") {
+                onChange({ ...expression, itemId: newValue });
+              } else {
+                onChange({ ...expression, itemId: newValue.id });
+              }
+            }}
+            getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
+            renderInput={(params) => <TextField {...params} label="Item" placeholder="Bundle item identifier" />}
           />
           <TextField
             size="small"
             type="number"
             label="Quantity"
             value={expression.quantity}
-            onChange={(event) =>
-              onChange({ ...expression, quantity: Number(event.target.value) || 0 })
-            }
+            onChange={(event) => onChange({ ...expression, quantity: Number(event.target.value) || 0 })}
           />
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
@@ -648,6 +944,44 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   );
 };
 
+type ConditionWizardProps = {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (kind: ConditionKind | "Compound") => void;
+};
+
+const CONDITION_CHOICES: { label: string; description: string; value: ConditionKind | "Compound" }[] = [
+  { label: "Taxonomy condition", description: "Match classification tags", value: "Taxonomy" },
+  { label: "Feature condition", description: "Inspect feature values", value: "Feature" },
+  { label: "Product condition", description: "Reference another product", value: "Product" },
+  { label: "Quantity condition", description: "Require item counts", value: "Quantity" },
+  { label: "Date/time condition", description: "Schedule-based logic", value: "DateTime" },
+  { label: "Compound group", description: "Nest AND/OR groups", value: "Compound" },
+];
+
+const ConditionWizard: React.FC<ConditionWizardProps> = ({ open, onClose, onSelect }) => (
+  <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <DialogTitle>Select condition type</DialogTitle>
+    <DialogContent dividers>
+      <List disablePadding>
+        {CONDITION_CHOICES.map((choice) => (
+          <ListItemButton
+            key={choice.value}
+            onClick={() => {
+              onSelect(choice.value);
+            }}
+          >
+            <ListItemText primary={choice.label} secondary={choice.description} />
+          </ListItemButton>
+        ))}
+      </List>
+    </DialogContent>
+    <DialogActions>
+      <Button onClick={onClose}>Cancel</Button>
+    </DialogActions>
+  </Dialog>
+);
+
 const formatList = (values: string[]) => values.join(", ");
 const parseList = (value: string) =>
   value
@@ -672,6 +1006,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
   instances,
   conceptLabel,
   concepts,
+  onRunRule,
 }) => {
   const schemaOptions = useMemo(
     () => schemas.map((schema) => ({ id: schema.id, label: schema.name })),
@@ -685,24 +1020,26 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
       })),
     [instances]
   );
-  const schemaName = useCallback(
-    (id?: string) => {
-      if (!id) return "Not set";
-      return schemaOptions.find((option) => option.id === id)?.label ?? id;
-    },
-    [schemaOptions]
-  );
-  const productName = useCallback(
-    (id?: string) => {
-      if (!id) return "Not set";
-      return productOptions.find((option) => option.id === id)?.label ?? id;
-    },
-    [productOptions]
-  );
   const visibleRules = useMemo(
     () => (selectedRuleId ? rules.filter((rule) => rule.id === selectedRuleId) : rules),
     [rules, selectedRuleId]
   );
+
+  const schemaById = useMemo(() => new Map(schemas.map((schema) => [schema.id, schema])), [schemas]);
+  const productById = useMemo(
+    () => new Map(instances.map((instance) => [instance.product.id, instance.product])),
+    [instances]
+  );
+
+  const [simulationProductId, setSimulationProductId] = useState<string>(instances[0]?.product.id ?? "");
+  useEffect(() => {
+    if (!simulationProductId && instances[0]) {
+      setSimulationProductId(instances[0].product.id);
+    } else if (simulationProductId && !productById.has(simulationProductId) && instances[0]) {
+      setSimulationProductId(instances[0].product.id);
+    }
+  }, [instances, productById, simulationProductId]);
+  const simulationProduct = simulationProductId ? productById.get(simulationProductId) : undefined;
 
   const updateRule = useCallback(
     (ruleId: string, updater: (rule: Rule) => Rule) => {
@@ -781,6 +1118,33 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
               definition: defaultScopeDefinition(),
             };
             const linksForRule = ruleLinks.filter((link) => link.ruleRef === rule.id);
+            const assignedSchemas = linksForRule
+              .filter((link) => link.kind === "Schema" && link.targetId)
+              .map((link) => schemaById.get(link.targetId!))
+              .filter((item): item is ProductSchema => Boolean(item));
+            const assignedProducts = linksForRule
+              .filter((link) => link.kind === "Product" && link.targetId)
+              .map((link) => productById.get(link.targetId!))
+              .filter((item): item is Product => Boolean(item));
+            const featureOptionsForRule = gatherFeatureOptions(assignedSchemas, assignedProducts);
+            const productOptionsForConditions = assignedProducts.length
+              ? assignedProducts.map((product) => ({ id: product.id, label: product.name || product.id }))
+              : productOptions;
+            const quantityOptionsForRule = assignedProducts.length
+              ? assignedProducts.flatMap((product) =>
+                  product.features.map((feature) => ({
+                    id: feature.id || feature.name,
+                    label: `${feature.name || feature.id} · ${product.name || product.id}`,
+                  }))
+                )
+              : [];
+            const diagnostics = collectExpressionDiagnostics(rule.expression, {
+              featureOptions: featureOptionsForRule,
+              productOptions: productOptionsForConditions,
+              conceptLabel,
+              simulationProduct,
+            });
+            const outlineNodes = buildExpressionOutline(rule.expression, diagnostics, conceptLabel);
 
             return (
               <Card key={rule.id} variant="outlined" sx={{ borderRadius: 2 }}>
@@ -792,6 +1156,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                           label="Rule ID"
                           size="small"
                           value={rule.ruleId}
+                          sx={{ width: { xs: "100%", sm: 220 } }}
                           onChange={(event) =>
                             updateRule(rule.id, (current) => ({ ...current, ruleId: event.target.value }))
                           }
@@ -800,6 +1165,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                           label="Rule name"
                           size="small"
                           fullWidth
+                          sx={{ maxWidth: 420 }}
                           value={rule.name}
                           onChange={(event) =>
                             updateRule(rule.id, (current) => ({ ...current, name: event.target.value }))
@@ -810,6 +1176,7 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                         label="Description"
                         size="small"
                         fullWidth
+                        sx={{ maxWidth: 600 }}
                         multiline
                         minRows={2}
                         value={rule.description}
@@ -820,353 +1187,572 @@ const RulesWorkspace: React.FC<RulesWorkspaceProps> = ({
                     </Stack>
                   }
                   action={
-                    <IconButton onClick={() => handleDeleteRule(rule.id)} aria-label="Delete rule">
-                      <DeleteIcon />
-                    </IconButton>
+                    <Stack spacing={1} alignItems="flex-start">
+                      {onRunRule && (
+                        <Button size="small" variant="outlined" onClick={() => onRunRule(rule.id)}>
+                          Run
+                        </Button>
+                      )}
+                      <IconButton onClick={() => handleDeleteRule(rule.id)} aria-label="Delete rule">
+                        <DeleteIcon />
+                      </IconButton>
+                    </Stack>
                   }
                 />
                 <CardContent>
                   <Stack spacing={3}>
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                      <FormControl size="small" sx={{ minWidth: 200 }}>
-                        <InputLabel>Rule type</InputLabel>
-                        <Select
-                          label="Rule type"
-                          value={rule.type}
-                          onChange={(event) =>
-                            updateRule(rule.id, (current) => ({
-                              ...current,
-                              type: event.target.value as Rule["type"],
-                            }))
-                          }
-                        >
-                          {RULE_TYPES.map((type) => (
-                            <MenuItem key={type} value={type}>
-                              {type}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        size="small"
-                        type="number"
-                        label="Priority"
-                        value={rule.priority}
-                        onChange={(event) =>
-                          updateRule(rule.id, (current) => ({
-                            ...current,
-                            priority: Number(event.target.value),
-                          }))
-                        }
-                      />
-                    </Stack>
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Logical expression
-                      </Typography>
-                      <ExpressionEditor
-                        expression={rule.expression}
-                        onChange={(expressionValue) =>
-                          updateRule(rule.id, (current) => ({ ...current, expression: expressionValue }))
-                        }
-                        conceptLabel={conceptLabel}
-                        concepts={concepts}
-                      />
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Assignments
-                      </Typography>
-                      <Stack spacing={2}>
-                        {linksForRule.map((link) => {
-                          const window = formatWindow(link.effectiveFrom, link.effectiveTo);
-                          return (
-                            <Stack
-                              key={link.id}
-                              spacing={2}
-                              sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
-                            >
-                              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
-                                <FormControl size="small" sx={{ minWidth: 160 }}>
-                                  <InputLabel>Scope</InputLabel>
-                                  <Select
-                                    label="Scope"
-                                    value={link.kind}
-                                    onChange={(event) => {
-                                      const nextKind = event.target.value as RuleLinkKind;
-                                      updateRuleLink(link.id, (current) => ({
+                    <Stack direction={{ xs: "column", lg: "row" }} spacing={3} alignItems="stretch">
+                      <Box sx={{ flex: 2 }}>
+                        <Stack spacing={2}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            <FormControl size="small" sx={{ minWidth: 200 }}>
+                              <InputLabel>Rule type</InputLabel>
+                              <Select
+                                label="Rule type"
+                                value={rule.type}
+                                onChange={(event) =>
+                                  updateRule(rule.id, (current) => ({
+                                    ...current,
+                                    type: event.target.value as Rule["type"],
+                                  }))
+                                }
+                              >
+                                {RULE_TYPES.map((type) => (
+                                  <MenuItem key={type} value={type}>
+                                    {type}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            <TextField
+                              size="small"
+                              type="number"
+                              label="Priority"
+                              value={rule.priority}
+                              onChange={(event) =>
+                                updateRule(rule.id, (current) => ({
+                                  ...current,
+                                  priority: Number(event.target.value),
+                                }))
+                              }
+                            />
+                          </Stack>
+                          <Box>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Logical expression
+                            </Typography>
+                            <ExpressionEditor
+                              expression={rule.expression}
+                              onChange={(expressionValue) =>
+                                updateRule(rule.id, (current) => ({ ...current, expression: expressionValue }))
+                              }
+                              conceptLabel={conceptLabel}
+                              concepts={concepts}
+                              featureOptions={featureOptionsForRule}
+                              productOptions={productOptionsForConditions}
+                              quantityOptions={quantityOptionsForRule}
+                              diagnostics={diagnostics}
+                            />
+                          </Box>
+                          <Box>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Targets
+                            </Typography>
+                            <Stack spacing={2}>
+                              {rule.targets.length === 0 && (
+                                <Alert severity="warning">No targets defined yet.</Alert>
+                              )}
+                              {rule.targets.map((target, index) => (
+                                <Stack
+                                  key={target.targetId}
+                                  spacing={2}
+                                  sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
+                                >
+                                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                                    <TextField
+                                      size="small"
+                                      label="Target ID"
+                                      value={target.targetId}
+                                      onChange={(event) =>
+                                        updateRule(rule.id, (current) => ({
+                                          ...current,
+                                          targets: current.targets.map((existing, idx) =>
+                                            idx === index ? { ...existing, targetId: event.target.value } : existing
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                    <FormControl size="small" sx={{ minWidth: 160 }}>
+                                      <InputLabel>Action</InputLabel>
+                                      <Select
+                                        label="Action"
+                                        value={target.action}
+                                        onChange={(event) =>
+                                          updateRule(rule.id, (current) => ({
+                                            ...current,
+                                            targets: current.targets.map((existing, idx) =>
+                                              idx === index
+                                                ? { ...existing, action: event.target.value as typeof target.action }
+                                                : existing
+                                            ),
+                                          }))
+                                        }
+                                      >
+                                        {TARGET_ACTIONS.map((action) => (
+                                          <MenuItem key={action} value={action}>
+                                            {action}
+                                          </MenuItem>
+                                        ))}
+                                      </Select>
+                                    </FormControl>
+                                    <IconButton
+                                      onClick={() =>
+                                        updateRule(rule.id, (current) => ({
+                                          ...current,
+                                          targets: current.targets.filter((_, idx) => idx !== index),
+                                        }))
+                                      }
+                                      aria-label="Remove target"
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Stack>
+                                  {target.kind === "Taxonomy" ? (
+                                    <Autocomplete<Concept, false, false, true>
+                                      freeSolo
+                                      size="small"
+                                      sx={{ maxWidth: 420 }}
+                                      options={concepts}
+                                      value={
+                                        target.conceptId
+                                          ? concepts.find((concept) => concept.id === target.conceptId) ?? target.conceptId
+                                          : null
+                                      }
+                                      onChange={(_, newValue) => {
+                                        if (!newValue) {
+                                          updateRule(rule.id, (current) => ({
+                                            ...current,
+                                            targets: current.targets.map((existing, idx) =>
+                                              idx === index ? { ...existing, conceptId: "" } : existing
+                                            ),
+                                          }));
+                                        } else if (typeof newValue === "string") {
+                                          updateRule(rule.id, (current) => ({
+                                            ...current,
+                                            targets: current.targets.map((existing, idx) =>
+                                              idx === index ? { ...existing, conceptId: newValue } : existing
+                                            ),
+                                          }));
+                                        } else {
+                                          updateRule(rule.id, (current) => ({
+                                            ...current,
+                                            targets: current.targets.map((existing, idx) =>
+                                              idx === index ? { ...existing, conceptId: newValue.id } : existing
+                                            ),
+                                          }));
+                                        }
+                                      }}
+                                      isOptionEqualToValue={(option, value) =>
+                                        typeof value === "string" ? option.id === value : option.id === value.id
+                                      }
+                                      getOptionLabel={(option) => (typeof option === "string" ? option : option.label || option.id)}
+                                      ListboxProps={{ style: { maxHeight: 320, minWidth: 320 } }}
+                                      renderOption={(props, option) => (
+                                        <li {...props} key={option.id}>
+                                          <Typography variant="body2">{option.label || option.id}</Typography>
+                                        </li>
+                                      )}
+                                      renderInput={(params) => (
+                                        <TextField
+                                          {...params}
+                                          label="Taxonomy concept"
+                                          placeholder="Select concept to target"
+                                          helperText={conceptLabel(target.conceptId) || "Enter a concept ID"}
+                                        />
+                                      )}
+                                    />
+                                  ) : (
+                                    <TextField
+                                      size="small"
+                                      label="Product ID"
+                                      value={target.productId}
+                                      onChange={(event) =>
+                                        updateRule(rule.id, (current) => ({
+                                          ...current,
+                                          targets: current.targets.map((existing, idx) =>
+                                            idx === index ? { ...existing, productId: event.target.value } : existing
+                                          ),
+                                        }))
+                                      }
+                                    />
+                                  )}
+                                  <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="Description"
+                                    value={target.description ?? ""}
+                                    onChange={(event) =>
+                                      updateRule(rule.id, (current) => ({
                                         ...current,
-                                        kind: nextKind,
-                                        targetId: nextKind === "Global" ? undefined : current.targetId ?? "",
-                                      }));
-                                    }}
+                                        targets: current.targets.map((existing, idx) =>
+                                          idx === index ? { ...existing, description: event.target.value } : existing
+                                        ),
+                                      }))
+                                    }
+                                  />
+                                </Stack>
+                              ))}
+                              <Button
+                                size="small"
+                                startIcon={<AddIcon fontSize="small" />}
+                                onClick={() =>
+                                  updateRule(rule.id, (current) => ({
+                                    ...current,
+                                    targets: [
+                                      ...current.targets,
+                                      {
+                                        kind: "Taxonomy" as const,
+                                        targetId: `TARGET-${uid().toUpperCase()}`,
+                                        action: "DISABLE",
+                                        conceptId: "",
+                                        description: "",
+                                      },
+                                    ],
+                                  }))
+                                }
+                              >
+                                Add target
+                              </Button>
+                            </Stack>
+                          </Box>
+                        </Stack>
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 280 }}>
+                        <Stack spacing={2}>
+                          <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Expression outline
+                            </Typography>
+                            {outlineNodes.length ? (
+                              <List dense>
+                                {outlineNodes.map((node) => (
+                                  <ListItem key={node.expressionId} sx={{ pl: 2 + node.depth * 2 }}>
+                                    <ListItemIcon sx={{ minWidth: 32 }}>
+                                      {outlineStatusIcon(node.diagnostic.status)}
+                                    </ListItemIcon>
+                                    <ListItemText
+                                      primary={node.label}
+                                      secondary={node.diagnostic.message}
+                                      secondaryTypographyProps={{ color: node.diagnostic.status === "ok" ? "text.secondary" : "warning.main" }}
+                                    />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No expressions yet.
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Simulation preview
+                            </Typography>
+                            <FormControl size="small" fullWidth>
+                              <InputLabel>Preview product</InputLabel>
+                              <Select
+                                label="Preview product"
+                                value={simulationProductId}
+                                onChange={(event) => setSimulationProductId(event.target.value)}
+                              >
+                                {instances.map((instance) => (
+                                  <MenuItem key={instance.product.id} value={instance.product.id}>
+                                    {instance.product.name}
+                                  </MenuItem>
+                                ))}
+                                {!instances.length && <MenuItem value="">No products available</MenuItem>}
+                              </Select>
+                            </FormControl>
+                            <Typography variant="caption" color="text.secondary">
+                              Diagnostics highlight conditions missing data for the selected product.
+                            </Typography>
+                          </Box>
+                          <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+                              <Typography variant="subtitle2">Assignments</Typography>
+                              <Button size="small" onClick={() => handleAddLink(rule.id, "Global")}>+ Global</Button>
+                            </Stack>
+                            <Stack spacing={2}>
+                              {linksForRule.map((link) => {
+                                const window = formatWindow(link.effectiveFrom, link.effectiveTo);
+                                return (
+                                  <Stack
+                                    key={link.id}
+                                    spacing={2}
+                                    sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}
                                   >
-                                    <MenuItem value="Global">Global</MenuItem>
-                                    <MenuItem value="Schema">Schema</MenuItem>
-                                    <MenuItem value="Product">Product</MenuItem>
-                                  </Select>
-                                </FormControl>
-                                {link.kind === "Schema" && (
-                                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                                    <InputLabel>Schema</InputLabel>
-                                    <Select
-                                      label="Schema"
-                                      value={link.targetId ?? ""}
+                                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+                                      <FormControl size="small" sx={{ minWidth: 160 }}>
+                                        <InputLabel>Scope</InputLabel>
+                                        <Select
+                                          label="Scope"
+                                          value={link.kind}
+                                          onChange={(event) => {
+                                            const nextKind = event.target.value as RuleLinkKind;
+                                            updateRuleLink(link.id, (current) => ({
+                                              ...current,
+                                              kind: nextKind,
+                                              targetId: nextKind === "Global" ? undefined : current.targetId ?? "",
+                                            }));
+                                          }}
+                                        >
+                                          <MenuItem value="Global">Global</MenuItem>
+                                          <MenuItem value="Schema">Schema</MenuItem>
+                                          <MenuItem value="Product">Product</MenuItem>
+                                        </Select>
+                                      </FormControl>
+                                      {link.kind === "Schema" && (
+                                        <FormControl size="small" sx={{ minWidth: 200 }}>
+                                          <InputLabel>Schema</InputLabel>
+                                          <Select
+                                            label="Schema"
+                                            value={link.targetId ?? ""}
+                                            onChange={(event) =>
+                                              updateRuleLink(link.id, (current) => ({
+                                                ...current,
+                                                targetId: event.target.value,
+                                              }))
+                                            }
+                                          >
+                                            {schemaOptions.map((option) => (
+                                              <MenuItem key={option.id} value={option.id}>
+                                                {option.label}
+                                              </MenuItem>
+                                            ))}
+                                          </Select>
+                                        </FormControl>
+                                      )}
+                                      {link.kind === "Product" && (
+                                        <FormControl size="small" sx={{ minWidth: 200 }}>
+                                          <InputLabel>Product</InputLabel>
+                                          <Select
+                                            label="Product"
+                                            value={link.targetId ?? ""}
+                                            onChange={(event) =>
+                                              updateRuleLink(link.id, (current) => ({
+                                                ...current,
+                                                targetId: event.target.value,
+                                              }))
+                                            }
+                                          >
+                                            {productOptions.map((option) => (
+                                              <MenuItem key={option.id} value={option.id}>
+                                                {option.label}
+                                              </MenuItem>
+                                            ))}
+                                          </Select>
+                                        </FormControl>
+                                      )}
+                                      <IconButton onClick={() => handleDeleteLink(link.id)} aria-label="Remove assignment">
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    </Stack>
+                                    <TextField
+                                      size="small"
+                                      label="Description"
+                                      value={link.description ?? ""}
                                       onChange={(event) =>
                                         updateRuleLink(link.id, (current) => ({
                                           ...current,
-                                          targetId: event.target.value,
+                                          description: event.target.value,
                                         }))
                                       }
-                                    >
-                                      {schemaOptions.map((option) => (
-                                        <MenuItem key={option.id} value={option.id}>
-                                          {option.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                )}
-                                {link.kind === "Product" && (
-                                  <FormControl size="small" sx={{ minWidth: 200 }}>
-                                    <InputLabel>Product</InputLabel>
-                                    <Select
-                                      label="Product"
-                                      value={link.targetId ?? ""}
-                                      onChange={(event) =>
-                                        updateRuleLink(link.id, (current) => ({
-                                          ...current,
-                                          targetId: event.target.value,
-                                        }))
-                                      }
-                                    >
-                                      {productOptions.map((option) => (
-                                        <MenuItem key={option.id} value={option.id}>
-                                          {option.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-                                )}
-                                <IconButton onClick={() => handleDeleteLink(link.id)} aria-label="Remove assignment">
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
+                                    />
+                                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                      <TextField
+                                        size="small"
+                                        type="date"
+                                        label="Effective from"
+                                        InputLabelProps={{ shrink: true }}
+                                        value={link.effectiveFrom ?? ""}
+                                        onChange={(event) =>
+                                          updateRuleLink(link.id, (current) => ({
+                                            ...current,
+                                            effectiveFrom: event.target.value || undefined,
+                                          }))
+                                        }
+                                      />
+                                      <TextField
+                                        size="small"
+                                        type="date"
+                                        label="Effective to"
+                                        InputLabelProps={{ shrink: true }}
+                                        value={link.effectiveTo ?? ""}
+                                        onChange={(event) =>
+                                          updateRuleLink(link.id, (current) => ({
+                                            ...current,
+                                            effectiveTo: event.target.value || undefined,
+                                          }))
+                                        }
+                                      />
+                                    </Stack>
+                                    {window && (
+                                      <Typography variant="caption" color="text.secondary">
+                                        Active {window}
+                                      </Typography>
+                                    )}
+                                  </Stack>
+                                );
+                              })}
+                              {!linksForRule.length && (
+                                <Alert severity="info">No assignments yet.</Alert>
+                              )}
+                              <Stack direction="row" spacing={1}>
+                                <Button size="small" onClick={() => handleAddLink(rule.id, "Schema")}>
+                                  + Schema
+                                </Button>
+                                <Button size="small" onClick={() => handleAddLink(rule.id, "Product")}>
+                                  + Product
+                                </Button>
+                              </Stack>
+                            </Stack>
+                          </Box>
+                          <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                              Scope
+                            </Typography>
+                            <Stack spacing={2}>
+                              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                <TextField
+                                  size="small"
+                                  label="Scope ID"
+                                  value={scope.scopeId}
+                                  onChange={(event) =>
+                                    updateRule(rule.id, (current) => ({
+                                      ...current,
+                                      scope: {
+                                        ...(current.scope ?? scope),
+                                        scopeId: event.target.value,
+                                        definition: { ...(current.scope?.definition ?? scope.definition) },
+                                      },
+                                    }))
+                                  }
+                                />
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  label="Description"
+                                  value={scope.description ?? ""}
+                                  onChange={(event) =>
+                                    updateRule(rule.id, (current) => ({
+                                      ...current,
+                                      scope: {
+                                        ...(current.scope ?? scope),
+                                        description: event.target.value,
+                                        definition: { ...(current.scope?.definition ?? scope.definition) },
+                                      },
+                                    }))
+                                  }
+                                />
                               </Stack>
                               <TextField
                                 size="small"
-                                label="Description"
-                                value={link.description ?? ""}
-                                onChange={(event) =>
-                                  updateRuleLink(link.id, (current) => ({
+                                label="Channels"
+                                placeholder="comma separated"
+                                value={formatList(scope.definition.channels)}
+                                onChange={(event) => {
+                                  const channels = parseList(event.target.value);
+                                  updateRule(rule.id, (current) => ({
                                     ...current,
-                                    description: event.target.value,
-                                  }))
-                                }
+                                    scope: {
+                                      ...(current.scope ?? scope),
+                                      definition: { ...(current.scope?.definition ?? scope.definition), channels },
+                                    },
+                                  }));
+                                }}
+                              />
+                              <TextField
+                                size="small"
+                                label="Markets"
+                                placeholder="comma separated"
+                                value={formatList(scope.definition.markets)}
+                                onChange={(event) => {
+                                  const markets = parseList(event.target.value);
+                                  updateRule(rule.id, (current) => ({
+                                    ...current,
+                                    scope: {
+                                      ...(current.scope ?? scope),
+                                      definition: { ...(current.scope?.definition ?? scope.definition), markets },
+                                    },
+                                  }));
+                                }}
+                              />
+                              <TextField
+                                size="small"
+                                label="Customer segments"
+                                placeholder="comma separated"
+                                value={formatList(scope.definition.customerSegments)}
+                                onChange={(event) => {
+                                  const customerSegments = parseList(event.target.value);
+                                  updateRule(rule.id, (current) => ({
+                                    ...current,
+                                    scope: {
+                                      ...(current.scope ?? scope),
+                                      definition: {
+                                        ...(current.scope?.definition ?? scope.definition),
+                                        customerSegments,
+                                      },
+                                    },
+                                  }));
+                                }}
                               />
                               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                 <TextField
                                   size="small"
-                                  type="date"
                                   label="Effective from"
+                                  type="date"
                                   InputLabelProps={{ shrink: true }}
-                                  value={link.effectiveFrom ?? ""}
-                                  onChange={(event) =>
-                                    updateRuleLink(link.id, (current) => ({
+                                  value={scope.definition.effectiveFrom ?? ""}
+                                  onChange={(event) => {
+                                    const effectiveFrom = event.target.value || undefined;
+                                    updateRule(rule.id, (current) => ({
                                       ...current,
-                                      effectiveFrom: event.target.value || undefined,
-                                    }))
-                                  }
+                                      scope: {
+                                        ...(current.scope ?? scope),
+                                        definition: {
+                                          ...(current.scope?.definition ?? scope.definition),
+                                          effectiveFrom,
+                                        },
+                                      },
+                                    }));
+                                  }}
                                 />
                                 <TextField
                                   size="small"
-                                  type="date"
                                   label="Effective to"
+                                  type="date"
                                   InputLabelProps={{ shrink: true }}
-                                  value={link.effectiveTo ?? ""}
-                                  onChange={(event) =>
-                                    updateRuleLink(link.id, (current) => ({
+                                  value={scope.definition.effectiveTo ?? ""}
+                                  onChange={(event) => {
+                                    const effectiveTo = event.target.value || undefined;
+                                    updateRule(rule.id, (current) => ({
                                       ...current,
-                                      effectiveTo: event.target.value || undefined,
-                                    }))
-                                  }
+                                      scope: {
+                                        ...(current.scope ?? scope),
+                                        definition: {
+                                          ...(current.scope?.definition ?? scope.definition),
+                                          effectiveTo,
+                                        },
+                                      },
+                                    }));
+                                  }}
                                 />
                               </Stack>
-                              <Typography variant="caption" color="text.secondary">
-                                {link.kind === "Global"
-                                  ? "Applies globally"
-                                  : link.kind === "Schema"
-                                  ? `Schema: ${schemaName(link.targetId)}`
-                                  : `Product: ${productName(link.targetId)}`}
-                                {window ? ` · ${window}` : ""}
-                              </Typography>
                             </Stack>
-                          );
-                        })}
-                        {linksForRule.length === 0 && (
-                          <Typography variant="body2" color="text.secondary">
-                            No assignments yet. Add at least one to activate this rule.
-                          </Typography>
-                        )}
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                          <Button
-                            size="small"
-                            startIcon={<AddIcon fontSize="small" />}
-                            onClick={() => handleAddLink(rule.id, "Global")}
-                          >
-                            Add global assignment
-                          </Button>
-                          <Button
-                            size="small"
-                            startIcon={<AddIcon fontSize="small" />}
-                            onClick={() => handleAddLink(rule.id, "Schema")}
-                            disabled={!schemaOptions.length}
-                          >
-                            Add schema assignment
-                          </Button>
-                          <Button
-                            size="small"
-                            startIcon={<AddIcon fontSize="small" />}
-                            onClick={() => handleAddLink(rule.id, "Product")}
-                            disabled={!productOptions.length}
-                          >
-                            Add product assignment
-                          </Button>
+                          </Box>
                         </Stack>
-                      </Stack>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Scope
-                      </Typography>
-                      <Stack spacing={2}>
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                          <TextField
-                            size="small"
-                            label="Scope ID"
-                            value={scope.scopeId}
-                            onChange={(event) =>
-                              updateRule(rule.id, (current) => ({
-                                ...current,
-                                scope: {
-                                  ...(current.scope ?? scope),
-                                  scopeId: event.target.value,
-                                  definition: { ...(current.scope?.definition ?? scope.definition) },
-                                },
-                              }))
-                            }
-                          />
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="Description"
-                            value={scope.description ?? ""}
-                            onChange={(event) =>
-                              updateRule(rule.id, (current) => ({
-                                ...current,
-                                scope: {
-                                  ...(current.scope ?? scope),
-                                  description: event.target.value,
-                                  definition: { ...(current.scope?.definition ?? scope.definition) },
-                                },
-                              }))
-                            }
-                          />
-                        </Stack>
-                        <TextField
-                          size="small"
-                          label="Channels"
-                          placeholder="comma separated"
-                          value={formatList(scope.definition.channels)}
-                          onChange={(event) => {
-                            const channels = parseList(event.target.value);
-                            updateRule(rule.id, (current) => ({
-                              ...current,
-                              scope: {
-                                ...(current.scope ?? scope),
-                                definition: { ...(current.scope?.definition ?? scope.definition), channels },
-                              },
-                            }));
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          label="Markets"
-                          placeholder="comma separated"
-                          value={formatList(scope.definition.markets)}
-                          onChange={(event) => {
-                            const markets = parseList(event.target.value);
-                            updateRule(rule.id, (current) => ({
-                              ...current,
-                              scope: {
-                                ...(current.scope ?? scope),
-                                definition: { ...(current.scope?.definition ?? scope.definition), markets },
-                              },
-                            }));
-                          }}
-                        />
-                        <TextField
-                          size="small"
-                          label="Customer segments"
-                          placeholder="comma separated"
-                          value={formatList(scope.definition.customerSegments)}
-                          onChange={(event) => {
-                            const customerSegments = parseList(event.target.value);
-                            updateRule(rule.id, (current) => ({
-                              ...current,
-                              scope: {
-                                ...(current.scope ?? scope),
-                                definition: {
-                                  ...(current.scope?.definition ?? scope.definition),
-                                  customerSegments,
-                                },
-                              },
-                            }));
-                          }}
-                        />
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                          <TextField
-                            size="small"
-                            label="Effective from"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                            value={scope.definition.effectiveFrom ?? ""}
-                            onChange={(event) => {
-                              const effectiveFrom = event.target.value || undefined;
-                              updateRule(rule.id, (current) => ({
-                                ...current,
-                                scope: {
-                                  ...(current.scope ?? scope),
-                                  definition: {
-                                    ...(current.scope?.definition ?? scope.definition),
-                                    effectiveFrom,
-                                  },
-                                },
-                              }));
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="Effective to"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                            value={scope.definition.effectiveTo ?? ""}
-                            onChange={(event) => {
-                              const effectiveTo = event.target.value || undefined;
-                              updateRule(rule.id, (current) => ({
-                                ...current,
-                                scope: {
-                                  ...(current.scope ?? scope),
-                                  definition: {
-                                    ...(current.scope?.definition ?? scope.definition),
-                                    effectiveTo,
-                                  },
-                                },
-                              }));
-                            }}
-                          />
-                        </Stack>
-                      </Stack>
-                    </Box>
+                      </Box>
+                    </Stack>
                   </Stack>
                 </CardContent>
               </Card>

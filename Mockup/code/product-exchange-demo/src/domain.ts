@@ -289,6 +289,7 @@ export type FeatureExpression = LogicalExpressionBase & {
   featureId: string;
   operator: ValueOperator;
   value?: string;
+  featureTagId?: string;
 };
 
 export type ProductExpression = LogicalExpressionBase & {
@@ -677,101 +678,6 @@ export const createRuleLink = (ruleRef: string, kind: RuleLinkKind): RuleLink =>
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-};
-
-export const createIndianMealRule = (): Rule => {
-  const timestamp = new Date().toISOString();
-  return {
-    id: uid(),
-    ruleId: "R-INDIAN-001",
-    name: "Indian meal blackout on EU→NA transports",
-    description: "Disable Indian cuisine selections for EU→NA transports during the blackout window.",
-    type: "AvailabilityConstraint",
-    priority: 10,
-    context: {
-      contextId: "CTX-1",
-      bindings: {
-        offer: "OFF-9876 offer snapshot",
-        currentProduct: "Indian meal",
-      },
-    },
-    expression: {
-      kind: "Compound",
-      expressionId: "EXP-INDIAN-ROOT",
-      operator: "AND",
-      description: "Departure in Europe, arrival in North America, Indian cuisine, and blackout window",
-      children: [
-        {
-          kind: "Feature",
-          expressionId: "EXP-INDIAN-DEPARTURE",
-          subjectRef: "currentProduct",
-          featureId: "DepartureLocation",
-          operator: "EQUALS",
-          value: "Europe",
-          description: "Departure location tagged as Europe",
-        },
-        {
-          kind: "Feature",
-          expressionId: "EXP-INDIAN-ARRIVAL",
-          subjectRef: "currentProduct",
-          featureId: "ArrivalLocation",
-          operator: "EQUALS",
-          value: "North America",
-          description: "Arrival location tagged as North America",
-        },
-        {
-          kind: "Taxonomy",
-          expressionId: "EXP-INDIAN-CUISINE",
-          taxonomyConceptId: "apmwg:66B0BOM6",
-          taxonomyScheme: "apmwg:product_taxonomy_scheme",
-          subjectRef: "currentProduct",
-          selectionScope: "ANY_SELECTED",
-          description: "Product tagged as Indian cuisine",
-        },
-        {
-          kind: "DateTime",
-          expressionId: "EXP-INDIAN-DATE",
-          subjectRef: "offer",
-          operator: "IN",
-          value: "2025-10-01/2025-12-31",
-          description: "Travel/service date within blackout period",
-        },
-      ],
-    },
-    targets: [
-      {
-        kind: "Taxonomy",
-        targetId: "TARGET-INDIAN-DISABLE",
-        action: "DISABLE",
-        conceptId: "apmwg:66B0BOM6",
-        description: "Disable all products tagged as Indian cuisine",
-      },
-    ],
-    scope: {
-      scopeId: "SCOPE-INDIAN",
-      description: "EU→NA blackout period",
-      definition: {
-        channels: [],
-        markets: [],
-        customerSegments: [],
-        effectiveFrom: "2025-10-01",
-        effectiveTo: "2025-12-31",
-      },
-    },
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-};
-
-export const createIndianMealRuleBundle = () => {
-  const rule = createIndianMealRule();
-  const link = {
-    ...createRuleLink(rule.id, "Global"),
-    description: "Applies to all offers during the EU↔NA blackout window",
-    effectiveFrom: "2025-10-01",
-    effectiveTo: "2025-12-31",
-  };
-  return { rule, links: [link] };
 };
 
 export const updateTimestamp = <T extends { updatedAt: string }>(item: T): T => ({
