@@ -57,6 +57,9 @@ export type IdentityCapability = (typeof IDENTITY_CAPABILITIES)[number];
 export const INBOUND_PROCESSING_MODES = ["manual", "auto"] as const;
 export type InboundProcessingMode = (typeof INBOUND_PROCESSING_MODES)[number];
 
+export const INSTANCE_ROLES = ["supplier", "retailer", "seller"] as const;
+export type InstanceRole = (typeof INSTANCE_ROLES)[number];
+
 export type AppIdentity = {
   instanceId: string;
   displayName: string;
@@ -65,6 +68,7 @@ export type AppIdentity = {
   description: string;
   endpointUrl: string;
   capabilities: IdentityCapability[];
+  role: InstanceRole;
 };
 
 export const EXCHANGE_PROTOCOLS = ["webhook", "sse", "websocket"] as const;
@@ -517,6 +521,7 @@ export const createDefaultIdentity = (): AppIdentity => ({
   description: "Local sandbox for exchanging product data.",
   endpointUrl: "",
   capabilities: ["product-updates", "schema-updates", "taxonomy-updates"] as IdentityCapability[],
+  role: "supplier",
 });
 
 export const createDefaultSettings = (): AppSettings => ({
@@ -551,6 +556,10 @@ export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSe
       description: typeof identityInput?.description === "string" ? identityInput.description : defaults.identity.description,
       endpointUrl: typeof identityInput?.endpointUrl === "string" ? identityInput.endpointUrl : defaults.identity.endpointUrl,
       capabilities: sanitizeCapabilities(identityInput?.capabilities, defaults.identity.capabilities),
+      role:
+        typeof identityInput?.role === "string" && (INSTANCE_ROLES as readonly string[]).includes(identityInput.role)
+          ? (identityInput.role as InstanceRole)
+          : defaults.identity.role,
     },
     channel: {
       ...defaults.channel,

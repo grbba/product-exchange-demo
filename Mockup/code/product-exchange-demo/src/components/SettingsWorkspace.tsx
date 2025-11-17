@@ -10,6 +10,8 @@ import {
   FormControl,
   FormControlLabel,
   FormGroup,
+  Radio,
+  RadioGroup,
   InputLabel,
   List,
   ListItemButton,
@@ -134,10 +136,10 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
   const availableSections = useMemo(
     () =>
       SECTION_DEFINITIONS.filter((section) => {
-        if (section.id === "demo") return resetActions.length > 0;
+        if (section.id === "demo") return resetActions.length > 0 || dataActions.length > 0;
         return true;
       }),
-    [resetActions.length]
+    [dataActions.length, resetActions.length]
   );
   const [activeSection, setActiveSection] = useState<SectionId>(availableSections[0]?.id ?? "identity");
 
@@ -274,6 +276,27 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
             helperText="Where this node expects callbacks/webhooks."
             fullWidth
           />
+          <Divider flexItem />
+          <Typography variant="subtitle1">Role (for demo emphasis)</Typography>
+          <FormControl>
+            <RadioGroup
+              row
+              value={draft.identity.role}
+              onChange={(event) => setIdentityField("role", event.target.value as AppIdentity["role"])}
+            >
+              {(["supplier", "retailer", "seller"] as const).map((role) => (
+                <FormControlLabel
+                  key={role}
+                  value={role}
+                  control={<Radio size="small" />}
+                  label={role.charAt(0).toUpperCase() + role.slice(1)}
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+          <Typography variant="caption" color="text.secondary">
+            Choose the role this instance represents to adapt the accent colors in the app chrome.
+          </Typography>
           <Divider flexItem />
           <Typography variant="subtitle1">Capabilities</Typography>
           <FormGroup>

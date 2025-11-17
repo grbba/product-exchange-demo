@@ -585,14 +585,20 @@ const evaluateRules = (product: Product, rules: Rule[], conceptLabelFn: (id: str
   });
 
 const App: React.FC = () => {
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: { mode: "light" },
-        typography: { fontSize: 12 },
-      }),
-    []
-  );
+  const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
+
+  const theme = useMemo(() => {
+    const role = settings.identity.role;
+    const roleAccent =
+      role === "retailer" ? "#1565c0" : role === "seller" ? "#6a1b9a" : "#2e7d32"; // blue, purple, green
+    return createTheme({
+      palette: {
+        mode: "light",
+        primary: { main: roleAccent },
+      },
+      typography: { fontSize: 12 },
+    });
+  }, [settings.identity.role]);
 
   const [tab, setTab] = useState(0);
 
@@ -641,8 +647,6 @@ const App: React.FC = () => {
   const [runDrawerFilterRuleId, setRunDrawerFilterRuleId] = useState<string | null>(null);
   const [referenceSystemSendMode, setReferenceSystemSendMode] = useState<SendScopeMode>("all");
   const [selectedReferenceSystemIds, setSelectedReferenceSystemIds] = useState<string[]>([]);
-
-  const [settings, setSettings] = useState<AppSettings>(() => normalizeAppSettings(loadSettings()));
 
   const taxonomy = useTaxonomy(DEFAULT_CONCEPTS, COLLECTIONS, settings.defaultTaxonomyId);
   const {
@@ -2073,8 +2077,11 @@ const App: React.FC = () => {
         <Toolbar>
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h6">Product Information Exchange Workbench</Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
               {settings.identity.displayName || "Unnamed instance"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Role: {settings.identity.role.charAt(0).toUpperCase() + settings.identity.role.slice(1)}
             </Typography>
           </Box>
         </Toolbar>
