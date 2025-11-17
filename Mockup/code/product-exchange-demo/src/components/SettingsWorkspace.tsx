@@ -23,6 +23,8 @@ import {
 import SaveIcon from "@mui/icons-material/Save";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import DownloadIcon from "@mui/icons-material/Download";
+import UploadIcon from "@mui/icons-material/Upload";
 import type {
   AppIdentity,
   AppSettings,
@@ -48,6 +50,14 @@ type ResetAction = {
   onReset: () => void;
 };
 
+type DataAction = {
+  key: string;
+  label: string;
+  description: string;
+  onExport: () => void;
+  onImport: (file: File) => Promise<void> | void;
+};
+
 type SectionId = "identity" | "channel" | "taxonomy" | "demo";
 
 const SECTION_DEFINITIONS: { id: SectionId; label: string; description: string }[] = [
@@ -68,8 +78,8 @@ const SECTION_DEFINITIONS: { id: SectionId; label: string; description: string }
   },
   {
     id: "demo",
-    label: "Demo data reset",
-    description: "Restore sample schemas, products, and other seed data.",
+    label: "Demo data",
+    description: "Manage demo backups and restore or reset sample data.",
   },
 ];
 
@@ -78,6 +88,7 @@ type SettingsWorkspaceProps = {
   capabilityOptions?: IdentityCapability[];
   protocolOptions?: ExchangeProtocol[];
   resetActions?: ResetAction[];
+  dataActions?: DataAction[];
   onSave: (settings: AppSettings) => void;
 };
 
@@ -116,6 +127,7 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
   capabilityOptions = IDENTITY_CAPABILITIES,
   protocolOptions = EXCHANGE_PROTOCOLS,
   resetActions = [],
+  dataActions = [],
   onSave,
 }) => {
   const [draft, setDraft] = useState<AppSettings>(settings);
@@ -413,31 +425,73 @@ const SettingsWorkspace: React.FC<SettingsWorkspaceProps> = ({
   );
 
   const renderDemoCard = () =>
-    resetActions.length ? (
+    resetActions.length || dataActions.length ? (
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
         <CardHeader title="Demo data reset" subheader="Quickly revert parts of the workspace to factory defaults." />
         <CardContent>
-          <Stack spacing={1.5}>
-            {resetActions.map((action) => (
-              <Stack key={action.key} direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2">{action.label}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {action.description}
-                  </Typography>
-                </Box>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={() => {
-                    const confirmed = window.confirm(`Reset ${action.label}? This cannot be undone.`);
-                    if (confirmed) action.onReset();
-                  }}
-                >
-                  Reset
-                </Button>
+          <Stack spacing={2}>
+            {resetActions.length ? (
+              <Stack spacing={1.5}>
+                {resetActions.map((action) => (
+                  <Stack key={action.key} direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle2">{action.label}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {action.description}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => {
+                        const confirmed = window.confirm(`Reset ${action.label}? This cannot be undone.`);
+                        if (confirmed) action.onReset();
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </Stack>
+                ))}
               </Stack>
-            ))}
+            ) : null}
+
+            {dataActions.length ? (
+              <Stack spacing={1.5}>
+                {dataActions.map((action) => (
+                  <Stack key={action.key} direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "center" }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle2">{action.label}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {action.description}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1}>
+                      <Button variant="outlined" startIcon={<DownloadIcon />} onClick={action.onExport}>
+                        Export
+                      </Button>
+                      <Button component="label" variant="contained" startIcon={<UploadIcon />}>
+                        Import
+                        <input
+                          type="file"
+                          accept="application/json"
+                          hidden
+                          onChange={async (event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = "";
+                            if (!file) return;
+                            try {
+                              await action.onImport(file);
+                            } catch (error) {
+                              console.error("Import failed", error);
+                            }
+                          }}
+                        />
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : null}
           </Stack>
         </CardContent>
       </Card>

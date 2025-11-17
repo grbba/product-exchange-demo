@@ -1470,6 +1470,82 @@ const App: React.FC = () => {
     [settings.identity]
   );
 
+  const parseJsonFile = async (file: File) => {
+    const text = await file.text();
+    return JSON.parse(text);
+  };
+
+  const handleExportSchemas = () => downloadJson("schemas-export.json", schemas);
+  const handleExportProducts = () => downloadJson("products-export.json", instances);
+  const handleExportReferenceSystems = () => downloadJson("reference-systems-export.json", referenceSystems);
+  const handleExportRules = () => downloadJson("rules-export.json", { rules, ruleLinks });
+
+  const handleImportSchemas = async (file: File) => {
+    try {
+      const parsed = await parseJsonFile(file);
+      const nextSchemas = Array.isArray(parsed?.schemas)
+        ? (parsed.schemas as ProductSchema[])
+        : (Array.isArray(parsed) ? (parsed as ProductSchema[]) : []);
+      if (!nextSchemas.length) throw new Error("No schemas found in file");
+      setSchemas(nextSchemas);
+      const firstId = nextSchemas[0]?.id ?? null;
+      setSchemaSelection(firstId);
+      setProductSchemaSelection(firstId);
+      setSelectedInstanceId(null);
+      notify(`Imported ${nextSchemas.length} schema(s)`, "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Schema import failed: ${message}`, "error");
+    }
+  };
+
+  const handleImportProducts = async (file: File) => {
+    try {
+      const parsed = await parseJsonFile(file);
+      const nextProducts = Array.isArray(parsed?.products)
+        ? (parsed.products as ProductInstance[])
+        : (Array.isArray(parsed) ? (parsed as ProductInstance[]) : []);
+      if (!nextProducts.length) throw new Error("No products found in file");
+      setInstances(nextProducts);
+      setSelectedInstanceId(nextProducts[0]?.id ?? null);
+      notify(`Imported ${nextProducts.length} product(s)`, "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Product import failed: ${message}`, "error");
+    }
+  };
+
+  const handleImportReferenceSystems = async (file: File) => {
+    try {
+      const parsed = await parseJsonFile(file);
+      const nextSystems = Array.isArray(parsed?.referenceSystems)
+        ? (parsed.referenceSystems as ReferenceSystem[])
+        : (Array.isArray(parsed) ? (parsed as ReferenceSystem[]) : []);
+      if (!nextSystems.length) throw new Error("No reference systems found in file");
+      setReferenceSystems(nextSystems.map((item) => normalizeReferenceSystem(item)));
+      notify(`Imported ${nextSystems.length} reference system(s)`, "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Reference system import failed: ${message}`, "error");
+    }
+  };
+
+  const handleImportRules = async (file: File) => {
+    try {
+      const parsed = await parseJsonFile(file);
+      const nextRules = Array.isArray(parsed?.rules) ? (parsed.rules as Rule[]) : (Array.isArray(parsed) ? (parsed as Rule[]) : []);
+      if (!nextRules.length) throw new Error("No rules found in file");
+      const nextLinks = Array.isArray(parsed?.ruleLinks) ? (parsed.ruleLinks as RuleLink[]) : [];
+      setRules(nextRules.map((rule) => normalizeRule(rule)));
+      setRuleLinks(nextLinks.map((link) => normalizeRuleLink(link as StoredRuleLink)));
+      setSelectedRuleId(nextRules[0]?.id ?? null);
+      notify(`Imported ${nextRules.length} rule(s)`, "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      notify(`Rule import failed: ${message}`, "error");
+    }
+  };
+
   const exportSupplierPayload = () => {
     if (!productPreviewEnvelope) return null;
     navigator.clipboard.writeText(JSON.stringify(productPreviewEnvelope, null, 2));
@@ -1863,6 +1939,49 @@ const App: React.FC = () => {
     setSelectedRuleId(starter.id);
     notify("Rules reset", "info");
   }, [notify]);
+
+  const settingsDataActions = useMemo(
+    () => [
+      {
+        key: "schemas",
+        label: "Product schemas",
+        description: "Export or import product schema templates.",
+        onExport: handleExportSchemas,
+        onImport: handleImportSchemas,
+      },
+      {
+        key: "products",
+        label: "Specified products",
+        description: "Backup instantiated products for later restore.",
+        onExport: handleExportProducts,
+        onImport: handleImportProducts,
+      },
+      {
+        key: "reference-systems",
+        label: "Reference systems",
+        description: "Backup validation/reference system catalogs.",
+        onExport: handleExportReferenceSystems,
+        onImport: handleImportReferenceSystems,
+      },
+      {
+        key: "rules",
+        label: "Rules",
+        description: "Backup rule definitions and their assignments.",
+        onExport: handleExportRules,
+        onImport: handleImportRules,
+      },
+    ],
+    [
+      handleExportProducts,
+      handleExportReferenceSystems,
+      handleExportRules,
+      handleExportSchemas,
+      handleImportProducts,
+      handleImportReferenceSystems,
+      handleImportRules,
+      handleImportSchemas,
+    ]
+  );
 
   const settingsResetActions = useMemo(
     () => [
@@ -2851,7 +2970,12 @@ const App: React.FC = () => {
       {tab === 7 && (
         <Box sx={{ p: 2 }}>
           <Suspense fallback={<WorkspaceFallback label="settings" />}>
-            <SettingsWorkspace settings={settings} onSave={handleSaveSettings} resetActions={settingsResetActions} />
+            <SettingsWorkspace
+              settings={settings}
+              onSave={handleSaveSettings}
+              resetActions={settingsResetActions}
+              dataActions={settingsDataActions}
+            />
           </Suspense>
         </Box>
       )}
