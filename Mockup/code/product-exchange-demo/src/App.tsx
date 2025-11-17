@@ -752,6 +752,7 @@ const App: React.FC = () => {
   const [webhookInbox, setWebhookInbox] = useState<WebhookInboxEvent[]>([]);
   const [webhookInboxLoading, setWebhookInboxLoading] = useState(false);
   const [inboxApplyingId, setInboxApplyingId] = useState<string | null>(null);
+  const inboxFetchInFlight = useRef(false);
 
   const [retailerPayload, setRetailerPayload] = useState<RetailerPayload | null>(null);
   const [snack, setSnack] = useState<{ open: boolean; message: string; severity: AlertColor }>({
@@ -1567,6 +1568,8 @@ const App: React.FC = () => {
   );
 
   const fetchWebhookInbox = useCallback(async () => {
+    if (inboxFetchInFlight.current) return;
+    inboxFetchInFlight.current = true;
     setWebhookInboxLoading(true);
     try {
       const response = await fetch(`/api/webhooks/${encodeURIComponent(settings.identity.instanceId)}`);
@@ -1579,6 +1582,7 @@ const App: React.FC = () => {
       const message = error instanceof Error ? error.message : String(error);
       notify(`Inbox refresh failed: ${message}`, "error");
     } finally {
+      inboxFetchInFlight.current = false;
       setWebhookInboxLoading(false);
     }
   }, [notify, settings.identity.instanceId]);
@@ -1606,6 +1610,28 @@ const App: React.FC = () => {
       );
     },
     [settings.identity.instanceId]
+  );
+
+  const schemaIdSet = useMemo(() => new Set(schemas.map((schema) => schema.id)), [schemas]);
+
+  const getMissingSchemaIds = useCallback(
+    (event: WebhookInboxEvent): string[] => {
+      const payload = event.payload;
+      if (!payload || typeof payload !== "object") return [];
+      const envelope = payload as Record<string, unknown>;
+      if (envelope.kind !== "product-update" || !Array.isArray(envelope.products)) return [];
+      const missing: string[] = [];
+      for (const entry of envelope.products as unknown[]) {
+        if (!entry || typeof entry !== "object") continue;
+        const candidate = entry as { schema?: { id?: string } };
+        const schemaId = candidate.schema?.id;
+        if (!schemaId || !schemaIdSet.has(schemaId)) {
+          missing.push(schemaId || "unknown");
+        }
+      }
+      return Array.from(new Set(missing));
+    },
+    [schemaIdSet]
   );
 
   const processInboundEvent = useCallback(
@@ -1649,6 +1675,16 @@ const App: React.FC = () => {
       }
 
       if (kind === "product-update") {
+        const missingSchemas = getMissingSchemaIds(event);
+        if (missingSchemas.length) {
+          if (!silent) {
+            notify(
+              `Missing schema(s): ${missingSchemas.join(", ")}. Unable to load product(s) until schemas are available.`,
+              "error"
+            );
+          }
+          return false;
+        }
         const entries = Array.isArray(envelope.products) ? (envelope.products as unknown[]) : [];
         const createdInstances: ProductInstance[] = [];
         const timestamp = new Date().toISOString();
@@ -1726,6 +1762,7 @@ const App: React.FC = () => {
       setTaxonomyMetadata,
       setSchemas,
       taxonomyMetadata,
+      getMissingSchemaIds,
     ]
   );
 
@@ -1767,6 +1804,13 @@ const App: React.FC = () => {
       cancelled = true;
     };
   }, [handleApplyInboundEvent, settings.inboundProcessingMode, webhookInbox]);
+  useEffect(() => {
+    if (settings.inboundProcessingMode !== "auto") return;
+    const interval = window.setInterval(() => {
+      fetchWebhookInbox();
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [fetchWebhookInbox, settings.inboundProcessingMode]);
 
   const handleResetSchemas = useCallback(() => {
     const schema = defaultSchemaTemplate();
@@ -2589,6 +2633,8 @@ const App: React.FC = () => {
                                 ? (eventPayload.identity as { displayName?: string; instanceId?: string })
                                 : null;
                             const senderLabel = senderIdentity?.displayName || senderIdentity?.instanceId || "Unknown sender";
+                            const missingSchemas =
+                              eventKind === "product-update" ? getMissingSchemaIds(event) : [];
                             return (
                               <Box key={event.id} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 1.5 }}>
                                 <Stack
@@ -2622,7 +2668,7 @@ const App: React.FC = () => {
                                     variant="contained"
                                     startIcon={<DownloadIcon fontSize="small" />}
                                     onClick={() => handleManualApplyInboundEvent(event)}
-                                    disabled={inboxApplyingId === event.id}
+                                    disabled={inboxApplyingId === event.id || missingSchemas.length > 0}
                                   >
                                     Load into workspace
                                   </Button>
@@ -2635,6 +2681,11 @@ const App: React.FC = () => {
                                     Copy payload
                                   </Button>
                                 </Stack>
+                                {missingSchemas.length ? (
+                                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: "block" }}>
+                                    Missing schema(s): {missingSchemas.join(", ")}. Import or create them before loading this product.
+                                  </Typography>
+                                ) : null}
                                 <Box
                                   component="pre"
                                   sx={{ m: 0, mt: 1, maxHeight: 180, overflow: "auto", borderRadius: 1, bgcolor: "background.default", p: 1 }}
