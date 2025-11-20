@@ -826,7 +826,15 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
               }
             }}
             getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
-            renderInput={(params) => <TextField {...params} label="Product" placeholder="Search product" />}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Product"
+                placeholder="Search product"
+                fullWidth
+                sx={{ minWidth: { sm: 260, md: 320 } }}
+              />
+            )}
           />
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>Operator</InputLabel>
