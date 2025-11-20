@@ -20,9 +20,19 @@ export type Feature = {
   id: string;
   name: string;
   description?: string;
+  required: boolean;
   values: FeatureValue[];
   tags: string[];
 };
+
+type StoredFeature = Omit<Feature, "required"> & { required?: boolean };
+
+export const normalizeFeature = (feature: StoredFeature): Feature => ({
+  ...feature,
+  required: typeof feature.required === "boolean" ? feature.required : false,
+});
+
+export const normalizeFeatures = (features: StoredFeature[]): Feature[] => features.map(normalizeFeature);
 
 export type Product = {
   id: string;
@@ -596,6 +606,7 @@ export const cloneFeatureValue = (value: FeatureValue): FeatureValue => {
 export const cloneFeature = (feature: Feature): Feature => ({
   ...feature,
   id: uid(),
+  required: feature.required ?? false,
   values: feature.values.map(cloneFeatureValue),
   tags: [...feature.tags],
 });

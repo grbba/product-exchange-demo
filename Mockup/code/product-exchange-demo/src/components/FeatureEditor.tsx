@@ -18,6 +18,8 @@ import {
   Select,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -111,6 +113,7 @@ type FeatureEditorProps = {
   splitView?: boolean;
   hideAddFeature?: boolean;
   lockStructure?: boolean;
+  showRequirementToggle?: boolean;
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
@@ -135,6 +138,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   splitView = false,
   hideAddFeature = false,
   lockStructure = false,
+  showRequirementToggle = false,
 }) => {
   const [tagSelections, setTagSelections] = useState<Record<string, string>>({});
   const [discreteInputs, setDiscreteInputs] = useState<Record<string, string>>({});
@@ -286,7 +290,14 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
   }, [features, selectedFeatureId, onSelectFeature, splitView]);
 
   const addFeature = () => {
-    const feature: Feature = { id: uid(), name: "New Feature", description: "", values: [], tags: [] };
+    const feature: Feature = {
+      id: uid(),
+      name: "New Feature",
+      description: "",
+      required: false,
+      values: [],
+      tags: [],
+    };
     onChange([...features, feature]);
     onSelectFeature(feature.id);
   };
@@ -363,6 +374,30 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
               setFeature(feature.id, (current) => ({ ...current, description: event.target.value }))
             }
           />
+          {showRequirementToggle && (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1}
+              alignItems={{ xs: "flex-start", sm: "center" }}
+            >
+              <Typography variant="body2" color="text.secondary" sx={{ minWidth: { sm: 120 } }}>
+                Requirement
+              </Typography>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={feature.required ? "mandatory" : "optional"}
+                onChange={(_, value) => {
+                  if (!value || lockStructure) return;
+                  setFeature(feature.id, (current) => ({ ...current, required: value === "mandatory" }));
+                }}
+                disabled={lockStructure}
+              >
+                <ToggleButton value="optional">Optional</ToggleButton>
+                <ToggleButton value="mandatory">Mandatory</ToggleButton>
+              </ToggleButtonGroup>
+            </Stack>
+          )}
           {feature.tags.length ? (
             <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
               {feature.tags.map((tag) => (

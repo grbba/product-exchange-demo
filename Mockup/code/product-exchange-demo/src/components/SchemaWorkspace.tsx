@@ -389,6 +389,7 @@ const SchemaWorkspace: React.FC<SchemaWorkspaceProps> = ({
               referenceSystems={referenceSystems}
               conceptOptions={orderedConcepts}
               splitView
+              showRequirementToggle
             />
 
           </Stack>

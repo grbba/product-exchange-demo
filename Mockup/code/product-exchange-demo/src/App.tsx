@@ -62,6 +62,7 @@ import {
   defaultReferenceSystems,
   defaultSchemaTemplate,
   instantiateProduct,
+  normalizeFeature,
   normalizeAppSettings,
   resolveCollectionMembers,
   schemaCategoryLabel,
@@ -608,13 +609,22 @@ const App: React.FC = () => {
       return stored.map((schema) => ({
         ...schema,
         assignedCollections: schema.assignedCollections ?? [],
+        featureTemplates: (schema.featureTemplates ?? []).map((feature) => normalizeFeature(feature)),
       }));
     }
     const schema = defaultSchemaTemplate();
     schema.name = "New Product Schema";
     return [schema];
   });
-  const [instances, setInstances] = useState<ProductInstance[]>(() => loadInstances());
+  const [instances, setInstances] = useState<ProductInstance[]>(() =>
+    loadInstances().map((instance) => ({
+      ...instance,
+      product: {
+        ...instance.product,
+        features: (instance.product.features ?? []).map((feature) => normalizeFeature(feature)),
+      },
+    }))
+  );
   const [referenceSystems, setReferenceSystems] = useState<ReferenceSystem[]>(() => {
     const stored = loadReferenceSystems();
     if (stored.length) return stored.map((item) => normalizeReferenceSystem(item));
