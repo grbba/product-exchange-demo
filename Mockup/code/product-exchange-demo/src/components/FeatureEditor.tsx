@@ -114,9 +114,9 @@ type FeatureEditorProps = {
 };
 
 const createValue = (kind: FeatureValue["kind"]): FeatureValue => {
-  if (kind === "SingleValue") return { kind, value: "", unit: "" };
-  if (kind === "ValueRange") return { kind, min: "", max: "", unit: "" };
-  return { kind, values: [] };
+  if (kind === "SingleValue") return { kind, name: "", value: "", unit: "" };
+  if (kind === "ValueRange") return { kind, name: "", min: "", max: "", unit: "" };
+  return { kind, name: "", values: [] };
 };
 
 const FeatureEditor: React.FC<FeatureEditorProps> = ({
@@ -441,6 +441,20 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                   </IconButton>
                 </Stack>
                 <Box sx={{ mt: 2 }}>
+                  <TextField
+                    size="small"
+                    label="Name"
+                    value={value.name ?? ""}
+                    onChange={(event) =>
+                      setFeature(feature.id, (current) => {
+                        const next = [...current.values];
+                        next[index] = { ...next[index], name: event.target.value };
+                        return { ...current, values: next };
+                      })
+                    }
+                    sx={{ mb: 1.5 }}
+                    placeholder="e.g. Adult fare"
+                  />
                   {value.kind === "SingleValue" &&
                     (() => {
                       const selectedReference = value.referenceSystemId

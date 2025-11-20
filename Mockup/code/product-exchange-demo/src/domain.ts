@@ -1,17 +1,19 @@
 export type SingleValue = {
   kind: "SingleValue";
+  name?: string;
   value: string;
   referenceSystemId?: string;
   unit?: string;
 };
 export type ValueRange = {
   kind: "ValueRange";
+  name?: string;
   min: string;
   max: string;
   referenceSystemId?: string;
   unit?: string;
 };
-export type DiscreteSet = { kind: "DiscreteSet"; values: string[]; referenceSystemId?: string };
+export type DiscreteSet = { kind: "DiscreteSet"; name?: string; values: string[]; referenceSystemId?: string };
 export type FeatureValue = SingleValue | ValueRange | DiscreteSet;
 
 export type Feature = {
