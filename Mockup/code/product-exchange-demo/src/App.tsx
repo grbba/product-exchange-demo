@@ -68,6 +68,7 @@ import {
   schemaCategoryLabel,
   updateTimestamp,
   uid,
+  createRuleLink,
 } from "./domain";
 import type {
   AppSettings,
@@ -141,6 +142,7 @@ type WebhookInboxEvent = {
 };
 
 type SendScopeMode = "all" | "selected";
+type ApiHealthStatus = "unknown" | "checking" | "ok" | "error";
 
 const MAPPINGS = [
   { fromConceptId: "apmwg:C-PriorityBoarding", toConceptId: "apmwg:C-PriorityBoarding" },
@@ -602,6 +604,8 @@ const App: React.FC = () => {
   }, [settings.identity.role]);
 
   const [tab, setTab] = useState(0);
+  const [apiHealth, setApiHealth] = useState<ApiHealthStatus>("unknown");
+  const [apiHealthMessage, setApiHealthMessage] = useState<string>("");
 
   const [schemas, setSchemas] = useState<ProductSchema[]>(() => {
     const stored = loadSchemas();
@@ -741,17 +745,99 @@ const App: React.FC = () => {
   const ruleCatalogue = useMemo(() => {
     const storedRules = loadRules();
     const storedLinks = loadRuleLinks();
+
+    const buildIndianMealBlackout = (): { rule: Rule; link: RuleLink } => {
+      const rule = createRule("Indian meal blackout – Europe to North America");
+      rule.description = "Indian meal unavailable on EU → NA routes between 1 Aug and 1 Sep.";
+      rule.type = "Exclusion";
+      rule.priority = 5;
+      rule.context = {
+        contextId: `CTX-${uid()}`,
+        bindings: { currentProduct: "product" },
+      };
+
+      const departureExpression: LogicalExpression = {
+        kind: "Feature",
+        expressionId: `EXP-${uid()}`,
+        description: "Departure tagged in Europe",
+        subjectRef: "currentProduct",
+        featureId: "Departure",
+        operator: "CONTAINS",
+        featureTagId: "1HJT7649KP",
+      };
+
+      const arrivalExpression: LogicalExpression = {
+        kind: "Feature",
+        expressionId: `EXP-${uid()}`,
+        description: "Arrival tagged in North America",
+        subjectRef: "currentProduct",
+        featureId: "Arrival",
+        operator: "CONTAINS",
+        featureTagId: "OSHGFC67",
+      };
+
+      const mealExpression: LogicalExpression = {
+        kind: "Feature",
+        expressionId: `EXP-${uid()}`,
+        description: "Meal selection is Indian cuisine",
+        subjectRef: "currentProduct",
+        featureId: "Meal",
+        operator: "EQUALS",
+        value: "Indian",
+        featureTagId: "66B0BOM6",
+      };
+
+      rule.expression = {
+        kind: "Compound",
+        expressionId: `EXP-${uid()}`,
+        operator: "AND",
+        description: "EU→NA blackout window",
+        children: [departureExpression, arrivalExpression, mealExpression],
+      };
+
+      rule.targets = [
+        {
+          targetId: `TGT-${uid()}`,
+          kind: "Taxonomy",
+          conceptId: "66B0BOM6",
+          action: "FORBID",
+        },
+      ];
+      rule.scope = {
+        scopeId: `SCOPE-${uid()}`,
+        description: "EU → NA blackout window (Aug 1–Sep 1)",
+        definition: {
+          channels: ["NDC"],
+          markets: ["EU"],
+          customerSegments: ["All"],
+          effectiveFrom: "2024-08-01",
+          effectiveTo: "2024-09-01",
+        },
+      };
+      rule.createdAt = new Date().toISOString();
+      rule.updatedAt = rule.createdAt;
+
+      const link = createRuleLink(rule.id, "Global");
+      link.description = "Default demo blackout";
+      return { rule, link };
+    };
+
     if (storedRules.length || storedLinks.length) {
       const normalizedRules = storedRules.map((rule) => normalizeRule(rule));
       const validRuleRefs = new Set(normalizedRules.map((rule) => rule.id));
       const normalizedLinks = storedLinks
         .map((link) => normalizeRuleLink(link as StoredRuleLink))
         .filter((link) => validRuleRefs.has(link.ruleRef));
+      const existing = new Set(normalizedRules.map((rule) => rule.name));
+      if (!existing.has("Indian meal blackout – Europe to North America")) {
+        const { rule, link } = buildIndianMealBlackout();
+        normalizedRules.push(rule);
+        normalizedLinks.push(link);
+      }
       return { rules: normalizedRules, links: normalizedLinks };
     }
-    const starterRule = createRule("Sample availability rule");
-    starterRule.description = "Use the Add Condition wizard to build your first rule.";
-    return { rules: [starterRule], links: [] };
+    const { rule, link } = buildIndianMealBlackout();
+    return { rules: [rule], links: [link] };
   }, []);
 
   const [rules, setRules] = useState<Rule[]>(ruleCatalogue.rules);
@@ -777,6 +863,32 @@ const App: React.FC = () => {
   const notify = useCallback((message: string, severity: AlertColor = "info") => {
     setSnack({ open: true, message, severity });
   }, []);
+
+  const runHealthCheck = useCallback(async () => {
+    setApiHealth("checking");
+    try {
+      const response = await fetch("/api/health", { cache: "no-store" });
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      const data = (await response.json()) as { status?: string; amadeusBase?: string };
+      const summary = typeof data.status === "string" ? data.status : "ok";
+      const base = typeof data.amadeusBase === "string" ? data.amadeusBase : undefined;
+      setApiHealth("ok");
+      setApiHealthMessage(base ? `${summary} @ ${base}` : summary);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setApiHealth("error");
+      setApiHealthMessage(message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void runHealthCheck();
+    const id = setInterval(() => {
+      void runHealthCheck();
+    }, 20000);
+    return () => clearInterval(id);
+  }, [runHealthCheck]);
+
   const handleSaveSettings = (next: AppSettings) => {
     setSettings(next);
     persistSettings(next);
@@ -2081,6 +2193,11 @@ const App: React.FC = () => {
     [handleApplyInboundEvent]
   );
 
+  const apiStatusColor =
+    apiHealth === "ok" ? "success" : apiHealth === "error" ? "error" : apiHealth === "checking" ? "warning" : "default";
+  const apiStatusLabel =
+    apiHealth === "checking" ? "API: Checking…" : apiHealth === "ok" ? "API: OK" : apiHealth === "error" ? "API: Error" : "API: Unknown";
+
   return (
     <ThemeProvider theme={theme}>
       <AppBar position="sticky" color="default" elevation={0}>
@@ -2094,6 +2211,24 @@ const App: React.FC = () => {
               Role: {settings.identity.role.charAt(0).toUpperCase() + settings.identity.role.slice(1)}
             </Typography>
           </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              size="small"
+              color={apiStatusColor as "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"}
+              variant={apiHealth === "ok" ? "filled" : "outlined"}
+              label={apiStatusLabel}
+              title={apiHealthMessage || undefined}
+            />
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<CachedIcon fontSize="small" />}
+              onClick={() => void runHealthCheck()}
+              disabled={apiHealth === "checking"}
+            >
+              Check API
+            </Button>
+          </Stack>
         </Toolbar>
         <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile>
           <Tab id="tab-0" label="Product Schemas" />

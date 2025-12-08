@@ -104,13 +104,26 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
 
   const tree = useMemo(() => buildTree(concepts, conceptById), [concepts, conceptById]);
 
-  const renderNode = (id: string): React.ReactNode => {
+  const renderNode = (id: string, ancestry: Set<string>): React.ReactNode => {
     const concept = conceptById.get(id);
     if (!concept) return null;
+    if (ancestry.has(id)) {
+      // Break potential cycles to avoid crashing the tree on circular broader/narrower data
+      return (
+        <TreeItem
+          key={`${id}-cycle`}
+          itemId={`${id}-cycle`}
+          label={`${concept.label} (circular reference)`}
+        />
+      );
+    }
+
     const childIds = tree.children.get(id) ?? [];
+    const nextAncestry = new Set(ancestry);
+    nextAncestry.add(id);
     return (
       <TreeItem key={id} itemId={id} label={concept.label}>
-        {childIds.map((childId) => renderNode(childId))}
+        {childIds.map((childId) => renderNode(childId, nextAncestry))}
       </TreeItem>
     );
   };
@@ -215,7 +228,11 @@ const TaxonomyWorkspace: React.FC<TaxonomyWorkspaceProps> = ({
                   }}
                   sx={{ height: "100%" }}
                 >
-                  {tree.roots.map((rootId) => renderNode(rootId))}
+                  {tree.roots.length ? (
+                    tree.roots.map((rootId) => renderNode(rootId, new Set<string>()))
+                  ) : (
+                    <TreeItem itemId="no-root" label="No root concepts detected (check for circular broader/narrower links)" />
+                  )}
                 </SimpleTreeView>
               </Box>
             ) : (

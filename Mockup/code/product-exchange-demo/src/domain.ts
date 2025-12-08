@@ -4,6 +4,7 @@ export type SingleValue = {
   value: string;
   referenceSystemId?: string;
   unit?: string;
+  lockedFromSchema?: boolean;
 };
 export type ValueRange = {
   kind: "ValueRange";
@@ -12,8 +13,15 @@ export type ValueRange = {
   max: string;
   referenceSystemId?: string;
   unit?: string;
+  lockedFromSchema?: boolean;
 };
-export type DiscreteSet = { kind: "DiscreteSet"; name?: string; values: string[]; referenceSystemId?: string };
+export type DiscreteSet = {
+  kind: "DiscreteSet";
+  name?: string;
+  values: string[];
+  referenceSystemId?: string;
+  lockedFromSchema?: boolean;
+};
 export type FeatureValue = SingleValue | ValueRange | DiscreteSet;
 
 export type Feature = {
@@ -458,6 +466,38 @@ export const defaultReferenceSystems = (): ReferenceSystem[] => {
       validationProvider: "amadeus-airport",
     },
     {
+      identifier: "RS-LOCAL-MEASURE-LLKQLS2G",
+      id: "llkqls2g",
+      description: "Local measurement system placeholder (cm, g, kcal) used by demo meals.",
+      systemType: "Measurement",
+      cardinality: "single",
+      source: {
+        kind: "External",
+        authority: "Demo",
+        resourceName: "Demo Measurements",
+        resourceType: "CodeList",
+        url: "",
+      },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    {
+      identifier: "RS-LOCAL-MEALTYPE-5DFFHZ9Z",
+      id: "5dffhz9z",
+      description: "Local meal type taxonomy placeholder for demo products.",
+      systemType: "Enumeration",
+      cardinality: "single",
+      source: {
+        kind: "External",
+        authority: "Demo",
+        resourceName: "Demo Meal Types",
+        resourceType: "CodeList",
+        url: "",
+      },
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+    {
       identifier: "RS-UNECE-REC20-001",
       id: "RS-UNECE-REC20-001",
       description: "UNECE Recommendation 20 – Measurement units",
@@ -546,7 +586,7 @@ export const createDefaultSettings = (): AppSettings => ({
     notes: "",
   },
   inboundProcessingMode: "manual",
-  defaultTaxonomyId: null,
+  defaultTaxonomyId: "export13",
   updatedAt: new Date().toISOString(),
 });
 
@@ -597,21 +637,22 @@ export const normalizeAppSettings = (input?: Partial<AppSettings> | null): AppSe
   };
 };
 
-export const cloneFeatureValue = (value: FeatureValue): FeatureValue => {
-  if (value.kind === "SingleValue") return { ...value };
-  if (value.kind === "ValueRange") return { ...value };
-  return { ...value, values: [...value.values] };
+export const cloneFeatureValue = (value: FeatureValue, lockFromSchema = false): FeatureValue => {
+  if (value.kind === "SingleValue") return { ...value, lockedFromSchema: lockFromSchema || value.lockedFromSchema };
+  if (value.kind === "ValueRange") return { ...value, lockedFromSchema: lockFromSchema || value.lockedFromSchema };
+  return { ...value, lockedFromSchema: lockFromSchema || value.lockedFromSchema, values: [...value.values] };
 };
 
-export const cloneFeature = (feature: Feature): Feature => ({
+export const cloneFeature = (feature: Feature, lockValuesFromSchema = false): Feature => ({
   ...feature,
   id: uid(),
   required: feature.required ?? false,
-  values: feature.values.map(cloneFeatureValue),
+  values: feature.values.map((value) => cloneFeatureValue(value, lockValuesFromSchema)),
   tags: [...feature.tags],
 });
 
-export const cloneFeatures = (features: Feature[]): Feature[] => features.map(cloneFeature);
+export const cloneFeatures = (features: Feature[], lockValuesFromSchema = false): Feature[] =>
+  features.map((feature) => cloneFeature(feature, lockValuesFromSchema));
 
 export const defaultSchemaTemplate = (): ProductSchema => {
   const timestamp = new Date().toISOString();

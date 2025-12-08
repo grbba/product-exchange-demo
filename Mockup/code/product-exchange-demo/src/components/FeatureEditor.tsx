@@ -462,16 +462,27 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
         >
           {feature.values.map((value, index) => {
             const key = discreteKey(feature.id, index);
+            const referenceConfig = value.referenceSystemId
+              ? referenceSystemMap.get(value.referenceSystemId)
+              : undefined;
             const validationProvider =
               value.kind === "SingleValue" && value.referenceSystemId
                 ? validationProviderByReference.get(value.referenceSystemId)
                 : undefined;
             const errorMessage = valueErrors[key] ?? null;
+            const taxonomyLock = (() => {
+              const isTaxonomy = referenceConfig ? Boolean(asTaxonomyConceptSet(referenceConfig)) : false;
+              if (!lockStructure || !isTaxonomy) return false;
+              if (value.kind === "DiscreteSet") return value.values.length > 0;
+              if (value.kind === "ValueRange") return Boolean(value.min || value.max);
+              return Boolean(value.value);
+            })();
+            const lockedFromSchema = Boolean((lockStructure && value.lockedFromSchema) || taxonomyLock);
             return (
               <Card key={`${feature.id}-${index}`} variant="outlined" sx={{ borderRadius: 2, p: 2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Chip label={value.kind} size="small" />
-                  <IconButton onClick={() => removeValue(feature.id, index)}>
+                  <IconButton onClick={() => removeValue(feature.id, index)} disabled={lockedFromSchema}>
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </Stack>
@@ -511,6 +522,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                           type={isMeasurement ? "number" : "text"}
                           inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
                           value={value.value}
+                          disabled={lockedFromSchema}
                           onChange={(event) => {
                             const input = event.target.value;
                             const normalized =
@@ -542,17 +554,18 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             </Typography>
                           )}
                           {taxonomyOptions ? (
-                            <FormControl size="small" error={Boolean(errorMessage)}>
-                              <InputLabel id={`single-value-${feature.id}-${index}`}>Value</InputLabel>
-                              <Select
-                                labelId={`single-value-${feature.id}-${index}`}
-                                label="Value"
-                                value={value.value ?? ""}
-                                onChange={(event) => {
-                                  clearError(key);
-                                  setFeature(feature.id, (current) => {
-                                    const next = [...current.values];
-                                    (next[index] as SingleValue).value = event.target.value;
+                          <FormControl size="small" error={Boolean(errorMessage)}>
+                            <InputLabel id={`single-value-${feature.id}-${index}`}>Value</InputLabel>
+                            <Select
+                              labelId={`single-value-${feature.id}-${index}`}
+                              label="Value"
+                              value={value.value ?? ""}
+                              disabled={lockedFromSchema}
+                              onChange={(event) => {
+                                clearError(key);
+                                setFeature(feature.id, (current) => {
+                                  const next = [...current.values];
+                                  (next[index] as SingleValue).value = event.target.value;
                                     return { ...current, values: next };
                                   });
                                 }}
@@ -576,6 +589,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               size="small"
                               label="Unit"
                               value={value.unit ?? ""}
+                              disabled={lockedFromSchema}
                               onChange={(event) =>
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -591,6 +605,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               labelId={`single-ref-${feature.id}-${index}`}
                               label="Reference"
                               value={value.referenceSystemId ?? ""}
+                              disabled={lockedFromSchema || lockStructure}
                               onChange={(event) => {
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -622,7 +637,6 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                                   runValidation(key, validationProvider, value.value ?? "");
                                 }
                               }}
-                              disabled={lockStructure}
                             >
                               <MenuItem value="">
                                 <em>None</em>
@@ -654,6 +668,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               type={isMeasurement ? "number" : "text"}
                               inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
                               value={value.min}
+                              disabled={lockedFromSchema}
                               onChange={(event) =>
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -668,6 +683,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               type={isMeasurement ? "number" : "text"}
                               inputProps={isMeasurement ? { inputMode: "decimal", step: "any" } : undefined}
                               value={value.max}
+                              disabled={lockedFromSchema}
                               onChange={(event) =>
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -682,6 +698,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               size="small"
                               label="Unit"
                               value={value.unit ?? ""}
+                              disabled={lockedFromSchema}
                               onChange={(event) =>
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -697,6 +714,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               labelId={`range-ref-${feature.id}-${index}`}
                               label="Reference"
                               value={value.referenceSystemId ?? ""}
+                              disabled={lockedFromSchema}
                               onChange={(event) =>
                                 setFeature(feature.id, (current) => {
                                   const next = [...current.values];
@@ -716,7 +734,6 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                                   return { ...current, values: next };
                                 })
                               }
-                              disabled={lockStructure}
                             >
                               <MenuItem value="">
                                 <em>None</em>
@@ -748,6 +765,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                                 label="Values"
                                 multiple
                                 value={value.values}
+                                disabled={lockedFromSchema}
                                 onChange={(event) => {
                                   const selections = Array.isArray(event.target.value)
                                     ? (event.target.value as string[])
@@ -787,6 +805,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                             size="small"
                             label="Comma separated values"
                             value={discreteInputs[key] ?? value.values.join(", ")}
+                            disabled={lockedFromSchema}
                             onChange={(event) => {
                               const raw = event.target.value;
                               setDiscreteInputs((previous) => ({ ...previous, [key]: raw }));
@@ -809,6 +828,7 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                           labelId={`set-ref-${feature.id}-${index}`}
                           label="Reference"
                           value={value.referenceSystemId ?? ""}
+                          disabled={lockedFromSchema || lockStructure}
                           onChange={(event) =>
                             setFeature(feature.id, (current) => {
                               const next = [...current.values];
@@ -826,7 +846,6 @@ const FeatureEditor: React.FC<FeatureEditorProps> = ({
                               return { ...current, values: next };
                             })
                           }
-                          disabled={lockStructure}
                         >
                           <MenuItem value="">
                             <em>None</em>

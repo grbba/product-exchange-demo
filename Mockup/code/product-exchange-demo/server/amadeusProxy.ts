@@ -40,6 +40,7 @@ const TOKEN_REFRESH_THRESHOLD_MS = 60_000;
 const getAccessToken = async (): Promise<string> => {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now + TOKEN_REFRESH_THRESHOLD_MS) {
+    console.log("[amadeus] Reusing cached token");
     return cachedToken.token;
   }
 
@@ -57,6 +58,7 @@ const getAccessToken = async (): Promise<string> => {
     body,
   };
 
+  console.log("[amadeus] Fetching new access token…");
   const response = await fetch(tokenEndpoint, request);
   if (!response.ok) {
     const errorPayload = await response.text();
@@ -75,6 +77,7 @@ const buildSearchUrl = (keyword: string, limit: number) =>
 
 const callAmadeusLocations = async (url: string) => {
   const token = await getAccessToken();
+  console.log("[amadeus] Request:", url);
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -83,9 +86,11 @@ const callAmadeusLocations = async (url: string) => {
 
   if (!response.ok) {
     const errorPayload = await response.text();
+    console.error("[amadeus] API error response:", response.status, errorPayload);
     throw new Error(`Amadeus API error: ${response.status} ${errorPayload}`);
   }
 
+  console.log("[amadeus] Response OK:", response.status);
   return response.json();
 };
 
@@ -120,6 +125,7 @@ const storeEvent = (channelId: string, event: StoredWebhookEvent) => {
   const existing = webhookInbox.get(channelId) ?? [];
   existing.unshift(event);
   webhookInbox.set(channelId, existing.slice(0, MAX_EVENTS_PER_CHANNEL));
+  console.log(`[webhooks] Stored event ${event.id} for channel ${channelId}. Count=${existing.length + 1}`);
 };
 
 const deleteEvent = (channelId: string, eventId: string) => {
@@ -136,6 +142,32 @@ export const createServer = () => {
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
 
+  // Lightweight request logger to help trace issues.
+  app.use((req, res, next) => {
+    console.log(`[http] ${req.method} ${req.url}`);
+    next();
+  });
+
+  // Flag error responses so we notice failures quickly.
+  app.use((req, res, next) => {
+    res.on("finish", () => {
+      if (res.statusCode >= 400) {
+        console.warn(`[http] ${req.method} ${req.url} -> ${res.statusCode}`);
+      }
+    });
+    next();
+  });
+
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      time: new Date().toISOString(),
+      apiPort: process.env.API_PORT ?? 5175,
+      amadeusBase: AMADEUS_BASE,
+      amadeusClientId: AMADEUS_CLIENT_ID ? "set" : "missing",
+    });
+  });
+
   app.get("/api/airports/search", async (req: Request, res: Response) => {
     const keyword = String(req.query.q ?? "").trim();
     const limit = Math.min(Number(req.query.limit ?? 10) || 10, 50);
@@ -146,6 +178,7 @@ export const createServer = () => {
     }
 
     try {
+      console.log(`[airports/search] q="${keyword}" limit=${limit}`);
       const url = buildSearchUrl(keyword, limit);
       const data = await callAmadeusLocations(url);
       res.json(data);
@@ -163,6 +196,7 @@ export const createServer = () => {
     }
 
     try {
+      console.log(`[airports/validate] code="${code}"`);
       const url = `${locationEndpoint}?subType=AIRPORT&keyword=${encodeURIComponent(code)}&page[limit]=20`;
       const data = await callAmadeusLocations(url);
       const match =
@@ -194,6 +228,7 @@ export const createServer = () => {
     }
 
     try {
+      console.log(`[webhooks/dispatch] -> ${destinationUrl}`);
       const response = await fetch(destinationUrl, {
         method: "POST",
         headers: finalHeaders,
@@ -228,6 +263,7 @@ export const createServer = () => {
       ),
     };
     storeEvent(channelId, event);
+    console.log(`[webhooks/inbound] Accepted event ${event.id} on channel ${channelId}`);
     res.status(202).json({ status: "accepted", eventId: event.id });
   };
 
@@ -240,6 +276,7 @@ export const createServer = () => {
       res.status(400).json({ error: "Missing channelId" });
       return;
     }
+    console.log(`[webhooks/list] channel=${channelId}`);
     res.json({ events: webhookInbox.get(channelId) ?? [] });
   });
 
@@ -250,6 +287,7 @@ export const createServer = () => {
       return;
     }
     webhookInbox.delete(channelId);
+    console.log(`[webhooks/clear] channel=${channelId}`);
     res.status(204).end();
   });
 
@@ -265,6 +303,7 @@ export const createServer = () => {
       res.status(404).json({ error: "Event not found" });
       return;
     }
+    console.log(`[webhooks/delete] channel=${channelId} event=${eventId}`);
     res.status(204).end();
   });
 
@@ -277,6 +316,28 @@ export const startServer = (port: number | string) => {
 
   const server = app.listen(serverPort, () => {
     console.log(`Amadeus proxy listening on port ${serverPort}`);
+    console.log(
+      `[startup] AMADEUS_BASE=${AMADEUS_BASE} | AMADEUS_CLIENT_ID=${AMADEUS_CLIENT_ID ? "set" : "missing"} | API_PORT=${serverPort}`
+    );
+  });
+
+  server.on("connection", (socket) => {
+    const addr = `${socket.remoteAddress ?? "unknown"}:${socket.remotePort ?? "?"}`;
+    console.log(`[connection] ${addr}`);
+  });
+
+  server.on("clientError", (err, socket) => {
+    console.error("[clientError]", err);
+    socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+  });
+
+  server.on("request", (req) => {
+    console.log(`[request] ${req.method} ${req.url}`);
+  });
+
+  server.setTimeout(15000, (socket) => {
+    console.warn("[timeout] closing slow socket");
+    socket.destroy();
   });
 
   return server;

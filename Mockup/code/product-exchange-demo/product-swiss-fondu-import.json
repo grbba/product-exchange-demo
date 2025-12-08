@@ -1,0 +1,154 @@
+{
+  "products": [
+    {
+      "id": "c65kz1ig",
+      "schemaId": "4zxvlnk9",
+      "product": {
+        "id": "kjwhn1lt",
+        "name": "Swiss Fondu",
+        "type": "Meal",
+        "lifecycleStatus": "Draft",
+        "features": [
+          {
+            "id": "gidhybx3",
+            "name": "Ingredients",
+            "description": "Ingredient list for the meal.",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "name": "",
+                "values": [
+                  "Gruyere Cheese 54%",
+                  "Emmental Cheese 36%",
+                  "White Wine 11%",
+                  "Nutmeg",
+                  "Pepper",
+                  "Crusty Bread"
+                ]
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "s9wgbxxj",
+            "name": "Allegenes",
+            "description": "List of allegenes ",
+            "values": [
+              {
+                "kind": "DiscreteSet",
+                "name": "",
+                "values": [
+                  "Gluten",
+                  "Diary"
+                ]
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "3patdn0r",
+            "name": "Heigth",
+            "description": "Heigth in order to know if the mal fits in the oven",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "",
+                "referenceSystemId": "llkqls2g",
+                "unit": "cm"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "gcpcutvv",
+            "name": "Nutrition",
+            "description": "Provides the nutrional information and values for the meal for Calories, Fat, Carbohydrates, Salt and Proteins per 100g",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "470",
+                "unit": "kcal",
+                "referenceSystemId": "llkqls2g",
+                "name": "Calories"
+              },
+              {
+                "kind": "SingleValue",
+                "name": "Fat",
+                "value": "73",
+                "unit": "g",
+                "referenceSystemId": "llkqls2g"
+              },
+              {
+                "kind": "SingleValue",
+                "name": "Carbohydrates",
+                "value": "12",
+                "unit": "g",
+                "referenceSystemId": "llkqls2g"
+              },
+              {
+                "kind": "SingleValue",
+                "name": "Proteins",
+                "value": "13",
+                "unit": "g",
+                "referenceSystemId": "llkqls2g"
+              },
+              {
+                "kind": "SingleValue",
+                "name": "Salt",
+                "value": "2",
+                "unit": "g",
+                "referenceSystemId": "llkqls2g"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "o66wqlnp",
+            "name": "Total Weight",
+            "description": "Provides the total weight of the meal",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "value": "280",
+                "unit": "g",
+                "referenceSystemId": "llkqls2g"
+              }
+            ],
+            "tags": []
+          },
+          {
+            "id": "snrozd5w",
+            "name": "Meal Type",
+            "description": "Type of meal based on the ingredients used. Type values are driven by the taxonomy.",
+            "values": [
+              {
+                "kind": "SingleValue",
+                "name": "",
+                "value": "apmwg:KXW2YZ8Z",
+                "referenceSystemId": "5dffhz9z"
+              }
+            ],
+            "tags": [
+              "apmwg:KXW2YZ8Z",
+              "apmwg:X4V55433"
+            ]
+          }
+        ],
+        "tags": [
+          "apmwg:8QTRPWZL",
+          "apmwg:3FDRL8LK",
+          "apmwg:EX0SCMIE",
+          "apmwg:LPNKBNFY",
+          "apmwg:P3DSZWW8"
+        ],
+        "additionalInfo": {},
+        "localizedNames": {
+          "de": "Schweizer Fondu",
+          "fr": "Fondu suisse"
+        }
+      },
+      "createdAt": "2025-11-19T14:51:52.607Z",
+      "updatedAt": "2025-11-19T16:00:36.737Z"
+    }
+  ]
+}
