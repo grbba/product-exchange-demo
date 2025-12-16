@@ -35,7 +35,6 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
-  CONTEXT_REFS,
   LOGICAL_OPERATORS,
   RULE_TYPES,
   SELECTION_SCOPES,
@@ -60,6 +59,7 @@ import {
   type RuleLink,
   type RuleLinkKind,
   type Concept,
+  type ContextRef,
   type ValueOperator,
   uid,
 } from "../domain";
@@ -114,6 +114,12 @@ type ExpressionDiagnostic = {
   status: "ok" | "warning" | "error";
   message?: string;
 };
+
+const SUBJECT_OPTIONS: { value: ContextRef; label: string; helper?: string }[] = [
+  { value: "currentProduct", label: "Transport product", helper: "Evaluated in demo" },
+  { value: "offer", label: "Offer context", helper: "Not evaluated in demo" },
+  { value: "customer", label: "Customer context", helper: "Not evaluated in demo" },
+];
 
 const isCompound = (expression: LogicalExpression): expression is CompoundExpression =>
   expression.kind === "Compound";
@@ -513,7 +519,7 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
   }
 
   const renderSubjectPicker = () => (
-    <FormControl size="small" sx={{ minWidth: 160 }}>
+    <FormControl size="small" sx={{ minWidth: 200 }}>
       <InputLabel>Subject</InputLabel>
       <Select
         label="Subject"
@@ -521,13 +527,20 @@ const ExpressionEditor: React.FC<ExpressionEditorProps> = ({
         onChange={(event) =>
           onChange({
             ...expression,
-            subjectRef: event.target.value as (typeof CONTEXT_REFS)[number],
+            subjectRef: event.target.value as ContextRef,
           } as LogicalExpression)
         }
       >
-        {CONTEXT_REFS.map((ref) => (
-          <MenuItem key={ref} value={ref}>
-            {ref}
+        {SUBJECT_OPTIONS.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            <Stack spacing={0.5}>
+              <Typography variant="body2">{option.label}</Typography>
+              {option.helper ? (
+                <Typography variant="caption" color="text.secondary">
+                  {option.helper}
+                </Typography>
+              ) : null}
+            </Stack>
           </MenuItem>
         ))}
       </Select>
