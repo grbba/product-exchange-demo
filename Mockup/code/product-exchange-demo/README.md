@@ -6,6 +6,15 @@ This guide explains how to spin up **two demo instances** (supplier + retailer) 
 
 ---
 
+## Branching and PRs (RoleSeparation)
+
+- Use `RoleSeparation` as the base for all new branches and pull requests.
+- Treat `Partner`/`main` as legacy; only cherry-pick urgent fixes there if absolutely required, then forward-merge back to `RoleSeparation`.
+- If you already have a feature branch, rebase it onto `RoleSeparation` before opening a PR.
+- Update any automation or local scripts that assume `Partner` as default to point at `RoleSeparation` instead.
+
+---
+
 ## 1. Prerequisites
 
 - Node.js 20+
